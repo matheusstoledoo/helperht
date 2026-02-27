@@ -47,6 +47,7 @@ import {
   EyeOff,
   Loader2,
   ExternalLink,
+  ChevronRight,
 } from "lucide-react";
 import { format, parseISO, subDays, subMonths, subYears, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -726,6 +727,23 @@ const PatientDocumentsView = () => {
                   <span className="sm:hidden">Outros</span>
                 </TabsTrigger>
               </TabsList>
+
+              {/* Link to lab charts */}
+              <Link
+                to="/pac/exames-lab"
+                className="mt-4 flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                    <FlaskConical className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Gráficos de Exames</p>
+                    <p className="text-xs text-muted-foreground">Veja a evolução dos seus marcadores laboratoriais</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+              </Link>
 
               {/* Tab contents */}
               {["imagem", "laboratorial", "receita", "outros"].map((tab) => (
