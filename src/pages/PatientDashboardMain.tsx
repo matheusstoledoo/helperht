@@ -8,7 +8,9 @@ import {
   FileText, 
   FlaskConical,
   Clock,
-  ChevronRight
+  ChevronRight,
+  Apple,
+  Dumbbell,
 } from "lucide-react";
 import PatientLayout from "@/components/patient/PatientLayout";
 import { FloatingUploadButton } from "@/components/documents/FloatingUploadButton";
@@ -83,6 +85,22 @@ export default function PatientDashboardMain() {
       icon: <FlaskConical className="h-8 w-8 sm:h-10 sm:w-10" />,
       route: `/pac/exames-lab`,
       color: "bg-purple-500/10 text-purple-600 dark:text-purple-400"
+    },
+    {
+      id: "nutrition",
+      title: "Nutrição",
+      description: "Plano alimentar e registro de suplementação",
+      icon: <Apple className="h-8 w-8 sm:h-10 sm:w-10" />,
+      route: `/pac/nutricao`,
+      color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+    },
+    {
+      id: "training",
+      title: "Treinos",
+      description: "Planos de treino e registro de atividades",
+      icon: <Dumbbell className="h-8 w-8 sm:h-10 sm:w-10" />,
+      route: `/pac/treinos`,
+      color: "bg-sky-500/10 text-sky-600 dark:text-sky-400"
     },
   ];
 
