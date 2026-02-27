@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,6 +18,17 @@ import {
 } from "@/components/ui/collapsible";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
@@ -34,12 +45,15 @@ import {
   Filter,
   Lightbulb,
   FileText,
+  Trash2,
 } from "lucide-react";
 import { format, subDays, subMonths, subYears, isAfter, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import PatientLayout from "@/components/patient/PatientLayout";
 import { useQuery } from "@tanstack/react-query";
+import { PatientDiagnosisForm } from "@/components/patient/PatientDiagnosisForm";
+import { toast } from "sonner";
 
 interface Diagnosis {
   id: string;
@@ -66,6 +80,8 @@ const PatientDiagnosesView = () => {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [patientId, setPatientId] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Get professional name if filtering by professional
   const { data: filterProfessional } = useQuery({
@@ -110,6 +126,8 @@ const PatientDiagnosesView = () => {
           setLoading(false);
           return;
         }
+
+        setPatientId(patient.id);
 
         // Fetch all diagnoses with consultation info to get professional
         const { data: diagnosesData, error: diagnosesError } = await supabase
@@ -167,7 +185,17 @@ const PatientDiagnosesView = () => {
     };
 
     fetchDiagnoses();
-  }, [user]);
+  }, [user, reloadKey]);
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("diagnoses").delete().eq("id", id);
+    if (error) {
+      toast.error("Erro ao excluir diagnóstico");
+      return;
+    }
+    toast.success("Diagnóstico excluído");
+    setReloadKey((k) => k + 1);
+  };
 
   // Get unique disease names for filter
   const uniqueDiseases = useMemo(() => {
@@ -280,6 +308,12 @@ const PatientDiagnosesView = () => {
       breadcrumb={breadcrumbContent}
     >
       <div className="max-w-4xl mx-auto p-4 space-y-4">
+        {/* Add button */}
+        {patientId && (
+          <div className="flex justify-end">
+            <PatientDiagnosisForm patientId={patientId} onCreated={() => setReloadKey((k) => k + 1)} />
+          </div>
+        )}
         {/* Filters */}
         <Card>
           <CardContent className="p-4">
@@ -419,6 +453,31 @@ const PatientDiagnosesView = () => {
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                   <User className="h-4 w-4" />
                                   <span>{diagnosis.professional_name}</span>
+                                </div>
+                              )}
+                              {/* Delete button - only for self-registered (no consultation) */}
+                              {!diagnosis.consultation_id && (
+                                <div className="mt-2">
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-7 px-2 gap-1">
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                        Excluir
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Excluir diagnóstico?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Essa ação não pode ser desfeita. O diagnóstico "{diagnosis.name}" será removido.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDelete(diagnosis.id)}>Excluir</AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
                                 </div>
                               )}
                             </div>

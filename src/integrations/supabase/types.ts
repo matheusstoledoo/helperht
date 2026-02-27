@@ -1454,6 +1454,53 @@ export type Database = {
           },
         ]
       }
+      patient_reminders: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          patient_id: string
+          recurrence: string | null
+          reminder_time: string | null
+          reminder_type: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          patient_id: string
+          recurrence?: string | null
+          reminder_time?: string | null
+          reminder_type?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          patient_id?: string
+          recurrence?: string | null
+          reminder_time?: string | null
+          reminder_type?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_reminders_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           address: string | null
