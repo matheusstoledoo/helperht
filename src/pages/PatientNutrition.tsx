@@ -24,6 +24,7 @@ import { ptBR } from "date-fns/locale";
 import { FloatingUploadButton } from "@/components/documents/FloatingUploadButton";
 import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import SupplementsLog from "@/components/nutrition/SupplementsLog";
+import ManualNutritionPlanForm from "@/components/nutrition/ManualNutritionPlanForm";
 
 interface NutritionPlan {
   id: string;
@@ -64,6 +65,7 @@ export default function PatientNutrition() {
   const [userName, setUserName] = useState("");
   const [expandedMeals, setExpandedMeals] = useState<Record<string, boolean>>({});
   const [completedMeals, setCompletedMeals] = useState<Record<string, boolean>>({});
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -269,16 +271,31 @@ export default function PatientNutrition() {
             </TabsList>
 
             <TabsContent value="plan" className="space-y-4 mt-4">
-              {activePlan ? (
-                renderPlanCard(activePlan, true)
+              {showCreateForm ? (
+                <ManualNutritionPlanForm
+                  userId={user!.id}
+                  patientId={patientId}
+                  onSaved={() => { setShowCreateForm(false); window.location.reload(); }}
+                  onCancel={() => setShowCreateForm(false)}
+                />
+              ) : activePlan ? (
+                <>
+                  {renderPlanCard(activePlan, true)}
+                  <Button variant="outline" className="w-full" onClick={() => setShowCreateForm(true)}>
+                    <Plus className="h-4 w-4 mr-1" /> Criar novo plano
+                  </Button>
+                </>
               ) : (
                 <Card>
                   <CardContent className="p-8 text-center">
                     <Apple className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
                     <p className="text-muted-foreground">Nenhum plano alimentar ativo</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Faça upload de uma prescrição nutricional para começar
+                      Crie seu plano alimentar ou faça upload de uma prescrição
                     </p>
+                    <Button className="mt-4" onClick={() => setShowCreateForm(true)}>
+                      <Plus className="h-4 w-4 mr-1" /> Criar plano alimentar
+                    </Button>
                   </CardContent>
                 </Card>
               )}
