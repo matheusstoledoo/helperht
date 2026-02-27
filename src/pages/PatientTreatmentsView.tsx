@@ -18,6 +18,17 @@ import {
 } from "@/components/ui/collapsible";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
@@ -35,12 +46,15 @@ import {
   Lightbulb,
   FileText,
   Clock,
+  Trash2,
 } from "lucide-react";
 import { format, subDays, subMonths, subYears, isAfter, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import PatientLayout from "@/components/patient/PatientLayout";
 import { useQuery } from "@tanstack/react-query";
+import { PatientTreatmentForm } from "@/components/patient/PatientTreatmentForm";
+import { toast } from "sonner";
 
 interface Treatment {
   id: string;
@@ -53,6 +67,7 @@ interface Treatment {
   public_notes: string | null;
   explanation_text: string | null;
   diagnosis_id: string | null;
+  consultation_id: string | null;
   diagnosis_name: string | null;
   professional_id: string | null;
   professional_name: string | null;
@@ -71,7 +86,8 @@ const PatientTreatmentsView = () => {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
-
+  const [patientId, setPatientId] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   // Get professional name if filtering by professional
   const { data: filterProfessional } = useQuery({
     queryKey: ['professional-name', professionalId],
@@ -116,6 +132,8 @@ const PatientTreatmentsView = () => {
           return;
         }
 
+        setPatientId(patient.id);
+
         // Fetch all treatments with consultation and diagnosis info
         const { data: treatmentsData, error: treatmentsError } = await supabase
           .from("treatments")
@@ -154,6 +172,7 @@ const PatientTreatmentsView = () => {
           public_notes: t.public_notes,
           explanation_text: t.explanation_text,
           diagnosis_id: t.diagnosis_id,
+          consultation_id: t.consultation_id || null,
           diagnosis_name: t.diagnoses?.name || null,
           professional_id: t.consultations?.professional_id || null,
           professional_name: t.consultations?.users?.name || null,
@@ -180,7 +199,17 @@ const PatientTreatmentsView = () => {
     };
 
     fetchTreatments();
-  }, [user]);
+  }, [user, reloadKey]);
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("treatments").delete().eq("id", id);
+    if (error) {
+      toast.error("Erro ao excluir tratamento");
+      return;
+    }
+    toast.success("Tratamento excluído");
+    setReloadKey((k) => k + 1);
+  };
 
   // Get unique disease names for filter
   const uniqueDiseases = useMemo(() => {
@@ -309,6 +338,12 @@ const PatientTreatmentsView = () => {
       breadcrumb={breadcrumbContent}
     >
       <div className="max-w-4xl mx-auto p-4 space-y-4">
+        {/* Add button */}
+        {patientId && (
+          <div className="flex justify-end">
+            <PatientTreatmentForm patientId={patientId} onCreated={() => setReloadKey((k) => k + 1)} />
+          </div>
+        )}
         {/* Filters */}
         <Card>
           <CardContent className="p-4">
@@ -449,6 +484,31 @@ const PatientTreatmentsView = () => {
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                   <User className="h-4 w-4" />
                                   <span>{treatment.professional_name}</span>
+                                </div>
+                              )}
+                              {/* Delete button - only for self-registered (no consultation) */}
+                              {!treatment.consultation_id && (
+                                <div className="mt-2">
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-7 px-2 gap-1">
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                        Excluir
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Excluir tratamento?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Essa ação não pode ser desfeita. O tratamento "{treatment.name}" será removido.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDelete(treatment.id)}>Excluir</AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
                                 </div>
                               )}
                             </div>
