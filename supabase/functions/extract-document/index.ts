@@ -1,0 +1,182 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { document_id, file_url, file_type, category_hint } = await req.json();
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Update extraction status to processing
+    await supabase
+      .from("document_extractions")
+      .update({ extraction_status: "processing" })
+      .eq("document_id", document_id);
+
+    // Build the prompt based on document type
+    const systemPrompt = `You are a medical document extraction AI for a Brazilian healthcare app. 
+You MUST respond in valid JSON only, no markdown, no explanation.
+
+Analyze the document and extract structured data. The document may be in Portuguese.
+
+Return this exact JSON structure:
+{
+  "suggested_category": "one of: exame_laboratorial, exame_imagem, laudo, receita, resumo_internacao, prescricao_nutricional, prescricao_treino, prescricao_suplementacao, outros",
+  "confidence_score": 0.0 to 1.0,
+  "document_date": "YYYY-MM-DD or null",
+  "professional_name": "string or null",
+  "professional_registry": "CRM/CRN/CREF number or null",
+  "specialty": "string or null", 
+  "institution": "string or null",
+  "diagnoses": [{"name": "string", "icd_code": "string or null"}],
+  "medications": [{"name": "string", "dose": "string", "posology": "string", "duration": "string or null"}],
+  "lab_results": [{"marker_name": "string", "value": "number or string", "unit": "string", "reference_min": "number or null", "reference_max": "number or null", "reference_text": "string or null", "category": "hemograma|bioquimica|lipidico|tireoide|inflamatorios|hormonal|other"}],
+  "nutrition_data": {"total_calories": "number or null", "carbs_grams": "number or null", "carbs_percent": "number or null", "protein_grams": "number or null", "protein_percent": "number or null", "fat_grams": "number or null", "fat_percent": "number or null", "meals": [{"name": "string", "time": "string or null", "foods": [{"item": "string", "quantity": "string"}]}], "restrictions": ["string"], "supplements": [{"name": "string", "dose": "string", "timing": "string"}]},
+  "training_data": {"sport": "string or null", "frequency_per_week": "number or null", "sessions": [{"day": "string", "name": "string", "exercises": [{"name": "string", "sets": "number or null", "reps": "string or null", "load": "string or null", "rest": "string or null"}]}]},
+  "raw_text_summary": "brief summary of the document content in Portuguese, max 200 chars"
+}
+
+If a section is not applicable, return empty arrays or null values. Always try to extract as much as possible.`;
+
+    const userContent: any[] = [
+      {
+        type: "text",
+        text: `Extract data from this ${category_hint || "medical"} document. File type: ${file_type}`,
+      },
+    ];
+
+    // For images, include inline; for PDFs/docs, include the URL
+    if (file_type?.startsWith("image/")) {
+      userContent.push({
+        type: "image_url",
+        image_url: { url: file_url },
+      });
+    } else {
+      userContent.push({
+        type: "text",
+        text: `Document URL: ${file_url}\n\nNote: If you cannot access this URL, extract whatever information you can from the filename and context.`,
+      });
+    }
+
+    const aiResponse = await fetch(
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userContent },
+          ],
+        }),
+      }
+    );
+
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error("AI gateway error:", aiResponse.status, errorText);
+
+      if (aiResponse.status === 429) {
+        await supabase
+          .from("document_extractions")
+          .update({
+            extraction_status: "failed",
+            error_message: "Taxa de requisições excedida. Tente novamente em alguns minutos.",
+          })
+          .eq("document_id", document_id);
+        return new Response(
+          JSON.stringify({ error: "Rate limit exceeded" }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (aiResponse.status === 402) {
+        await supabase
+          .from("document_extractions")
+          .update({
+            extraction_status: "failed",
+            error_message: "Créditos de IA insuficientes.",
+          })
+          .eq("document_id", document_id);
+        return new Response(
+          JSON.stringify({ error: "Payment required" }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      throw new Error(`AI error: ${aiResponse.status}`);
+    }
+
+    const aiData = await aiResponse.json();
+    const content = aiData.choices?.[0]?.message?.content || "";
+
+    // Parse the JSON from AI response
+    let extracted;
+    try {
+      // Remove potential markdown code blocks
+      const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      extracted = JSON.parse(cleaned);
+    } catch (parseError) {
+      console.error("Failed to parse AI response:", content);
+      await supabase
+        .from("document_extractions")
+        .update({
+          extraction_status: "failed",
+          error_message: "Não foi possível interpretar o documento. Tente novamente ou preencha manualmente.",
+          raw_text: content,
+        })
+        .eq("document_id", document_id);
+
+      return new Response(
+        JSON.stringify({ error: "Failed to parse extraction", raw: content }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Save extraction results
+    await supabase
+      .from("document_extractions")
+      .update({
+        extraction_status: "completed",
+        extracted_data: extracted,
+        suggested_category: extracted.suggested_category || category_hint,
+        confidence_score: extracted.confidence_score || 0.5,
+        document_date: extracted.document_date,
+        professional_name: extracted.professional_name,
+        professional_registry: extracted.professional_registry,
+        specialty: extracted.specialty,
+        institution: extracted.institution,
+        raw_text: extracted.raw_text_summary,
+      })
+      .eq("document_id", document_id);
+
+    return new Response(
+      JSON.stringify({ success: true, extraction: extracted }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Extract document error:", error);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});

@@ -339,6 +339,74 @@ export type Database = {
           },
         ]
       }
+      document_extractions: {
+        Row: {
+          confidence_score: number | null
+          confirmed_at: string | null
+          created_at: string
+          document_date: string | null
+          document_id: string
+          error_message: string | null
+          extracted_data: Json | null
+          extraction_status: string
+          id: string
+          institution: string | null
+          professional_name: string | null
+          professional_registry: string | null
+          raw_text: string | null
+          specialty: string | null
+          suggested_category: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          confidence_score?: number | null
+          confirmed_at?: string | null
+          created_at?: string
+          document_date?: string | null
+          document_id: string
+          error_message?: string | null
+          extracted_data?: Json | null
+          extraction_status?: string
+          id?: string
+          institution?: string | null
+          professional_name?: string | null
+          professional_registry?: string | null
+          raw_text?: string | null
+          specialty?: string | null
+          suggested_category?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          confidence_score?: number | null
+          confirmed_at?: string | null
+          created_at?: string
+          document_date?: string | null
+          document_id?: string
+          error_message?: string | null
+          extracted_data?: Json | null
+          extraction_status?: string
+          id?: string
+          institution?: string | null
+          professional_name?: string | null
+          professional_registry?: string | null
+          raw_text?: string | null
+          specialty?: string | null
+          suggested_category?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_extractions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           category: string
@@ -1027,6 +1095,81 @@ export type Database = {
         }
         Relationships: []
       }
+      lab_results: {
+        Row: {
+          collection_date: string
+          created_at: string
+          document_id: string | null
+          id: string
+          lab_name: string | null
+          marker_category: string | null
+          marker_name: string
+          patient_id: string | null
+          reference_max: number | null
+          reference_min: number | null
+          reference_text: string | null
+          status: string | null
+          unit: string | null
+          updated_at: string
+          user_id: string
+          value: number | null
+          value_text: string | null
+        }
+        Insert: {
+          collection_date?: string
+          created_at?: string
+          document_id?: string | null
+          id?: string
+          lab_name?: string | null
+          marker_category?: string | null
+          marker_name: string
+          patient_id?: string | null
+          reference_max?: number | null
+          reference_min?: number | null
+          reference_text?: string | null
+          status?: string | null
+          unit?: string | null
+          updated_at?: string
+          user_id: string
+          value?: number | null
+          value_text?: string | null
+        }
+        Update: {
+          collection_date?: string
+          created_at?: string
+          document_id?: string | null
+          id?: string
+          lab_name?: string | null
+          marker_category?: string | null
+          marker_name?: string
+          patient_id?: string | null
+          reference_max?: number | null
+          reference_min?: number | null
+          reference_text?: string | null
+          status?: string | null
+          unit?: string | null
+          updated_at?: string
+          user_id?: string
+          value?: number | null
+          value_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_results_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_results_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       normalized_clinical_data: {
         Row: {
           clinical_event_id: string | null
@@ -1077,6 +1220,102 @@ export type Database = {
             columns: ["patient_outcome_id"]
             isOneToOne: false
             referencedRelation: "patient_outcomes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nutrition_plans: {
+        Row: {
+          avoided_foods: string[] | null
+          carbs_grams: number | null
+          carbs_percent: number | null
+          created_at: string
+          document_id: string | null
+          end_date: string | null
+          fat_grams: number | null
+          fat_percent: number | null
+          id: string
+          meals: Json | null
+          observations: string | null
+          patient_id: string | null
+          professional_name: string | null
+          professional_registry: string | null
+          protein_grams: number | null
+          protein_percent: number | null
+          recommended_foods: string[] | null
+          restrictions: string[] | null
+          start_date: string | null
+          status: string | null
+          supplements: Json | null
+          total_calories: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avoided_foods?: string[] | null
+          carbs_grams?: number | null
+          carbs_percent?: number | null
+          created_at?: string
+          document_id?: string | null
+          end_date?: string | null
+          fat_grams?: number | null
+          fat_percent?: number | null
+          id?: string
+          meals?: Json | null
+          observations?: string | null
+          patient_id?: string | null
+          professional_name?: string | null
+          professional_registry?: string | null
+          protein_grams?: number | null
+          protein_percent?: number | null
+          recommended_foods?: string[] | null
+          restrictions?: string[] | null
+          start_date?: string | null
+          status?: string | null
+          supplements?: Json | null
+          total_calories?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avoided_foods?: string[] | null
+          carbs_grams?: number | null
+          carbs_percent?: number | null
+          created_at?: string
+          document_id?: string | null
+          end_date?: string | null
+          fat_grams?: number | null
+          fat_percent?: number | null
+          id?: string
+          meals?: Json | null
+          observations?: string | null
+          patient_id?: string | null
+          professional_name?: string | null
+          professional_registry?: string | null
+          protein_grams?: number | null
+          protein_percent?: number | null
+          recommended_foods?: string[] | null
+          restrictions?: string[] | null
+          start_date?: string | null
+          status?: string | null
+          supplements?: Json | null
+          total_calories?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_plans_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_plans_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]
@@ -1262,6 +1501,60 @@ export type Database = {
             columns: ["performed_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplements_log: {
+        Row: {
+          created_at: string
+          id: string
+          log_date: string
+          notes: string | null
+          patient_id: string | null
+          product: string
+          quantity: string | null
+          timing: string
+          training_plan_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          log_date?: string
+          notes?: string | null
+          patient_id?: string | null
+          product: string
+          quantity?: string | null
+          timing: string
+          training_plan_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          log_date?: string
+          notes?: string | null
+          patient_id?: string | null
+          product?: string
+          quantity?: string | null
+          timing?: string
+          training_plan_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplements_log_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplements_log_training_plan_id_fkey"
+            columns: ["training_plan_id"]
+            isOneToOne: false
+            referencedRelation: "training_plans"
             referencedColumns: ["id"]
           },
         ]
@@ -1872,6 +2165,78 @@ export type Database = {
             columns: ["trail_id"]
             isOneToOne: false
             referencedRelation: "care_trails"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_plans: {
+        Row: {
+          created_at: string
+          document_id: string | null
+          end_date: string | null
+          frequency_per_week: number | null
+          id: string
+          observations: string | null
+          patient_id: string | null
+          periodization_notes: string | null
+          professional_name: string | null
+          professional_registry: string | null
+          sessions: Json | null
+          sport: string | null
+          start_date: string | null
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_id?: string | null
+          end_date?: string | null
+          frequency_per_week?: number | null
+          id?: string
+          observations?: string | null
+          patient_id?: string | null
+          periodization_notes?: string | null
+          professional_name?: string | null
+          professional_registry?: string | null
+          sessions?: Json | null
+          sport?: string | null
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string | null
+          end_date?: string | null
+          frequency_per_week?: number | null
+          id?: string
+          observations?: string | null
+          patient_id?: string | null
+          periodization_notes?: string | null
+          professional_name?: string | null
+          professional_registry?: string | null
+          sessions?: Json | null
+          sport?: string | null
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_plans_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_plans_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]

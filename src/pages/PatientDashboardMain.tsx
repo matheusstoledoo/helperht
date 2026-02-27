@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
@@ -8,6 +9,9 @@ import {
   ChevronRight
 } from "lucide-react";
 import PatientLayout from "@/components/patient/PatientLayout";
+import { FloatingUploadButton } from "@/components/documents/FloatingUploadButton";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DashboardCard {
   id: string;
@@ -19,6 +23,22 @@ interface DashboardCard {
 }
 
 export default function PatientDashboardMain() {
+  const { user } = useAuth();
+  const [patientId, setPatientId] = useState<string | null>(null);
+  const [userName, setUserName] = useState("");
+
+  useEffect(() => {
+    const fetchPatientInfo = async () => {
+      if (!user) return;
+      const [patientRes, userRes] = await Promise.all([
+        supabase.from("patients").select("id").eq("user_id", user.id).maybeSingle(),
+        supabase.from("users").select("name").eq("id", user.id).maybeSingle(),
+      ]);
+      if (patientRes.data) setPatientId(patientRes.data.id);
+      if (userRes.data) setUserName(userRes.data.name);
+    };
+    fetchPatientInfo();
+  }, [user]);
   const navigate = useNavigate();
 
   const dashboardCards: DashboardCard[] = [
@@ -86,6 +106,16 @@ export default function PatientDashboardMain() {
           ))}
         </div>
       </div>
+
+      {/* Floating Upload Button */}
+      {user && patientId && (
+        <FloatingUploadButton
+          patientId={patientId}
+          userId={user.id}
+          userRole="patient"
+          userName={userName}
+        />
+      )}
     </PatientLayout>
   );
 }
