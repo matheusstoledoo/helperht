@@ -23,20 +23,27 @@ serve(async (req) => {
     if (authError || !user) throw new Error("Unauthorized");
 
     // Fetch patient data
-    const [patientRes, labRes, diagRes, treatRes] = await Promise.all([
+    // Step 1: get patient + lab results (no dependency)
+    const [patientRes, labRes] = await Promise.all([
       supabase.from("patients").select("id, allergies, blood_type").eq("user_id", user.id).maybeSingle(),
       supabase.from("lab_results")
         .select("marker_name, value, unit, status, collection_date, reference_min, reference_max")
         .eq("user_id", user.id)
         .order("collection_date", { ascending: false })
         .limit(50),
+    ]);
+
+    const patientId = patientRes?.data?.id || "00000000-0000-0000-0000-000000000000";
+
+    // Step 2: diagnoses & treatments depend on patientId
+    const [diagRes, treatRes] = await Promise.all([
       supabase.from("diagnoses")
         .select("name, status, severity, icd_code, diagnosed_date")
-        .eq("patient_id", patientRes?.data?.id || "00000000-0000-0000-0000-000000000000")
+        .eq("patient_id", patientId)
         .eq("status", "active"),
       supabase.from("treatments")
         .select("name, status, dosage, frequency, start_date")
-        .eq("patient_id", patientRes?.data?.id || "00000000-0000-0000-0000-000000000000")
+        .eq("patient_id", patientId)
         .eq("status", "active"),
     ]);
 
