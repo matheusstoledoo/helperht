@@ -13,6 +13,7 @@ import {
   Clock,
   Flame,
   TrendingUp,
+  Plus,
 } from "lucide-react";
 import PatientLayout from "@/components/patient/PatientLayout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,6 +23,7 @@ import { ptBR } from "date-fns/locale";
 import { FloatingUploadButton } from "@/components/documents/FloatingUploadButton";
 import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import WorkoutLogger from "@/components/training/WorkoutLogger";
+import ManualTrainingPlanForm from "@/components/training/ManualTrainingPlanForm";
 
 interface TrainingPlan {
   id: string;
@@ -74,6 +76,7 @@ export default function PatientTraining() {
   const [patientId, setPatientId] = useState<string | null>(null);
   const [userName, setUserName] = useState("");
   const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>({});
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -244,16 +247,31 @@ export default function PatientTraining() {
             </TabsList>
 
             <TabsContent value="plan" className="space-y-4 mt-4">
-              {activePlan ? (
-                renderPlanCard(activePlan, true)
+              {showCreateForm ? (
+                <ManualTrainingPlanForm
+                  userId={user!.id}
+                  patientId={patientId}
+                  onSaved={() => { setShowCreateForm(false); window.location.reload(); }}
+                  onCancel={() => setShowCreateForm(false)}
+                />
+              ) : activePlan ? (
+                <>
+                  {renderPlanCard(activePlan, true)}
+                  <Button variant="outline" className="w-full" onClick={() => setShowCreateForm(true)}>
+                    <Plus className="h-4 w-4 mr-1" /> Criar novo plano
+                  </Button>
+                </>
               ) : (
                 <Card>
                   <CardContent className="p-8 text-center">
                     <Dumbbell className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
                     <p className="text-muted-foreground">Nenhum plano de treino ativo</p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Faça upload de uma prescrição de treino para começar
+                      Crie seu plano de treino ou faça upload de uma prescrição
                     </p>
+                    <Button className="mt-4" onClick={() => setShowCreateForm(true)}>
+                      <Plus className="h-4 w-4 mr-1" /> Criar plano de treino
+                    </Button>
                   </CardContent>
                 </Card>
               )}
