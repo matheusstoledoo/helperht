@@ -5,203 +5,320 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Heart,
-  Stethoscope,
-  Pill,
-  FlaskConical,
-  FileText,
   Activity,
   TrendingUp,
   TrendingDown,
   Minus,
+  AlertTriangle,
+  CheckCircle2,
+  ArrowRight,
 } from "lucide-react";
 import PatientLayout from "@/components/patient/PatientLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
-interface SummaryData {
-  activeDiagnoses: number;
-  activeTreatments: number;
-  totalDocuments: number;
-  recentLabResults: { marker_name: string; value: number | null; unit: string | null; status: string | null; collection_date: string }[];
-  pendingExams: number;
-  lastConsultation: string | null;
-  allergies: string[] | null;
-  bloodType: string | null;
+interface LabMarkerSummary {
+  marker_name: string;
+  latestValue: number | null;
+  previousValue: number | null;
+  unit: string | null;
+  status: string | null;
+  latestDate: string;
+  previousDate: string | null;
+  variationPercent: number | null;
+  reference_min: number | null;
+  reference_max: number | null;
+}
+
+interface Insight {
+  type: "warning" | "improvement" | "stable" | "attention";
+  title: string;
+  description: string;
 }
 
 export default function PatientHealthSummary() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [data, setData] = useState<SummaryData | null>(null);
+  const [markers, setMarkers] = useState<LabMarkerSummary[]>([]);
+  const [insights, setInsights] = useState<Insight[]>([]);
+  const [allergies, setAllergies] = useState<string[] | null>(null);
+  const [bloodType, setBloodType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
 
-    const fetch = async () => {
-      const patientRes = await supabase
-        .from("patients")
-        .select("id, allergies, blood_type")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (!patientRes.data) {
-        setLoading(false);
-        return;
-      }
-
-      const pid = patientRes.data.id;
-
-      const [diagRes, treatRes, docRes, labRes, examRes, consultRes] = await Promise.all([
-        supabase.from("diagnoses").select("id", { count: "exact", head: true }).eq("patient_id", pid).eq("status", "active"),
-        supabase.from("treatments").select("id", { count: "exact", head: true }).eq("patient_id", pid).eq("status", "active"),
-        supabase.from("documents").select("id", { count: "exact", head: true }).eq("patient_id", pid),
-        supabase.from("lab_results").select("marker_name, value, unit, status, collection_date").eq("user_id", user.id).order("collection_date", { ascending: false }).limit(6),
-        supabase.from("exams").select("id", { count: "exact", head: true }).eq("patient_id", pid).in("status", ["requested", "in_progress"]),
-        supabase.from("consultations").select("consultation_date").eq("patient_id", pid).order("consultation_date", { ascending: false }).limit(1),
+    const fetchData = async () => {
+      const [patientRes, labRes] = await Promise.all([
+        supabase.from("patients").select("id, allergies, blood_type").eq("user_id", user.id).maybeSingle(),
+        supabase
+          .from("lab_results")
+          .select("marker_name, value, unit, status, collection_date, reference_min, reference_max")
+          .eq("user_id", user.id)
+          .order("collection_date", { ascending: false })
+          .limit(200),
       ]);
 
-      setData({
-        activeDiagnoses: diagRes.count || 0,
-        activeTreatments: treatRes.count || 0,
-        totalDocuments: docRes.count || 0,
-        recentLabResults: (labRes.data || []) as any,
-        pendingExams: examRes.count || 0,
-        lastConsultation: consultRes.data?.[0]?.consultation_date || null,
-        allergies: patientRes.data.allergies,
-        bloodType: patientRes.data.blood_type,
+      if (patientRes.data) {
+        setAllergies(patientRes.data.allergies);
+        setBloodType(patientRes.data.blood_type);
+      }
+
+      const labs = (labRes.data || []) as {
+        marker_name: string;
+        value: number | null;
+        unit: string | null;
+        status: string | null;
+        collection_date: string;
+        reference_min: number | null;
+        reference_max: number | null;
+      }[];
+
+      // Group by marker, take last 2 readings each
+      const grouped: Record<string, typeof labs> = {};
+      for (const r of labs) {
+        if (!grouped[r.marker_name]) grouped[r.marker_name] = [];
+        if (grouped[r.marker_name].length < 2) grouped[r.marker_name].push(r);
+      }
+
+      const summaries: LabMarkerSummary[] = Object.entries(grouped).map(([name, readings]) => {
+        const latest = readings[0];
+        const previous = readings.length > 1 ? readings[1] : null;
+        let variationPercent: number | null = null;
+        if (latest.value != null && previous?.value != null && previous.value !== 0) {
+          variationPercent = Math.round(((latest.value - previous.value) / Math.abs(previous.value)) * 100);
+        }
+        return {
+          marker_name: name,
+          latestValue: latest.value,
+          previousValue: previous?.value ?? null,
+          unit: latest.unit,
+          status: latest.status,
+          latestDate: latest.collection_date,
+          previousDate: previous?.collection_date ?? null,
+          variationPercent,
+          reference_min: latest.reference_min,
+          reference_max: latest.reference_max,
+        };
       });
+
+      // Sort: abnormal first, then by date
+      summaries.sort((a, b) => {
+        const aAbnormal = a.status === "high" || a.status === "low" ? 0 : 1;
+        const bAbnormal = b.status === "high" || b.status === "low" ? 0 : 1;
+        if (aAbnormal !== bAbnormal) return aAbnormal - bAbnormal;
+        return new Date(b.latestDate).getTime() - new Date(a.latestDate).getTime();
+      });
+
+      setMarkers(summaries);
+
+      // Generate insights
+      const newInsights: Insight[] = [];
+      const abnormal = summaries.filter(m => m.status === "high" || m.status === "low");
+      const improved = summaries.filter(m => {
+        if (m.variationPercent == null || !m.previousValue) return false;
+        // Was abnormal before, now normal
+        return m.status === "normal" && m.variationPercent !== 0;
+      });
+      const worsened = summaries.filter(m => {
+        if (m.variationPercent == null) return false;
+        return (m.status === "high" || m.status === "low") && Math.abs(m.variationPercent) > 10;
+      });
+
+      if (abnormal.length === 0 && summaries.length > 0) {
+        newInsights.push({
+          type: "stable",
+          title: "Todos os marcadores dentro da normalidade",
+          description: "Seus resultados recentes estão dentro das faixas de referência.",
+        });
+      }
+
+      for (const m of worsened.slice(0, 3)) {
+        newInsights.push({
+          type: "warning",
+          title: `${m.marker_name} ${m.status === "high" ? "elevado" : "baixo"}`,
+          description: `Variação de ${m.variationPercent! > 0 ? "+" : ""}${m.variationPercent}% em relação ao exame anterior${m.latestValue != null ? ` (${m.latestValue} ${m.unit || ""})` : ""}.`,
+        });
+      }
+
+      for (const m of improved.slice(0, 2)) {
+        newInsights.push({
+          type: "improvement",
+          title: `${m.marker_name} normalizado`,
+          description: `Valor atual ${m.latestValue} ${m.unit || ""} — voltou à faixa normal.`,
+        });
+      }
+
+      if (abnormal.length > 0 && worsened.length === 0) {
+        newInsights.push({
+          type: "attention",
+          title: `${abnormal.length} marcador${abnormal.length > 1 ? "es" : ""} fora da faixa`,
+          description: abnormal.map(m => m.marker_name).join(", "),
+        });
+      }
+
+      setInsights(newInsights);
       setLoading(false);
     };
 
-    fetch();
+    fetchData();
   }, [user]);
 
-  const statusIcon = (status: string | null) => {
-    if (status === "high") return <TrendingUp className="h-3 w-3 text-destructive" />;
-    if (status === "low") return <TrendingDown className="h-3 w-3 text-amber-500" />;
-    return <Minus className="h-3 w-3 text-muted-foreground" />;
+  const variationBadge = (m: LabMarkerSummary) => {
+    if (m.variationPercent == null) return null;
+    const isUp = m.variationPercent > 0;
+    const isDown = m.variationPercent < 0;
+    const abs = Math.abs(m.variationPercent);
+    if (abs === 0) return null;
+
+    return (
+      <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${
+        m.status === "high" || m.status === "low"
+          ? "text-destructive"
+          : abs > 15
+          ? "text-amber-600"
+          : "text-green-600"
+      }`}>
+        {isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+        {isUp ? "+" : ""}{m.variationPercent}%
+      </span>
+    );
   };
 
-  const statCards = data
-    ? [
-        { label: "Diagnósticos ativos", value: data.activeDiagnoses, icon: <Stethoscope className="h-5 w-5" />, color: "text-purple-600", route: "/pac/diagnosticos" },
-        { label: "Tratamentos ativos", value: data.activeTreatments, icon: <Pill className="h-5 w-5" />, color: "text-green-600", route: "/pac/tratamentos" },
-        { label: "Exames pendentes", value: data.pendingExams, icon: <FlaskConical className="h-5 w-5" />, color: "text-amber-600", route: "/pac/documentos" },
-        { label: "Documentos", value: data.totalDocuments, icon: <FileText className="h-5 w-5" />, color: "text-blue-600", route: "/pac/documentos" },
-      ]
-    : [];
+  const statusBadge = (status: string | null) => {
+    if (status === "high") return <Badge variant="destructive" className="text-xs">Alto</Badge>;
+    if (status === "low") return <Badge className="text-xs bg-amber-500 hover:bg-amber-600">Baixo</Badge>;
+    return null;
+  };
+
+  const insightIcon = (type: Insight["type"]) => {
+    switch (type) {
+      case "warning": return <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />;
+      case "attention": return <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />;
+      case "improvement": return <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />;
+      case "stable": return <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />;
+    }
+  };
+
+  const insightBg = (type: Insight["type"]) => {
+    switch (type) {
+      case "warning": return "border-destructive/30 bg-destructive/5";
+      case "attention": return "border-amber-500/30 bg-amber-50 dark:bg-amber-950/20";
+      case "improvement": return "border-green-500/30 bg-green-50 dark:bg-green-950/20";
+      case "stable": return "border-green-500/30 bg-green-50 dark:bg-green-950/20";
+    }
+  };
 
   return (
     <PatientLayout
       title="Resumo de Saúde"
-      subtitle="Visão geral do seu estado clínico"
+      subtitle="Variações nos seus exames e insights"
       showHeader={false}
       breadcrumb={<PatientBreadcrumb currentPage="Resumo de Saúde" />}
     >
       <div className="p-4 sm:p-6 space-y-6 max-w-2xl mx-auto">
         {loading ? (
           <div className="text-center py-12 text-muted-foreground">Carregando...</div>
-        ) : !data ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Heart className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-              <p className="text-muted-foreground">Nenhum dado encontrado</p>
-            </CardContent>
-          </Card>
         ) : (
           <>
-            {/* Quick stats */}
-            <div className="grid grid-cols-2 gap-3">
-              {statCards.map((s) => (
-                <Card
-                  key={s.label}
-                  className="cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => navigate(s.route)}
-                >
-                  <CardContent className="p-4 flex items-center gap-3">
-                    <div className={`${s.color}`}>{s.icon}</div>
-                    <div>
-                      <p className="text-2xl font-bold text-foreground">{s.value}</p>
-                      <p className="text-xs text-muted-foreground">{s.label}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {/* Patient info */}
-            {(data.bloodType || (data.allergies && data.allergies.length > 0)) && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Heart className="h-4 w-4 text-red-500" />
-                    Informações Gerais
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {data.bloodType && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Tipo sanguíneo</span>
-                      <Badge variant="outline">{data.bloodType}</Badge>
-                    </div>
-                  )}
-                  {data.allergies && data.allergies.length > 0 && (
-                    <div>
-                      <span className="text-sm text-muted-foreground">Alergias</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {data.allergies.map((a, i) => (
-                          <Badge key={i} variant="destructive" className="text-xs">
-                            {a}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {data.lastConsultation && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Última consulta</span>
-                      <span className="text-sm font-medium">
-                        {new Date(data.lastConsultation).toLocaleDateString("pt-BR")}
-                      </span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+            {/* Patient info bar */}
+            {(bloodType || (allergies && allergies.length > 0)) && (
+              <div className="flex flex-wrap items-center gap-2">
+                {bloodType && (
+                  <Badge variant="outline" className="gap-1">
+                    <Heart className="h-3 w-3 text-destructive" /> {bloodType}
+                  </Badge>
+                )}
+                {allergies?.map((a, i) => (
+                  <Badge key={i} variant="destructive" className="text-xs">{a}</Badge>
+                ))}
+              </div>
             )}
 
-            {/* Recent lab results */}
-            {data.recentLabResults.length > 0 && (
+            {/* Insights */}
+            {insights.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-primary" />
+                  Insights
+                </h3>
+                {insights.map((insight, i) => (
+                  <div key={i} className={`flex items-start gap-3 p-3 rounded-lg border ${insightBg(insight.type)}`}>
+                    {insightIcon(insight.type)}
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{insight.title}</p>
+                      <p className="text-xs text-muted-foreground">{insight.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Lab markers with variations */}
+            {markers.length > 0 ? (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Activity className="h-4 w-4 text-primary" />
-                    Últimos Resultados
+                    Marcadores Recentes
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    {data.recentLabResults.map((lab, i) => (
-                      <div key={i} className="flex items-center justify-between py-1.5 border-b last:border-0">
-                        <div className="flex items-center gap-2">
-                          {statusIcon(lab.status)}
-                          <span className="text-sm">{lab.marker_name}</span>
+                  <div className="space-y-1">
+                    {markers.map((m, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between py-2.5 border-b last:border-0"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`h-2 w-2 rounded-full shrink-0 ${
+                            m.status === "high" ? "bg-destructive" :
+                            m.status === "low" ? "bg-amber-500" :
+                            "bg-green-500"
+                          }`} />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-medium truncate">{m.marker_name}</span>
+                              {statusBadge(m.status)}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(m.latestDate + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}
+                              {m.previousDate && (
+                                <span> • anterior: {m.previousValue ?? "—"} {m.unit || ""}</span>
+                              )}
+                            </p>
+                          </div>
                         </div>
-                        <span className="text-sm font-medium">
-                          {lab.value ?? "—"} {lab.unit || ""}
-                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-sm font-semibold text-foreground">
+                            {m.latestValue ?? "—"} <span className="text-xs font-normal text-muted-foreground">{m.unit || ""}</span>
+                          </span>
+                          {variationBadge(m)}
+                        </div>
                       </div>
                     ))}
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="w-full mt-3"
+                    className="w-full mt-3 gap-1"
                     onClick={() => navigate("/pac/exames-lab")}
                   >
-                    Ver gráficos completos
+                    Ver gráficos detalhados <ArrowRight className="h-3 w-3" />
                   </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Activity className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                  <p className="text-muted-foreground">Nenhum resultado de exame encontrado</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Faça upload de exames para ver variações e insights aqui
+                  </p>
                 </CardContent>
               </Card>
             )}
