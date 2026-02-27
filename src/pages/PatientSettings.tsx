@@ -32,6 +32,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import PatientLayout from "@/components/patient/PatientLayout";
+import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 
 const PatientSettings = () => {
   const { user } = useAuth();
@@ -172,15 +173,7 @@ const PatientSettings = () => {
     <PatientLayout 
       title="Configurações" 
       subtitle="Gerencie suas informações e preferências"
-      breadcrumb={
-        <nav className="flex items-center text-sm text-muted-foreground">
-          <a href="/pac/dashboard" className="hover:text-foreground transition-colors">
-            Página inicial
-          </a>
-          <span className="mx-2">›</span>
-          <span className="text-foreground font-medium">Configurações</span>
-        </nav>
-      }
+      breadcrumb={<PatientBreadcrumb currentPage="Configurações" />}
     >
       <div className="max-w-2xl mx-auto p-4 space-y-6">
         {/* Profile Section */}

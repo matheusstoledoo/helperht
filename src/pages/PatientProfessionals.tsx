@@ -12,18 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 import { User, Calendar, ChevronRight, Search } from "lucide-react";
+import PatientLayout from "@/components/patient/PatientLayout";
+import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import PatientLayout from "@/components/patient/PatientLayout";
 
 interface Professional {
   id: string;
@@ -122,28 +115,8 @@ const PatientProfessionals = () => {
   });
 
   return (
-    <PatientLayout title="" subtitle="">
+    <PatientLayout title="" subtitle="" breadcrumb={<PatientBreadcrumb currentPage="Profissionais" />}>
       <div className="max-w-4xl mx-auto p-4 space-y-6">
-        {/* Breadcrumbs as Header */}
-        <div className="border-b bg-card -mx-4 -mt-4 px-4 py-4 mb-6">
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link to="/pac/dashboard" className="text-muted-foreground hover:text-foreground">
-                    Página inicial
-                  </Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator>
-                <ChevronRight className="h-4 w-4" />
-              </BreadcrumbSeparator>
-              <BreadcrumbItem>
-                <BreadcrumbPage className="font-semibold">Profissionais</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

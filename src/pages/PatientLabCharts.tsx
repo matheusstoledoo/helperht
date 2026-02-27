@@ -6,6 +6,7 @@ import { LabPanelSection, LAB_PANELS, classifyMarker } from "@/components/lab-ch
 import type { LabDataPoint } from "@/components/lab-charts/LabMarkerChart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FlaskConical } from "lucide-react";
+import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 
 interface RawLabResult {
   id: string;
@@ -100,7 +101,7 @@ export default function PatientLabCharts() {
   }, [groupedByMarker]);
 
   return (
-    <PatientLayout title="Meus Exames Laboratoriais" subtitle="Acompanhe a evolução dos seus marcadores ao longo do tempo" showHeader>
+    <PatientLayout title="Meus Exames Laboratoriais" subtitle="Acompanhe a evolução dos seus marcadores ao longo do tempo" showHeader breadcrumb={<PatientBreadcrumb currentPage="Gráficos de Exames" />}>
       <div className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto">
         {loading ? (
           <div className="space-y-4">

@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  ArrowLeft,
   Bell,
   Pill,
   FlaskConical,
@@ -20,6 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { format, isAfter, isBefore, addDays, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 
 interface Treatment {
   id: string;
@@ -226,11 +226,7 @@ export default function PatientAlerts() {
       title="Alertas e Lembretes"
       subtitle="Medicações, exames e notificações"
       showHeader={false}
-      breadcrumb={
-        <Button variant="ghost" size="sm" onClick={() => navigate("/pac/dashboard")} className="gap-1">
-          <ArrowLeft className="h-4 w-4" /> Voltar
-        </Button>
-      }
+      breadcrumb={<PatientBreadcrumb currentPage="Alertas e Lembretes" />}
     >
       <div className="p-4 sm:p-6 space-y-6 max-w-2xl mx-auto">
         {loading ? (
