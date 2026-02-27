@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  ArrowLeft,
   Dumbbell,
   Calendar,
   ChevronDown,
@@ -21,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FloatingUploadButton } from "@/components/documents/FloatingUploadButton";
+import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import WorkoutLogger from "@/components/training/WorkoutLogger";
 
 interface TrainingPlan {
@@ -231,11 +231,7 @@ export default function PatientTraining() {
       title="Treinos"
       subtitle="Seus planos de treino e registros"
       showHeader={false}
-      breadcrumb={
-        <Button variant="ghost" size="sm" onClick={() => navigate("/pac/dashboard")} className="gap-1">
-          <ArrowLeft className="h-4 w-4" /> Voltar
-        </Button>
-      }
+      breadcrumb={<PatientBreadcrumb currentPage="Treinos" />}
     >
       <div className="p-4 sm:p-6 space-y-6 max-w-2xl mx-auto">
         {loading ? (

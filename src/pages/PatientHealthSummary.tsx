@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowLeft,
   Heart,
   Stethoscope,
   Pill,
@@ -18,6 +17,7 @@ import {
 import PatientLayout from "@/components/patient/PatientLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 
 interface SummaryData {
   activeDiagnoses: number;
@@ -98,11 +98,7 @@ export default function PatientHealthSummary() {
       title="Resumo de Saúde"
       subtitle="Visão geral do seu estado clínico"
       showHeader={false}
-      breadcrumb={
-        <Button variant="ghost" size="sm" onClick={() => navigate("/pac/dashboard")} className="gap-1">
-          <ArrowLeft className="h-4 w-4" /> Voltar
-        </Button>
-      }
+      breadcrumb={<PatientBreadcrumb currentPage="Resumo de Saúde" />}
     >
       <div className="p-4 sm:p-6 space-y-6 max-w-2xl mx-auto">
         {loading ? (

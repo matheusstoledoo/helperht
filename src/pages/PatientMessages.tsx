@@ -14,6 +14,7 @@ import {
 import PatientLayout from "@/components/patient/PatientLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -267,11 +268,7 @@ export default function PatientMessages() {
       title="Mensagens"
       subtitle="Converse com seus profissionais de saúde"
       showHeader={false}
-      breadcrumb={
-        <Button variant="ghost" size="sm" onClick={() => navigate("/pac/dashboard")} className="gap-1">
-          <ArrowLeft className="h-4 w-4" /> Voltar
-        </Button>
-      }
+      breadcrumb={<PatientBreadcrumb currentPage="Mensagens" />}
     >
       <div className="p-4 sm:p-6 space-y-4 max-w-2xl mx-auto">
         {loading ? (

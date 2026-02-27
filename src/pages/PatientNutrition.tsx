@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import {
-  ArrowLeft,
   Apple,
   Flame,
   Droplets,
@@ -23,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FloatingUploadButton } from "@/components/documents/FloatingUploadButton";
+import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import SupplementsLog from "@/components/nutrition/SupplementsLog";
 
 interface NutritionPlan {
@@ -256,11 +256,7 @@ export default function PatientNutrition() {
       title="Nutrição"
       subtitle="Seu plano alimentar e suplementação"
       showHeader={false}
-      breadcrumb={
-        <Button variant="ghost" size="sm" onClick={() => navigate("/pac/dashboard")} className="gap-1">
-          <ArrowLeft className="h-4 w-4" /> Voltar
-        </Button>
-      }
+      breadcrumb={<PatientBreadcrumb currentPage="Nutrição" />}
     >
       <div className="p-4 sm:p-6 space-y-6 max-w-2xl mx-auto">
         {loading ? (
