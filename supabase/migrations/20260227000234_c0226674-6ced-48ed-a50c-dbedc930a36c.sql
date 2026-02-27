@@ -1,0 +1,1 @@
+ALTER TABLE public.interested_leads ADD COLUMN specialty text;

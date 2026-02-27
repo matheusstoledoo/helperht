@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Helper Design System - Colors in HSL */
+    --background: 216 33% 97%; /* #F4F6F8 */
+    --foreground: 215 25% 20%; /* #1E293B */
+
+    --card: 0 0% 98%; /* #FBFBFB */
+    --card-foreground: 215 25% 20%;
+
+    --popover: 0 0% 98%;
+    --popover-foreground: 215 25% 20%;
+
+    --primary: 212 35% 21%; /* #22334A */
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 213 35% 28%; /* #2F4662 */
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 210 14% 89%; /* #E5E8EB */
+    --muted-foreground: 209 15% 65%; /* #9AA6B2 */
+
+    --accent: 177 94% 38%; /* #0FC0B9 */
+    --accent-foreground: 0 0% 98%;
+
+    --highlight: 180 100% 50%; /* #00FDE4 */
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 210 20% 90%;
+    --input: 210 20% 90%;
+    --ring: 177 94% 38%;
+
+    --radius: 1rem;
+
+    --sidebar-background: 212 35% 21%; /* #22334A */
+
+    --sidebar-foreground: 0 0% 98%;
+
+    --sidebar-primary: 177 94% 38%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 213 35% 28%;
+
+    --sidebar-accent-foreground: 0 0% 98%;
+
+    --sidebar-border: 212 30% 25%;
+
+    --sidebar-ring: 177 94% 38%;
+  }
+
+  .dark {
+    --background: 212 35% 15%;
+    --foreground: 0 0% 98%;
+
+    --card: 212 35% 18%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 212 35% 18%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 212 35% 21%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 213 35% 28%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 212 30% 25%;
+    --muted-foreground: 209 15% 65%;
+
+    --accent: 177 94% 38%;
+    --accent-foreground: 0 0% 98%;
+
+    --highlight: 180 100% 50%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 212 30% 25%;
+    --input: 212 30% 25%;
+    --ring: 177 94% 38%;
+    --sidebar-background: 212 35% 15%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 177 94% 38%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 212 30% 25%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 212 30% 25%;
+    --sidebar-ring: 177 94% 38%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Montserrat', sans-serif;
+  }
+}
+
+@layer utilities {
+  /* Helper card styles */
+  .helper-card {
+    @apply rounded-2xl bg-card shadow-sm border border-border/50 transition-all duration-300;
+  }
+  
+  .helper-card-hover {
+    @apply helper-card hover:shadow-md hover:border-accent/20;
+  }
+
+  /* Smooth animations */
+  .fade-in {
+    animation: fadeIn 0.4s ease-in;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
