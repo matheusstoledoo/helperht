@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Mail, 
@@ -21,7 +22,12 @@ import {
   EyeOff,
   CheckCircle,
   UserX,
-  Settings
+  Settings,
+  User,
+  Heart,
+  Phone,
+  Save,
+  X,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -30,12 +36,21 @@ import PatientLayout from "@/components/patient/PatientLayout";
 const PatientSettings = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPasswords, setShowPasswords] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [shareDataBetweenProfessionals, setShareDataBetweenProfessionals] = useState(true);
+
+  // Profile editing state
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileName, setProfileName] = useState("");
+  const [profileBloodType, setProfileBloodType] = useState("");
+  const [profileAllergies, setProfileAllergies] = useState("");
+  const [profileEmergencyName, setProfileEmergencyName] = useState("");
+  const [profileEmergencyPhone, setProfileEmergencyPhone] = useState("");
 
   // Fetch user data
   const { data: userData, isLoading: loadingUser } = useQuery({
@@ -168,6 +183,132 @@ const PatientSettings = () => {
       }
     >
       <div className="max-w-2xl mx-auto p-4 space-y-6">
+        {/* Profile Section */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <User className="h-5 w-5 text-primary" />
+                Perfil
+              </CardTitle>
+              {!editingProfile ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setProfileName(userData?.name || "");
+                    setProfileBloodType(patient?.blood_type || "");
+                    setProfileAllergies((patient?.allergies || []).join(", "));
+                    setProfileEmergencyName(patient?.emergency_contact_name || "");
+                    setProfileEmergencyPhone(patient?.emergency_contact_phone || "");
+                    setEditingProfile(true);
+                  }}
+                >
+                  Editar
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setEditingProfile(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        await supabase.from("users").update({ name: profileName }).eq("id", user!.id);
+                        if (patient) {
+                          await supabase.from("patients").update({
+                            blood_type: profileBloodType || null,
+                            allergies: profileAllergies ? profileAllergies.split(",").map(a => a.trim()).filter(Boolean) : null,
+                            emergency_contact_name: profileEmergencyName || null,
+                            emergency_contact_phone: profileEmergencyPhone || null,
+                          }).eq("id", patient.id);
+                        }
+                        queryClient.invalidateQueries({ queryKey: ["user-data"] });
+                        queryClient.invalidateQueries({ queryKey: ["patient-by-user"] });
+                        toast({ title: "Perfil atualizado!" });
+                        setEditingProfile(false);
+                      } catch {
+                        toast({ title: "Erro ao salvar", variant: "destructive" });
+                      }
+                    }}
+                  >
+                    <Save className="h-4 w-4 mr-1" /> Salvar
+                  </Button>
+                </div>
+              )}
+            </div>
+            <CardDescription>Seus dados pessoais e informações de saúde</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {loadingUser ? (
+              <Skeleton className="h-20 w-full" />
+            ) : editingProfile ? (
+              <>
+                <div className="space-y-1.5">
+                  <Label>Nome</Label>
+                  <Input value={profileName} onChange={(e) => setProfileName(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Tipo sanguíneo</Label>
+                  <Select value={profileBloodType} onValueChange={setProfileBloodType}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(t => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Alergias (separadas por vírgula)</Label>
+                  <Input value={profileAllergies} onChange={(e) => setProfileAllergies(e.target.value)} placeholder="Ex: Dipirona, Amendoim" />
+                </div>
+                <Separator />
+                <p className="text-sm font-medium flex items-center gap-1"><Phone className="h-4 w-4" /> Contato de emergência</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Nome</Label>
+                    <Input value={profileEmergencyName} onChange={(e) => setProfileEmergencyName(e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Telefone</Label>
+                    <Input value={profileEmergencyPhone} onChange={(e) => setProfileEmergencyPhone(e.target.value)} />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Nome</span>
+                  <span className="text-sm font-medium">{userData?.name || "—"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Tipo sanguíneo</span>
+                  <span className="text-sm font-medium">{patient?.blood_type || "—"}</span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-sm text-muted-foreground">Alergias</span>
+                  <div className="flex flex-wrap gap-1 justify-end">
+                    {patient?.allergies?.length ? patient.allergies.map((a, i) => (
+                      <Badge key={i} variant="destructive" className="text-xs">{a}</Badge>
+                    )) : <span className="text-sm text-muted-foreground">Nenhuma</span>}
+                  </div>
+                </div>
+                <Separator />
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Contato de emergência</span>
+                  <span className="text-sm font-medium">
+                    {patient?.emergency_contact_name
+                      ? `${patient.emergency_contact_name} (${patient.emergency_contact_phone || "sem tel."})`
+                      : "—"}
+                  </span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Access Data Section */}
         <Card>
           <CardHeader>
