@@ -37,7 +37,8 @@ const PatientCareTrails = lazy(() => import("./pages/PatientCareTrails"));
 const PatientLabCharts = lazy(() => import("./pages/PatientLabCharts"));
 const PatientNutrition = lazy(() => import("./pages/PatientNutrition"));
 const PatientTraining = lazy(() => import("./pages/PatientTraining"));
-// PatientGoals and PatientGoalsView removed
+const PatientAlerts = lazy(() => import("./pages/PatientAlerts"));
+const PatientHealthSummary = lazy(() => import("./pages/PatientHealthSummary"));
 // PatientTrailsView removed - trails are now professional-only
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -78,7 +79,8 @@ const App = () => (
               <Route path="/pac/exames-lab" element={<PatientLabCharts />} />
               <Route path="/pac/nutricao" element={<PatientNutrition />} />
               <Route path="/pac/treinos" element={<PatientTraining />} />
-              {/* /pac/metas removed */}
+              <Route path="/pac/alertas" element={<PatientAlerts />} />
+              <Route path="/pac/resumo" element={<PatientHealthSummary />} />
               {/* /pac/trilhas removed - trails are now professional-only */}
               <Route path="/pac/config" element={<PatientSettings />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
