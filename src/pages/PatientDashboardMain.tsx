@@ -13,6 +13,7 @@ import {
   Bell,
   Heart,
   MessageCircle,
+  Sparkles,
 } from "lucide-react";
 import PatientLayout from "@/components/patient/PatientLayout";
 import { FloatingUploadButton } from "@/components/documents/FloatingUploadButton";
@@ -127,6 +128,14 @@ export default function PatientDashboardMain() {
       icon: <MessageCircle className="h-8 w-8 sm:h-10 sm:w-10" />,
       route: `/pac/mensagens`,
       color: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+    },
+    {
+      id: "insights",
+      title: "Insights de IA",
+      description: "Análises inteligentes dos seus dados de saúde",
+      icon: <Sparkles className="h-8 w-8 sm:h-10 sm:w-10" />,
+      route: `/pac/insights`,
+      color: "bg-violet-500/10 text-violet-600 dark:text-violet-400"
     },
   ];
 
