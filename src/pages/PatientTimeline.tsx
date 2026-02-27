@@ -59,6 +59,8 @@ import {
   Lock,
   FlaskConical,
   ImageIcon,
+  List,
+  LayoutList,
 } from "lucide-react";
 import { format, subDays, subMonths, subYears, isAfter, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -167,6 +169,7 @@ const PatientTimeline = () => {
 
   // Expanded cards
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<"compact" | "expanded">("expanded");
 
   // Edit dialogs
   const [editingPublicNotes, setEditingPublicNotes] = useState<TimelineEvent | null>(null);
@@ -531,7 +534,7 @@ const PatientTimeline = () => {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
               <Select value={eventTypeFilter} onValueChange={(v) => setEventTypeFilter(v as EventType | "all")}>
                 <SelectTrigger className="w-full sm:w-[220px]">
                   <SelectValue placeholder="Filtrar por tipo" />
@@ -544,7 +547,6 @@ const PatientTimeline = () => {
                   <SelectItem value="treatment_start">Início de tratamento</SelectItem>
                   <SelectItem value="treatment_modify">Alteração de tratamento</SelectItem>
                   <SelectItem value="exam_result">Resultado de exame</SelectItem>
-                  <SelectItem value="goals_update">Definição de metas</SelectItem>
                   <SelectItem value="document_upload">Documentos</SelectItem>
                 </SelectContent>
               </Select>
@@ -562,6 +564,28 @@ const PatientTimeline = () => {
                   <SelectItem value="year">Último Ano</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* View mode toggle */}
+              <div className="flex items-center gap-1 border rounded-md p-0.5 ml-auto">
+                <Button
+                  variant={viewMode === "compact" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("compact")}
+                  className="h-8 px-2"
+                  title="Modo compacto"
+                >
+                  <List className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "expanded" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("expanded")}
+                  className="h-8 px-2"
+                  title="Modo expandido"
+                >
+                  <LayoutList className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </header>
 
@@ -579,9 +603,33 @@ const PatientTimeline = () => {
                   <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-border" />
 
                   {/* Timeline events */}
-                  <div className="space-y-6 pl-6">
+                  <div className={`${viewMode === "compact" ? "space-y-2" : "space-y-6"} pl-6`}>
                     {filteredEvents.map((event, index) => {
                       const isExpanded = expandedCards.has(event.id);
+
+                      if (viewMode === "compact") {
+                        return (
+                          <div
+                            key={event.id}
+                            className="relative animate-fade-in cursor-pointer"
+                            style={{ animationDelay: `${index * 0.02}s` }}
+                            onClick={() => toggleExpanded(event.id)}
+                          >
+                            <div className="absolute left-0 top-3 w-2 h-2 rounded-full bg-primary border-2 border-background -translate-x-1/2" />
+                            <div className="ml-6 flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors">
+                              <div className={`p-1.5 rounded-md shrink-0 ${eventTypeColors[event.type]}`}>
+                                {getEventIcon(event.type)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-foreground truncate">{event.title}</p>
+                              </div>
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                {format(parseISO(event.date), "dd/MM/yy")}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      }
 
                       return (
                         <div
@@ -640,10 +688,9 @@ const PatientTimeline = () => {
                               {/* Expanded Content */}
                               {isExpanded && (
                                 <div className="mt-4 pt-4 border-t border-border ml-12 space-y-4">
-                                  {/* Consultation Details - only for consultation type */}
+                                  {/* Consultation Details */}
                                   {event.type === "consultation" && event.consultationDetails && (
                                     <>
-                                      {/* Diagnoses */}
                                       {event.consultationDetails.diagnoses.length > 0 && (
                                         <div>
                                           <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
@@ -664,7 +711,6 @@ const PatientTimeline = () => {
                                         </div>
                                       )}
 
-                                      {/* Treatments */}
                                       {event.consultationDetails.treatments.length > 0 && (
                                         <div>
                                           <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
@@ -686,7 +732,6 @@ const PatientTimeline = () => {
                                         </div>
                                       )}
 
-                                      {/* Exams */}
                                       {event.consultationDetails.exams.length > 0 && (
                                         <div>
                                           <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
@@ -703,7 +748,6 @@ const PatientTimeline = () => {
                                           </ul>
                                         </div>
                                       )}
-
                                     </>
                                   )}
 

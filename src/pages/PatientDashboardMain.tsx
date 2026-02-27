@@ -6,6 +6,8 @@ import {
   Stethoscope, 
   Pill, 
   FileText, 
+  FlaskConical,
+  Clock,
   ChevronRight
 } from "lucide-react";
 import PatientLayout from "@/components/patient/PatientLayout";
@@ -73,6 +75,14 @@ export default function PatientDashboardMain() {
       icon: <FileText className="h-8 w-8 sm:h-10 sm:w-10" />,
       route: `/pac/documentos`,
       color: "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+    },
+    {
+      id: "lab-charts",
+      title: "Gráficos de Exames",
+      description: "Veja a evolução dos seus marcadores laboratoriais",
+      icon: <FlaskConical className="h-8 w-8 sm:h-10 sm:w-10" />,
+      route: `/pac/exames-lab`,
+      color: "bg-purple-500/10 text-purple-600 dark:text-purple-400"
     },
   ];
 
