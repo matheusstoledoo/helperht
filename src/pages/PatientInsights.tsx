@@ -68,26 +68,35 @@ const priorityIcon = (priority: string) => {
 };
 
 export default function PatientInsights() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [data, setData] = useState<InsightsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
 
   const generateInsights = async () => {
-    if (!user) return;
+    if (!user) {
+      toast.error("Você precisa estar logado para gerar insights.");
+      return;
+    }
     setLoading(true);
     try {
+      console.log("[Insights] Calling generate-health-insights...");
       const { data: result, error } = await supabase.functions.invoke("generate-health-insights");
-      if (error) throw error;
+      console.log("[Insights] Response:", { result, error });
+      if (error) {
+        console.error("[Insights] Function error:", error);
+        throw error;
+      }
       if (result?.error) {
         toast.error(result.error);
         return;
       }
       setData(result as InsightsData);
       setGenerated(true);
-    } catch (e) {
-      console.error(e);
-      toast.error("Erro ao gerar insights. Tente novamente.");
+    } catch (e: any) {
+      console.error("[Insights] Error:", e);
+      const message = e?.message || e?.context?.body || "Erro ao gerar insights. Tente novamente.";
+      toast.error(typeof message === 'string' ? message : "Erro ao gerar insights. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -101,7 +110,14 @@ export default function PatientInsights() {
       breadcrumb={<PatientBreadcrumb currentPage="Insights de IA" />}
     >
       <div className="p-4 sm:p-6 space-y-6 max-w-2xl mx-auto">
-        {!generated ? (
+        {authLoading ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <RefreshCw className="h-8 w-8 mx-auto animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground mt-2">Carregando...</p>
+            </CardContent>
+          </Card>
+        ) : !generated ? (
           <Card>
             <CardContent className="p-8 text-center space-y-4">
               <Sparkles className="h-12 w-12 mx-auto text-primary/60" />
