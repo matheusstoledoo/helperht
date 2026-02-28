@@ -35,6 +35,10 @@ const PatientDocumentsView = lazy(() => import("./pages/PatientDocumentsView"));
 const PatientSettings = lazy(() => import("./pages/PatientSettings"));
 const PatientCareTrails = lazy(() => import("./pages/PatientCareTrails"));
 const PatientLabCharts = lazy(() => import("./pages/PatientLabCharts"));
+const ProfPatientNutrition = lazy(() => import("./pages/ProfPatientNutrition"));
+const ProfPatientTraining = lazy(() => import("./pages/ProfPatientTraining"));
+const ProfPatientHealthSummary = lazy(() => import("./pages/ProfPatientHealthSummary"));
+const ProfPatientLabCharts = lazy(() => import("./pages/ProfPatientLabCharts"));
 const PatientNutrition = lazy(() => import("./pages/PatientNutrition"));
 const PatientTraining = lazy(() => import("./pages/PatientTraining"));
 const PatientAlerts = lazy(() => import("./pages/PatientAlerts"));
@@ -63,6 +67,10 @@ const App = () => (
               <Route path="/prof/paciente/:id/tratamentos" element={<PatientTreatments />} />
               <Route path="/prof/paciente/:id/exames" element={<PatientExams />} />
               <Route path="/prof/paciente/:id/documentos" element={<PatientDocuments />} />
+              <Route path="/prof/paciente/:id/nutricao" element={<ProfPatientNutrition />} />
+              <Route path="/prof/paciente/:id/treinos" element={<ProfPatientTraining />} />
+              <Route path="/prof/paciente/:id/resumo" element={<ProfPatientHealthSummary />} />
+              <Route path="/prof/paciente/:id/graficos-exames" element={<ProfPatientLabCharts />} />
               {/* /prof/paciente/:id/metas removed */}
               <Route path="/prof/paciente/:id/*" element={<ProfessionalPatientView />} />
               <Route path="/patient/:id" element={<PatientDetail />} />
