@@ -22,8 +22,7 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) throw new Error("Unauthorized");
 
-    // Fetch patient data
-    // Step 1: get patient + lab results (no dependency)
+    // Step 1: get patient + lab results
     const [patientRes, labRes] = await Promise.all([
       supabase.from("patients").select("id, allergies, blood_type").eq("user_id", user.id).maybeSingle(),
       supabase.from("lab_results")
@@ -35,8 +34,8 @@ serve(async (req) => {
 
     const patientId = patientRes?.data?.id || "00000000-0000-0000-0000-000000000000";
 
-    // Step 2: diagnoses & treatments depend on patientId
-    const [diagRes, treatRes] = await Promise.all([
+    // Step 2: diagnoses, treatments, nutrition, training
+    const [diagRes, treatRes, nutritionRes, trainingRes] = await Promise.all([
       supabase.from("diagnoses")
         .select("name, status, severity, icd_code, diagnosed_date")
         .eq("patient_id", patientId)
@@ -45,7 +44,22 @@ serve(async (req) => {
         .select("name, status, dosage, frequency, start_date")
         .eq("patient_id", patientId)
         .eq("status", "active"),
+      supabase.from("nutrition_plans")
+        .select("total_calories, protein_grams, carbs_grams, fat_grams, restrictions, recommended_foods, avoided_foods, meals, supplements, observations, status")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1),
+      supabase.from("training_plans")
+        .select("sport, frequency_per_week, sessions, periodization_notes, observations, status")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1),
     ]);
+
+    const activeNutrition = nutritionRes.data?.[0] || null;
+    const activeTraining = trainingRes.data?.[0] || null;
 
     const patientContext = {
       allergies: patientRes.data?.allergies || [],
@@ -53,12 +67,31 @@ serve(async (req) => {
       lab_results: (labRes.data || []).slice(0, 30),
       active_diagnoses: diagRes.data || [],
       active_treatments: treatRes.data || [],
+      nutrition: activeNutrition ? {
+        calories: activeNutrition.total_calories,
+        protein_g: activeNutrition.protein_grams,
+        carbs_g: activeNutrition.carbs_grams,
+        fat_g: activeNutrition.fat_grams,
+        restrictions: activeNutrition.restrictions,
+        recommended_foods: activeNutrition.recommended_foods,
+        avoided_foods: activeNutrition.avoided_foods,
+        supplements: activeNutrition.supplements,
+        observations: activeNutrition.observations,
+      } : null,
+      training: activeTraining ? {
+        sport: activeTraining.sport,
+        frequency_per_week: activeTraining.frequency_per_week,
+        periodization: activeTraining.periodization_notes,
+        observations: activeTraining.observations,
+        session_count: Array.isArray(activeTraining.sessions) ? activeTraining.sessions.length : 0,
+      } : null,
     };
 
-    // Check if there's enough data
     const hasData = patientContext.lab_results.length > 0 ||
       patientContext.active_diagnoses.length > 0 ||
-      patientContext.active_treatments.length > 0;
+      patientContext.active_treatments.length > 0 ||
+      patientContext.nutrition !== null ||
+      patientContext.training !== null;
 
     if (!hasData) {
       return new Response(JSON.stringify({
@@ -78,13 +111,17 @@ IMPORTANTE:
 - Sempre recomende consultar o profissional de saúde
 - Foque em tendências nos exames, possíveis correlações e dicas gerais de bem-estar
 - Seja empático e encorajador
+- CONECTE os dados entre si: analise como diagnósticos se relacionam com tratamentos, como a nutrição pode impactar os exames, como o treino se conecta com os resultados laboratoriais e diagnósticos
+- Se houver dados de nutrição, analise se a dieta é adequada para os diagnósticos e exames do paciente
+- Se houver dados de treino, analise se a modalidade e frequência são compatíveis com o quadro clínico
+- Identifique sinergias e potenciais conflitos entre tratamentos, nutrição e atividade física
 
 Responda EXCLUSIVAMENTE com um JSON válido (sem markdown, sem backticks) no formato:
 {
-  "summary": "Resumo geral de 2-3 frases sobre a saúde do paciente",
+  "summary": "Resumo geral de 2-3 frases sobre a saúde do paciente, conectando os diferentes aspectos",
   "insights": [
     {
-      "category": "exames" | "nutricao" | "estilo_de_vida" | "atencao" | "positivo",
+      "category": "exames" | "nutricao" | "treino" | "estilo_de_vida" | "atencao" | "positivo" | "conexao",
       "title": "Título curto do insight",
       "description": "Descrição de 2-3 frases",
       "priority": "info" | "attention" | "positive"
@@ -92,7 +129,7 @@ Responda EXCLUSIVAMENTE com um JSON válido (sem markdown, sem backticks) no for
   ]
 }
 
-Gere entre 3 e 6 insights relevantes.`;
+Gere entre 3 e 8 insights relevantes. Use a categoria "conexao" para insights que cruzam dados de diferentes áreas (ex: relação entre exames e nutrição, treino e diagnóstico).`;
 
     const userPrompt = `Dados do paciente:\n${JSON.stringify(patientContext, null, 2)}`;
 
@@ -129,10 +166,8 @@ Gere entre 3 e 6 insights relevantes.`;
     const aiData = await aiResponse.json();
     const content = aiData.choices?.[0]?.message?.content || "";
 
-    // Parse the JSON response
     let parsed;
     try {
-      // Remove potential markdown code blocks
       const cleaned = content.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
       parsed = JSON.parse(cleaned);
     } catch {
