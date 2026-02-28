@@ -65,6 +65,11 @@ const SPORT_LABELS: Record<string, string> = {
   natacao: "Natação",
   triatlo: "Triátlo",
   funcional: "Funcional",
+  crossfit: "CrossFit",
+  yoga: "Yoga",
+  pilates: "Pilates",
+  luta: "Lutas / Artes Marciais",
+  esporte_coletivo: "Esporte Coletivo",
   outro: "Outro",
 };
 

@@ -40,7 +40,13 @@ const SPORT_OPTIONS = [
   { value: "corrida", label: "Corrida" },
   { value: "ciclismo", label: "Ciclismo" },
   { value: "natacao", label: "Natação" },
+  { value: "triatlo", label: "Triátlo" },
   { value: "funcional", label: "Funcional" },
+  { value: "crossfit", label: "CrossFit" },
+  { value: "yoga", label: "Yoga" },
+  { value: "pilates", label: "Pilates" },
+  { value: "luta", label: "Lutas / Artes Marciais" },
+  { value: "esporte_coletivo", label: "Esporte Coletivo" },
   { value: "outro", label: "Outro" },
 ];
 

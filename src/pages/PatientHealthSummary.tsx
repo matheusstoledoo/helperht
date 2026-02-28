@@ -8,10 +8,11 @@ import {
   Activity,
   TrendingUp,
   TrendingDown,
-  Minus,
   AlertTriangle,
   CheckCircle2,
   ArrowRight,
+  Apple,
+  Dumbbell,
 } from "lucide-react";
 import PatientLayout from "@/components/patient/PatientLayout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,6 +40,16 @@ interface Insight {
   description: string;
 }
 
+const SPORT_LABELS: Record<string, string> = {
+  musculacao: "Musculação",
+  corrida: "Corrida",
+  ciclismo: "Ciclismo",
+  natacao: "Natação",
+  triatlo: "Triátlo",
+  funcional: "Funcional",
+  outro: "Outro",
+};
+
 export default function PatientHealthSummary() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -46,13 +57,15 @@ export default function PatientHealthSummary() {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [allergies, setAllergies] = useState<string[] | null>(null);
   const [bloodType, setBloodType] = useState<string | null>(null);
+  const [nutritionSummary, setNutritionSummary] = useState<any>(null);
+  const [trainingSummary, setTrainingSummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
 
     const fetchData = async () => {
-      const [patientRes, labRes] = await Promise.all([
+      const [patientRes, labRes, nutritionRes, trainingRes] = await Promise.all([
         supabase.from("patients").select("id, allergies, blood_type").eq("user_id", user.id).maybeSingle(),
         supabase
           .from("lab_results")
@@ -60,12 +73,29 @@ export default function PatientHealthSummary() {
           .eq("user_id", user.id)
           .order("collection_date", { ascending: false })
           .limit(200),
+        supabase
+          .from("nutrition_plans")
+          .select("total_calories, protein_grams, carbs_grams, fat_grams, restrictions, supplements, observations, status")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(1),
+        supabase
+          .from("training_plans")
+          .select("sport, frequency_per_week, observations, status")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(1),
       ]);
 
       if (patientRes.data) {
         setAllergies(patientRes.data.allergies);
         setBloodType(patientRes.data.blood_type);
       }
+
+      if (nutritionRes.data?.[0]) setNutritionSummary(nutritionRes.data[0]);
+      if (trainingRes.data?.[0]) setTrainingSummary(trainingRes.data[0]);
 
       const labs = (labRes.data || []) as {
         marker_name: string;
@@ -77,7 +107,6 @@ export default function PatientHealthSummary() {
         reference_max: number | null;
       }[];
 
-      // Group by marker, take last 2 readings each
       const grouped: Record<string, typeof labs> = {};
       for (const r of labs) {
         if (!grouped[r.marker_name]) grouped[r.marker_name] = [];
@@ -105,7 +134,6 @@ export default function PatientHealthSummary() {
         };
       });
 
-      // Sort: abnormal first, then by date
       summaries.sort((a, b) => {
         const aAbnormal = a.status === "high" || a.status === "low" ? 0 : 1;
         const bAbnormal = b.status === "high" || b.status === "low" ? 0 : 1;
@@ -118,14 +146,13 @@ export default function PatientHealthSummary() {
       // Generate insights
       const newInsights: Insight[] = [];
       const abnormal = summaries.filter(m => m.status === "high" || m.status === "low");
-      const improved = summaries.filter(m => {
-        if (m.variationPercent == null || !m.previousValue) return false;
-        // Was abnormal before, now normal
-        return m.status === "normal" && m.variationPercent !== 0;
-      });
       const worsened = summaries.filter(m => {
         if (m.variationPercent == null) return false;
         return (m.status === "high" || m.status === "low") && Math.abs(m.variationPercent) > 10;
+      });
+      const improved = summaries.filter(m => {
+        if (m.variationPercent == null || !m.previousValue) return false;
+        return m.status === "normal" && m.variationPercent !== 0;
       });
 
       if (abnormal.length === 0 && summaries.length > 0) {
@@ -170,7 +197,6 @@ export default function PatientHealthSummary() {
   const variationBadge = (m: LabMarkerSummary) => {
     if (m.variationPercent == null) return null;
     const isUp = m.variationPercent > 0;
-    const isDown = m.variationPercent < 0;
     const abs = Math.abs(m.variationPercent);
     if (abs === 0) return null;
 
@@ -238,6 +264,61 @@ export default function PatientHealthSummary() {
               </div>
             )}
 
+            {/* Nutrition & Training summary cards */}
+            {(nutritionSummary || trainingSummary) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {nutritionSummary && (
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate("/pac/nutricao")}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Apple className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-medium">Nutrição Ativa</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
+                        {nutritionSummary.total_calories && (
+                          <span>{nutritionSummary.total_calories} kcal/dia</span>
+                        )}
+                        {nutritionSummary.protein_grams && (
+                          <span>Proteína: {nutritionSummary.protein_grams}g</span>
+                        )}
+                        {nutritionSummary.carbs_grams && (
+                          <span>Carbs: {nutritionSummary.carbs_grams}g</span>
+                        )}
+                        {nutritionSummary.fat_grams && (
+                          <span>Gordura: {nutritionSummary.fat_grams}g</span>
+                        )}
+                      </div>
+                      {nutritionSummary.restrictions?.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {nutritionSummary.restrictions.slice(0, 3).map((r: string, i: number) => (
+                            <Badge key={i} variant="outline" className="text-xs">{r}</Badge>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+                {trainingSummary && (
+                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate("/pac/treinos")}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Dumbbell className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-medium">Treino Ativo</span>
+                      </div>
+                      <div className="text-xs text-muted-foreground space-y-1">
+                        {trainingSummary.sport && (
+                          <span className="block">{SPORT_LABELS[trainingSummary.sport] || trainingSummary.sport}</span>
+                        )}
+                        {trainingSummary.frequency_per_week && (
+                          <span className="block">{trainingSummary.frequency_per_week}x por semana</span>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+
             {/* Insights */}
             {insights.length > 0 && (
               <div className="space-y-2">
@@ -257,7 +338,7 @@ export default function PatientHealthSummary() {
               </div>
             )}
 
-            {/* Lab markers with variations */}
+            {/* Lab markers */}
             {markers.length > 0 ? (
               <Card>
                 <CardHeader className="pb-3">
@@ -269,10 +350,7 @@ export default function PatientHealthSummary() {
                 <CardContent>
                   <div className="space-y-1">
                     {markers.map((m, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between py-2.5 border-b last:border-0"
-                      >
+                      <div key={i} className="flex items-center justify-between py-2.5 border-b last:border-0">
                         <div className="flex items-center gap-2 min-w-0">
                           <div className={`h-2 w-2 rounded-full shrink-0 ${
                             m.status === "high" ? "bg-destructive" :
@@ -301,27 +379,22 @@ export default function PatientHealthSummary() {
                       </div>
                     ))}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full mt-3 gap-1"
-                    onClick={() => navigate("/pac/exames-lab")}
-                  >
+                  <Button variant="ghost" size="sm" className="w-full mt-3 gap-1" onClick={() => navigate("/pac/exames-lab")}>
                     Ver gráficos detalhados <ArrowRight className="h-3 w-3" />
                   </Button>
                 </CardContent>
               </Card>
-            ) : (
+            ) : !nutritionSummary && !trainingSummary ? (
               <Card>
                 <CardContent className="p-8 text-center">
                   <Activity className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-                  <p className="text-muted-foreground">Nenhum resultado de exame encontrado</p>
+                  <p className="text-muted-foreground">Nenhum dado de saúde encontrado</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Faça upload de exames para ver variações e insights aqui
+                    Faça upload de exames ou registre informações clínicas
                   </p>
                 </CardContent>
               </Card>
-            )}
+            ) : null}
           </>
         )}
       </div>
