@@ -33,6 +33,10 @@ import {
   EyeOff,
   Calendar,
   Stethoscope,
+  Apple,
+  Dumbbell,
+  Heart,
+  FlaskConical,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -96,6 +100,9 @@ const ProfessionalPatientView = () => {
   const [treatmentCount, setTreatmentCount] = useState(0);
   const [examDocumentCount, setExamDocumentCount] = useState(0);
   const [goalCount, setGoalCount] = useState(0);
+  const [nutritionCount, setNutritionCount] = useState(0);
+  const [trainingCount, setTrainingCount] = useState(0);
+  const [labResultCount, setLabResultCount] = useState(0);
 
   const [microExpanded, setMicroExpanded] = useState<Set<string>>(new Set());
   const [macroExpanded, setMacroExpanded] = useState<Set<string>>(new Set());
@@ -147,18 +154,24 @@ const ProfessionalPatientView = () => {
 
         setConsultations(consultationData || []);
 
-        const [diagnosesRes, treatmentsRes, examsRes, documentsRes, goalsRes] = await Promise.all([
+        const [diagnosesRes, treatmentsRes, examsRes, documentsRes, goalsRes, nutritionRes, trainingRes, labRes] = await Promise.all([
           supabase.from("diagnoses").select("id", { count: "exact" }).eq("patient_id", id).eq("status", "active"),
           supabase.from("treatments").select("id", { count: "exact" }).eq("patient_id", id).eq("status", "active"),
           supabase.from("exams").select("id", { count: "exact" }).eq("patient_id", id),
           supabase.from("documents").select("id", { count: "exact" }).eq("patient_id", id),
           supabase.from("goals").select("id", { count: "exact" }).eq("patient_id", id).eq("status", "active"),
+          supabase.from("nutrition_plans").select("id", { count: "exact" }).eq("patient_id", id),
+          supabase.from("training_plans").select("id", { count: "exact" }).eq("patient_id", id),
+          supabase.from("lab_results").select("id", { count: "exact" }).eq("patient_id", id),
         ]);
 
         setDiagnosisCount(diagnosesRes.count || 0);
         setTreatmentCount(treatmentsRes.count || 0);
         setExamDocumentCount((examsRes.count || 0) + (documentsRes.count || 0));
         setGoalCount(goalsRes.count || 0);
+        setNutritionCount(nutritionRes.count || 0);
+        setTrainingCount(trainingRes.count || 0);
+        setLabResultCount(labRes.count || 0);
 
         if (consultationData && consultationData.length > 0) {
           const consultationIds = consultationData.map(c => c.id);
@@ -503,6 +516,70 @@ const ProfessionalPatientView = () => {
                     <div>
                       <p className="font-medium text-sm">Exames/Documentos</p>
                       <p className="text-xs text-muted-foreground">{examDocumentCount} registrados</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                </CardContent>
+              </Card>
+
+              <Card
+                className="cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() => navigate(`${basePath}/resumo`)}
+              >
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Heart className="h-5 w-5 text-primary shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">Resumo de Saúde</p>
+                      <p className="text-xs text-muted-foreground">Visão geral</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                </CardContent>
+              </Card>
+
+              <Card
+                className="cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() => navigate(`${basePath}/graficos-exames`)}
+              >
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FlaskConical className="h-5 w-5 text-primary shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">Gráficos de Exames</p>
+                      <p className="text-xs text-muted-foreground">{labResultCount} resultados</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                </CardContent>
+              </Card>
+
+              <Card
+                className="cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() => navigate(`${basePath}/nutricao`)}
+              >
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Apple className="h-5 w-5 text-primary shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">Nutrição</p>
+                      <p className="text-xs text-muted-foreground">{nutritionCount} plano{nutritionCount !== 1 ? "s" : ""}</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                </CardContent>
+              </Card>
+
+              <Card
+                className="cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() => navigate(`${basePath}/treinos`)}
+              >
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Dumbbell className="h-5 w-5 text-primary shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">Treinos</p>
+                      <p className="text-xs text-muted-foreground">{trainingCount} plano{trainingCount !== 1 ? "s" : ""}</p>
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
