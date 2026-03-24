@@ -364,6 +364,11 @@ const Dashboard = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <RequestPatientAccessModal
+        open={showAccessModal}
+        onOpenChange={setShowAccessModal}
+      />
     </div>
   );
 };
