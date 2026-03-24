@@ -33,10 +33,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Search, UserPlus, Eye, Users, LogOut, Settings, ArrowUpDown, Route } from "lucide-react";
+import { Search, UserPlus, Eye, Users, LogOut, Settings, ArrowUpDown, Route, UserSearch } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DailyTasksList } from "@/components/trails/DailyTasksList";
+import { RequestPatientAccessModal } from "@/components/professional/RequestPatientAccessModal";
 
 interface PatientWithUser {
   id: string;
