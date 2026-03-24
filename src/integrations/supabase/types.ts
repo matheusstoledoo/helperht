@@ -1551,6 +1551,48 @@ export type Database = {
           },
         ]
       }
+      professional_patient_links: {
+        Row: {
+          created_at: string
+          id: string
+          patient_id: string
+          professional_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          patient_id: string
+          professional_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          patient_id?: string
+          professional_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_patient_links_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_patient_links_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quality_analysis_audit_logs: {
         Row: {
           action: string
@@ -2530,6 +2572,15 @@ export type Database = {
       patient_is_enrolled_in_trail: {
         Args: { _trail_id: string; _user_id: string }
         Returns: boolean
+      }
+      search_patients_for_linking: {
+        Args: { _professional_id: string; _search_name: string }
+        Returns: {
+          link_status: string
+          patient_id: string
+          patient_name: string
+          patient_user_id: string
+        }[]
       }
     }
     Enums: {
