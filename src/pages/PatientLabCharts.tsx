@@ -7,6 +7,7 @@ import type { LabDataPoint } from "@/components/lab-charts/LabMarkerChart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FlaskConical } from "lucide-react";
 import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
+import { FloatingUploadButton } from "@/components/documents/FloatingUploadButton";
 
 interface RawLabResult {
   id: string;
