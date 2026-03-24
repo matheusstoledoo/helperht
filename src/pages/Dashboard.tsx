@@ -174,6 +174,10 @@ const Dashboard = () => {
                   <UserPlus className="mr-2 h-4 w-4" />
                   Cadastrar paciente
                 </Button>
+                <Button variant="outline" onClick={() => setShowAccessModal(true)}>
+                  <UserSearch className="mr-2 h-4 w-4" />
+                  Solicitar acesso
+                </Button>
                 <Button variant="outline" onClick={() => navigate("/prof/trilhas")}>
                   <Route className="mr-2 h-4 w-4" />
                   Trilhas
