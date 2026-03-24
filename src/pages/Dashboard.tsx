@@ -33,10 +33,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Search, UserPlus, Eye, Users, LogOut, Settings, ArrowUpDown, Route } from "lucide-react";
+import { Search, UserPlus, Eye, Users, LogOut, Settings, ArrowUpDown, Route, UserSearch } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DailyTasksList } from "@/components/trails/DailyTasksList";
+import { RequestPatientAccessModal } from "@/components/professional/RequestPatientAccessModal";
 
 interface PatientWithUser {
   id: string;
@@ -61,6 +62,7 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [professionalName, setProfessionalName] = useState("");
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [showAccessModal, setShowAccessModal] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -172,6 +174,10 @@ const Dashboard = () => {
                   <UserPlus className="mr-2 h-4 w-4" />
                   Cadastrar paciente
                 </Button>
+                <Button variant="outline" onClick={() => setShowAccessModal(true)}>
+                  <UserSearch className="mr-2 h-4 w-4" />
+                  Solicitar acesso
+                </Button>
                 <Button variant="outline" onClick={() => navigate("/prof/trilhas")}>
                   <Route className="mr-2 h-4 w-4" />
                   Trilhas
@@ -195,10 +201,14 @@ const Dashboard = () => {
               </div>
             </div>
             {/* Mobile action buttons */}
-            <div className="flex sm:hidden gap-2">
+            <div className="flex sm:hidden gap-2 flex-wrap">
               <Button className="flex-1" size="sm" onClick={() => navigate("/prof/pacientes/novo")}>
                 <UserPlus className="mr-2 h-4 w-4" />
                 Cadastrar
+              </Button>
+              <Button className="flex-1" variant="outline" size="sm" onClick={() => setShowAccessModal(true)}>
+                <UserSearch className="mr-2 h-4 w-4" />
+                Solicitar acesso
               </Button>
               <Button className="flex-1" variant="outline" size="sm" onClick={() => navigate("/prof/trilhas")}>
                 <Route className="mr-2 h-4 w-4" />
@@ -354,6 +364,11 @@ const Dashboard = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <RequestPatientAccessModal
+        open={showAccessModal}
+        onOpenChange={setShowAccessModal}
+      />
     </div>
   );
 };
