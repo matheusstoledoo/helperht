@@ -164,6 +164,16 @@ export default function PatientLabCharts() {
           </>
         )}
       </div>
+
+      {user && patientId && (
+        <FloatingUploadButton
+          patientId={patientId}
+          userId={user.id}
+          userRole="patient"
+          userName={userName}
+          onSuccess={fetchResults}
+        />
+      )}
     </PatientLayout>
   );
 }
