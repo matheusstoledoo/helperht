@@ -201,10 +201,14 @@ const Dashboard = () => {
               </div>
             </div>
             {/* Mobile action buttons */}
-            <div className="flex sm:hidden gap-2">
+            <div className="flex sm:hidden gap-2 flex-wrap">
               <Button className="flex-1" size="sm" onClick={() => navigate("/prof/pacientes/novo")}>
                 <UserPlus className="mr-2 h-4 w-4" />
                 Cadastrar
+              </Button>
+              <Button className="flex-1" variant="outline" size="sm" onClick={() => setShowAccessModal(true)}>
+                <UserSearch className="mr-2 h-4 w-4" />
+                Solicitar acesso
               </Button>
               <Button className="flex-1" variant="outline" size="sm" onClick={() => navigate("/prof/trilhas")}>
                 <Route className="mr-2 h-4 w-4" />
