@@ -62,6 +62,7 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [professionalName, setProfessionalName] = useState("");
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [showAccessModal, setShowAccessModal] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
