@@ -7,6 +7,7 @@ import type { LabDataPoint } from "@/components/lab-charts/LabMarkerChart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FlaskConical } from "lucide-react";
 import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
+import { FloatingUploadButton } from "@/components/documents/FloatingUploadButton";
 
 interface RawLabResult {
   id: string;
@@ -27,39 +28,41 @@ export default function PatientLabCharts() {
   const { user } = useAuth();
   const [results, setResults] = useState<RawLabResult[]>([]);
   const [loading, setLoading] = useState(true);
+  const [patientId, setPatientId] = useState<string | null>(null);
+  const [userName, setUserName] = useState("Paciente");
+
+  const fetchResults = async () => {
+    if (!user) return;
+    setLoading(true);
+
+    const [patientRes, userRes] = await Promise.all([
+      supabase.from("patients").select("id").eq("user_id", user.id).maybeSingle(),
+      supabase.from("users").select("name").eq("id", user.id).maybeSingle(),
+    ]);
+
+    setUserName(userRes.data?.name || "Paciente");
+
+    if (!patientRes.data) {
+      const { data } = await supabase
+        .from("lab_results")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("collection_date", { ascending: true });
+      setResults(data || []);
+    } else {
+      setPatientId(patientRes.data.id);
+      const { data } = await supabase
+        .from("lab_results")
+        .select("*")
+        .or(`user_id.eq.${user.id},patient_id.eq.${patientRes.data.id}`)
+        .order("collection_date", { ascending: true });
+      setResults(data || []);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const fetch = async () => {
-      if (!user) return;
-      setLoading(true);
-
-      // Get patient id
-      const { data: patient } = await supabase
-        .from("patients")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (!patient) {
-        // Also fetch by user_id directly (user owns their own lab results)
-        const { data } = await supabase
-          .from("lab_results")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("collection_date", { ascending: true });
-        setResults(data || []);
-      } else {
-        // Fetch both user_id and patient_id results
-        const { data } = await supabase
-          .from("lab_results")
-          .select("*")
-          .or(`user_id.eq.${user.id},patient_id.eq.${patient.id}`)
-          .order("collection_date", { ascending: true });
-        setResults(data || []);
-      }
-      setLoading(false);
-    };
-    fetch();
+    fetchResults();
   }, [user]);
 
   // Group by marker name
@@ -161,6 +164,16 @@ export default function PatientLabCharts() {
           </>
         )}
       </div>
+
+      {user && patientId && (
+        <FloatingUploadButton
+          patientId={patientId}
+          userId={user.id}
+          userRole="patient"
+          userName={userName}
+          onSuccess={fetchResults}
+        />
+      )}
     </PatientLayout>
   );
 }
