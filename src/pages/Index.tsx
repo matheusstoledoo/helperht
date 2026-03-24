@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Users, 
-  FileText, 
   Shield, 
   Stethoscope,
   ClipboardList,
@@ -10,11 +9,8 @@ import {
   FolderOpen,
   Activity,
   ArrowRight,
-  UserPlus,
-  LogIn,
-  Sparkles,
   Heart,
-  Instagram,
+  LogIn,
   MessageCircle
 } from "lucide-react";
 import logo from "@/assets/logo.png";
@@ -23,12 +19,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { InterestForm } from "@/components/landing/InterestForm";
 import { FeatureSection } from "@/components/landing/FeatureSection";
 import { StatsSection } from "@/components/landing/StatsSection";
+import { ImageShowcase } from "@/components/landing/ImageShowcase";
 
 const Index = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [interestFormOpen, setInterestFormOpen] = useState(false);
-  const [interestUserType, setInterestUserType] = useState<"patient" | "professional">("patient");
 
   useEffect(() => {
     if (!loading && user) {
@@ -36,8 +32,7 @@ const Index = () => {
     }
   }, [user, loading, navigate]);
 
-  const openInterestForm = (userType: "patient" | "professional") => {
-    setInterestUserType(userType);
+  const openInterestForm = () => {
     setInterestFormOpen(true);
   };
 
@@ -67,16 +62,6 @@ const Index = () => {
                   <LogIn className="w-4 h-4 mr-2" />
                   Entrar
                 </Button>
-                {/* Signup button temporarily disabled - keep for future activation
-                <Button 
-                  variant="outline"
-                  onClick={() => navigate("/auth")}
-                  className="border-accent text-accent hover:bg-accent/10"
-                >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Cadastrar
-                </Button>
-                */}
               </div>
             </div>
           </div>
@@ -84,13 +69,13 @@ const Index = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-32 pb-20 lg:pt-40 lg:pb-32 px-6">
+      <section className="relative overflow-hidden pt-28 pb-20 lg:pt-36 lg:pb-32 px-6">
         <div className="container mx-auto max-w-7xl">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="text-center lg:text-left fade-in">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 leading-tight">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 pb-1 leading-tight">
                 Seu companheiro
-                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-accent to-primary mt-2">
+                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-accent to-primary mt-2 pb-2">
                   clínico inteligente
                 </span>
               </h1>
@@ -105,7 +90,7 @@ const Index = () => {
                 <p className="text-sm text-foreground">
                   <strong>Para você, profissional,</strong> agregue mais valor à sua consulta, aumente a taxa de retenção dos seus pacientes e reduza tempo procurando dados em meio a longos textos.
                 </p>
-                <p className="text-sm text-foreground mt-1">
+                <p className="text-sm text-foreground mt-2">
                   <strong>Para você, paciente,</strong> tenha controle e autonomia sobre seus dados de saúde. Pare de ficar carregando documentos e perdendo informações sobre aquilo que você tem de mais importante: seu bem-estar.
                 </p>
               </div>
@@ -113,7 +98,7 @@ const Index = () => {
                 <Button 
                   size="lg" 
                   className="bg-accent hover:bg-accent/90 text-white font-semibold px-8 group"
-                  onClick={() => openInterestForm("professional")}
+                  onClick={() => openInterestForm()}
                 >
                   Tenho interesse
                   <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -168,7 +153,7 @@ const Index = () => {
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
             <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
-              Tudo o que você precisa em um só lugar
+              Acompanhe seus pacientes em um só lugar
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Uma plataforma completa para gestão do cuidado longitudinal em saúde
@@ -180,16 +165,6 @@ const Index = () => {
               icon={<Heart className="w-8 h-8 text-accent" />}
               title="Cuidado Longitudinal"
               description="Tome decisões a partir de todo o histórico do paciente"
-            />
-            <FeatureCard
-              icon={<Users className="w-8 h-8 text-accent" />}
-              title="Cuidado Colaborativo"
-              description="Comunicação integrada entre todos os profissionais e pacientes"
-            />
-            <FeatureCard
-              icon={<FileText className="w-8 h-8 text-accent" />}
-              title="Registros Inteligentes"
-              description="Histórico de saúde organizado e acessível com filtros avançados"
             />
             <FeatureCard
               icon={<Shield className="w-8 h-8 text-accent" />}
@@ -207,21 +182,14 @@ const Index = () => {
               description="Organize e visualize dados clínicos ao longo do tempo de forma integrada"
             />
             <FeatureCard
-              icon={<Sparkles className="w-8 h-8 text-accent" />}
-              title="Menos Fricção"
-              description="Reduza barreiras no acompanhamento com coleta de dados automatizada"
-            />
-            <FeatureCard
-              icon={<UserPlus className="w-8 h-8 text-accent" />}
-              title="Identificação de Retorno"
-              description="Identifique facilmente pacientes que precisam retornar à consulta"
-            />
-            <FeatureCard
               icon={<Heart className="w-8 h-8 text-accent" />}
               title="Experiência do Paciente"
               description="Melhore o engajamento e satisfação do paciente com acompanhamento contínuo"
             />
           </div>
+
+          {/* Image Showcase Carousel */}
+          <ImageShowcase />
         </div>
       </section>
 
@@ -251,9 +219,6 @@ const Index = () => {
               description="Registre e acompanhe todos os diagnósticos dos seus pacientes com histórico completo de evolução."
               features={[
                 "Acompanhe o histórico de diagnósticos do paciente",
-                "Histórico de alterações e justificativas",
-                "Notas públicas e privadas para cada diagnóstico",
-                "Visualização por profissional responsável"
               ]}
               gradient="from-accent/10 to-accent/5"
             />
@@ -265,8 +230,6 @@ const Index = () => {
               features={[
                 "Acompanhe medicamentos já utilizados e suas doses",
                 "Utilize o histórico para aperfeiçoar os tratamentos e evitar repetição",
-                "Vinculação automática com diagnósticos",
-                "Histórico completo de mudanças no tratamento"
               ]}
               reversed
               gradient="from-primary/10 to-primary/5"
@@ -284,13 +247,27 @@ const Index = () => {
               ]}
               gradient="from-green-500/10 to-green-500/5"
             />
+
+            <FeatureSection
+              icon={<Activity className="w-24 h-24 text-accent" />}
+              title="Trilhas de Acompanhamento"
+              description="Mantenha um contato próximo com seus pacientes."
+              features={[
+                "Acompanhe com frequência e regularidade",
+                "Saiba o que está acontecendo de forma prática",
+                "Faça o seguimento das suas condutas de forma rápida",
+                "Saiba quais pacientes precisam de mais atenção",
+              ]}
+              reversed
+              gradient="from-accent/10 to-accent/5"
+            />
           </div>
 
           <div className="text-center mt-16">
             <Button 
               size="lg" 
               className="bg-primary hover:bg-primary/90 text-white font-semibold px-12"
-              onClick={() => openInterestForm("professional")}
+              onClick={() => openInterestForm()}
             >
               Tenho interesse
               <ArrowRight className="w-4 h-4 ml-2" />
@@ -342,7 +319,7 @@ const Index = () => {
             <Button 
               size="lg" 
               className="bg-accent hover:bg-accent/90 text-white font-semibold px-12"
-              onClick={() => openInterestForm("patient")}
+              onClick={() => openInterestForm()}
             >
               Tenho interesse
               <ArrowRight className="w-4 h-4 ml-2" />
@@ -367,7 +344,7 @@ const Index = () => {
                 <Button 
                   size="lg" 
                   className="bg-white text-primary hover:bg-white/90 font-semibold px-8"
-                  onClick={() => openInterestForm("professional")}
+                  onClick={() => openInterestForm()}
                 >
                   Registrar Interesse
                 </Button>
@@ -407,28 +384,6 @@ const Index = () => {
               <img src={logo} alt="Helper Logo" className="w-8 h-8 object-contain" />
               <span className="font-bold text-foreground">Helper</span>
             </div>
-            {/* Social media links temporarily disabled - keep for future activation
-            <div className="flex items-center gap-4">
-              <a 
-                href="https://instagram.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-primary transition-colors"
-                aria-label="Instagram"
-              >
-                <Instagram className="w-5 h-5" />
-              </a>
-              <a 
-                href="https://wa.me/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-primary transition-colors"
-                aria-label="WhatsApp"
-              >
-                <MessageCircle className="w-5 h-5" />
-              </a>
-            </div>
-            */}
             <p className="text-sm text-muted-foreground">
               © 2026 Helper. Cuidado longitudinal.
             </p>
@@ -440,7 +395,6 @@ const Index = () => {
       <InterestForm 
         open={interestFormOpen} 
         onOpenChange={setInterestFormOpen}
-        userType={interestUserType}
       />
     </div>
   );
