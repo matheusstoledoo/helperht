@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { z } from "zod";
 import {
   Dialog,
   DialogContent,
@@ -6,169 +7,180 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 interface InterestFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  userType: "patient" | "professional";
+  userType?: "patient" | "professional";
 }
 
-export function InterestForm({ open, onOpenChange, userType }: InterestFormProps) {
+const baseSchema = z.object({
+  name: z.string().trim().min(1, "Nome é obrigatório").max(100),
+  email: z.string().trim().email("E-mail inválido").max(255),
+  phone: z.string().trim().min(1, "Telefone é obrigatório").max(20),
+  userType: z.enum(["patient", "professional"], { required_error: "Selecione o tipo de usuário" }),
+  specialty: z.string().trim().max(100).optional(),
+});
+
+export function InterestForm({ open, onOpenChange }: InterestFormProps) {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [selectedType, setSelectedType] = useState<string>(
-    userType === "patient" ? "paciente" : "profissional"
-  );
+  const [email, setEmail] = useState("");
+  const [selectedType, setSelectedType] = useState<"patient" | "professional" | "">("");
   const [specialty, setSpecialty] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const resetForm = () => {
-    setName("");
-    setEmail("");
-    setPhone("");
-    setSpecialty("");
-    setSelectedType(userType === "patient" ? "paciente" : "profissional");
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors({});
 
-  const handleSubmit = async () => {
-    const trimmedName = name.trim();
-    const trimmedEmail = email.trim();
-    const trimmedPhone = phone.trim();
-    const trimmedSpecialty = specialty.trim();
+    const data = {
+      name,
+      email,
+      phone,
+      userType: selectedType || undefined,
+      specialty: selectedType === "professional" ? specialty : undefined,
+    };
 
-    if (!trimmedName || !trimmedEmail || !trimmedPhone || !selectedType) {
-      toast.error("Preencha os campos obrigatórios: Nome, Email, Telefone e Tipo de usuário.");
+    const result = baseSchema.safeParse(data);
+
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      result.error.errors.forEach((err) => {
+        if (err.path[0]) fieldErrors[err.path[0] as string] = err.message;
+      });
+      setErrors(fieldErrors);
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedEmail)) {
-      toast.error("Informe um email válido.");
+    if (selectedType === "professional" && !specialty.trim()) {
+      setErrors({ specialty: "Especialidade é obrigatória para profissionais" });
       return;
     }
 
-    if (trimmedName.length > 200 || trimmedEmail.length > 255 || trimmedPhone.length > 30 || trimmedSpecialty.length > 200) {
-      toast.error("Um ou mais campos excedem o tamanho máximo permitido.");
-      return;
-    }
-
-    setSubmitting(true);
+    setLoading(true);
     try {
       const { error } = await supabase.from("interested_leads").insert({
-        name: trimmedName,
-        email: trimmedEmail,
-        phone: trimmedPhone || null,
-        user_type: selectedType,
-        specialty: selectedType === "profissional" ? trimmedSpecialty || null : null,
-      });
+        name: result.data.name,
+        phone: result.data.phone,
+        email: result.data.email,
+        user_type: result.data.userType,
+        specialty: selectedType === "professional" ? specialty.trim() : null,
+      } as any);
 
       if (error) throw error;
 
-      toast.success("Interesse registrado com sucesso! Entraremos em contato.");
-      resetForm();
+      toast({
+        title: "Interesse registrado!",
+        description: "Entraremos em contato em breve.",
+      });
+      setName("");
+      setPhone("");
+      setEmail("");
+      setSelectedType("");
+      setSpecialty("");
       onOpenChange(false);
-    } catch {
-      toast.error("Erro ao registrar interesse. Tente novamente.");
+    } catch (err) {
+      console.error("Error saving lead:", err);
+      toast({
+        title: "Erro",
+        description: "Não foi possível registrar seu interesse. Tente novamente.",
+        variant: "destructive",
+      });
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Registrar interesse</DialogTitle>
+          <DialogTitle>Registrar Interesse</DialogTitle>
           <DialogDescription>
-            Preencha seus dados para que possamos entrar em contato
+            Deixe seus dados e entraremos em contato.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 pt-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="lead-name">Nome *</Label>
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <div className="space-y-2">
+            <Label htmlFor="name">Nome *</Label>
             <Input
-              id="lead-name"
-              placeholder="Seu nome completo"
+              id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              maxLength={200}
-              disabled={submitting}
+              placeholder="Seu nome completo"
             />
+            {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
           </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="lead-email">Email *</Label>
+          <div className="space-y-2">
+            <Label htmlFor="email">E-mail *</Label>
             <Input
-              id="lead-email"
+              id="email"
               type="email"
-              placeholder="seu@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              maxLength={255}
-              disabled={submitting}
+              placeholder="seu@email.com"
             />
+            {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
           </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="lead-phone">Telefone *</Label>
+          <div className="space-y-2">
+            <Label htmlFor="phone">Telefone *</Label>
             <Input
-              id="lead-phone"
+              id="phone"
               type="tel"
-              placeholder="(00) 00000-0000"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              maxLength={30}
-              disabled={submitting}
+              placeholder="(00) 00000-0000"
             />
+            {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
           </div>
-
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label>Tipo de usuário *</Label>
-            <Select value={selectedType} onValueChange={setSelectedType} disabled={submitting}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="profissional">Profissional</SelectItem>
-                <SelectItem value="paciente">Paciente</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant={selectedType === "professional" ? "default" : "outline"}
+                className="flex-1"
+                onClick={() => { setSelectedType("professional"); setSpecialty(""); }}
+              >
+                Profissional
+              </Button>
+              <Button
+                type="button"
+                variant={selectedType === "patient" ? "default" : "outline"}
+                className="flex-1"
+                onClick={() => { setSelectedType("patient"); setSpecialty(""); }}
+              >
+                Paciente
+              </Button>
+            </div>
+            {errors.userType && <p className="text-sm text-destructive">{errors.userType}</p>}
           </div>
-
-          {selectedType === "profissional" && (
-            <div className="space-y-1.5">
-              <Label htmlFor="lead-specialty">Especialidade</Label>
+          {selectedType === "professional" && (
+            <div className="space-y-2">
+              <Label htmlFor="specialty">Especialidade *</Label>
               <Input
-                id="lead-specialty"
-                placeholder="Ex: Cardiologia, Psicologia..."
+                id="specialty"
                 value={specialty}
                 onChange={(e) => setSpecialty(e.target.value)}
-                maxLength={200}
-                disabled={submitting}
+                placeholder="Ex: Cardiologia, Nutrição, Ortopedia..."
               />
+              {errors.specialty && <p className="text-sm text-destructive">{errors.specialty}</p>}
             </div>
           )}
-
-          <Button onClick={handleSubmit} disabled={submitting} className="w-full bg-accent hover:bg-accent/90 text-white">
-            {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-            {submitting ? "Enviando..." : "Registrar interesse"}
-            {!submitting && <ArrowRight className="w-4 h-4 ml-2" />}
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            Enviar
           </Button>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
