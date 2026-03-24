@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { FullPageLoading } from "@/components/ui/loading-spinner";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,7 +36,9 @@ const NewPatient = () => {
   const { user, loading: authLoading } = useAuth();
   const { isProfessional, isAdmin, loading: roleLoading } = useUserRole();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
+  const [searchName, setSearchName] = useState("");
   const [cpf, setCpf] = useState("");
   const [name, setName] = useState("");
   const [birthdate, setBirthdate] = useState("");
@@ -47,11 +50,10 @@ const NewPatient = () => {
 
   const [isSearching, setIsSearching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [existingPatient, setExistingPatient] = useState<ExistingPatient | null>(null);
-  const [cpfChecked, setCpfChecked] = useState(false);
+  const [existingPatients, setExistingPatients] = useState<ExistingPatient[]>([]);
+  const [searchDone, setSearchDone] = useState(false);
   const [canCreateNew, setCanCreateNew] = useState(false);
 
-  // Format CPF as user types
   const formatCpf = (value: string) => {
     const digits = value.replace(/\D/g, "").slice(0, 11);
     if (digits.length <= 3) return digits;
@@ -60,7 +62,6 @@ const NewPatient = () => {
     return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
   };
 
-  // Format phone as user types
   const formatPhone = (value: string) => {
     const digits = value.replace(/\D/g, "").slice(0, 11);
     if (digits.length <= 2) return digits.length > 0 ? `(${digits}` : "";
@@ -69,26 +70,19 @@ const NewPatient = () => {
   };
 
   const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatCpf(e.target.value);
-    setCpf(formatted);
-    // Reset search state when CPF changes
-    setCpfChecked(false);
-    setExistingPatient(null);
-    setCanCreateNew(false);
+    setCpf(formatCpf(e.target.value));
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhone(e.target.value);
-    setPhone(formatted);
+    setPhone(formatPhone(e.target.value));
   };
 
-  const handleSearchCpf = async () => {
-    const cleanCpf = cpf.replace(/\D/g, "");
-    
-    if (cleanCpf.length !== 11) {
+  const handleSearchName = async () => {
+    const trimmed = searchName.trim();
+    if (trimmed.length < 3) {
       toast({
-        title: "CPF inválido",
-        description: "Por favor, digite um CPF válido com 11 dígitos.",
+        title: "Nome muito curto",
+        description: "Digite pelo menos 3 caracteres para buscar.",
         variant: "destructive",
       });
       return;
@@ -96,47 +90,53 @@ const NewPatient = () => {
 
     setIsSearching(true);
     try {
-      // Search for existing user with this CPF
-      const { data: userData, error } = await supabase
+      const { data: usersData, error: usersError } = await supabase
         .from("users")
-        .select("id, name, email, cpf")
-        .eq("cpf", cleanCpf)
-        .maybeSingle();
+        .select("id, name, email")
+        .ilike("name", `%${trimmed}%`)
+        .eq("role", "patient");
 
-      if (error) throw error;
+      if (usersError) throw usersError;
 
-      if (userData) {
-        // User exists, find the patient record
-        const { data: patientData } = await supabase
+      if (usersData && usersData.length > 0) {
+        const userIds = usersData.map((u) => u.id);
+        const { data: patients } = await supabase
           .from("patients")
-          .select(`
-            id,
-            user_id,
-            users (name, email)
-          `)
-          .eq("user_id", userData.id)
-          .maybeSingle();
+          .select("id, user_id")
+          .in("user_id", userIds);
 
-        if (patientData) {
-          setExistingPatient(patientData);
-          setCanCreateNew(false);
-        } else {
-          // User exists but no patient record - rare case
-          setExistingPatient(null);
-          setCanCreateNew(true);
+        const matched: ExistingPatient[] = (patients || []).map((p) => {
+          const foundUser = usersData.find((u) => u.id === p.user_id);
+          return {
+            id: p.id,
+            user_id: p.user_id,
+            users: foundUser ? { name: foundUser.name, email: foundUser.email } : null,
+          };
+        }).filter((p) => p.users !== null);
+
+        setExistingPatients(matched);
+        setCanCreateNew(true);
+
+        if (matched.length === 0) {
+          toast({
+            title: "Pacientes com nome similar encontrados",
+            description: "Já existem pacientes com nomes similares no sistema. Verifique antes de cadastrar um novo.",
+          });
         }
       } else {
-        // No user found, allow creation
-        setExistingPatient(null);
+        setExistingPatients([]);
         setCanCreateNew(true);
       }
-      
-      setCpfChecked(true);
+      setSearchDone(true);
+
+      if (!usersData?.length) {
+        setName(trimmed);
+      }
     } catch (error) {
-      console.error("Error searching CPF:", error);
+      console.error("Error searching patients:", error);
       toast({
         title: "Erro na busca",
-        description: "Não foi possível buscar o CPF. Tente novamente.",
+        description: "Não foi possível buscar pacientes. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -146,60 +146,28 @@ const NewPatient = () => {
 
   const handleCreatePatient = async () => {
     if (!name.trim()) {
-      toast({
-        title: "Campo obrigatório",
-        description: "Por favor, preencha o nome completo.",
-        variant: "destructive",
-      });
+      toast({ title: "Campo obrigatório", description: "Preencha o nome completo.", variant: "destructive" });
       return;
     }
-
     if (!birthdate) {
-      toast({
-        title: "Campo obrigatório",
-        description: "Por favor, preencha a data de nascimento.",
-        variant: "destructive",
-      });
+      toast({ title: "Campo obrigatório", description: "Preencha a data de nascimento.", variant: "destructive" });
       return;
     }
-
     const cleanCpf = cpf.replace(/\D/g, "");
     if (cleanCpf.length !== 11) {
-      toast({
-        title: "CPF inválido",
-        description: "Por favor, digite um CPF válido.",
-        variant: "destructive",
-      });
+      toast({ title: "CPF inválido", description: "Digite um CPF válido com 11 dígitos.", variant: "destructive" });
       return;
     }
-
-    // Validate email if required
     if (!noEmail && !email.trim()) {
-      toast({
-        title: "Campo obrigatório",
-        description: "Por favor, preencha o e-mail ou marque 'Não possui e-mail'.",
-        variant: "destructive",
-      });
+      toast({ title: "Campo obrigatório", description: "Preencha o e-mail ou marque 'Não possui e-mail'.", variant: "destructive" });
       return;
     }
-
-    // Validate phone if required
     if (!noPhone && !phone.trim()) {
-      toast({
-        title: "Campo obrigatório",
-        description: "Por favor, preencha o telefone ou marque 'Não possui telefone'.",
-        variant: "destructive",
-      });
+      toast({ title: "Campo obrigatório", description: "Preencha o telefone ou marque 'Não possui telefone'.", variant: "destructive" });
       return;
     }
-
-    // Validate data collection confirmation
     if (!dataCollectionConfirmed) {
-      toast({
-        title: "Confirmação necessária",
-        description: "Por favor, confirme que o paciente foi informado sobre a coleta de dados.",
-        variant: "destructive",
-      });
+      toast({ title: "Confirmação necessária", description: "Confirme que o paciente foi informado sobre a coleta de dados.", variant: "destructive" });
       return;
     }
 
@@ -208,50 +176,73 @@ const NewPatient = () => {
       const tempPassword = `Temp${Math.random().toString(36).slice(-8)}!`;
       const patientEmail = noEmail ? `${cleanCpf}@temp.paciente.com` : email.trim();
 
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: patientEmail,
-        password: tempPassword,
-        options: {
-          data: {
-            name: name.trim(),
-            role: "patient",
-            cpf: cleanCpf,
-          },
+      const { data: result, error: fnError } = await supabase.functions.invoke("create-user", {
+        body: {
+          email: patientEmail,
+          password: tempPassword,
+          name: name.trim(),
+          role: "patient",
+          cpf: cleanCpf,
+          requesting_professional_id: user?.id,
         },
       });
 
-      if (authError) throw authError;
-
-      if (authData.user) {
-        // Update user with phone if provided
-        if (!noPhone && phone.trim()) {
-          await supabase
-            .from("users")
-            .update({ phone: phone.replace(/\D/g, "") })
-            .eq("id", authData.user.id);
-        }
-
-        // Get the created patient record and update birthdate
-        const { data: patientData } = await supabase
-          .from("patients")
-          .select("id")
-          .eq("user_id", authData.user.id)
-          .maybeSingle();
-
-        if (patientData) {
-          await supabase
-            .from("patients")
-            .update({ birthdate })
-            .eq("id", patientData.id);
-
+      if (fnError) {
+        const errorBody = result || {};
+        if (errorBody.error === "email_exists" && errorBody.existingPatientId) {
           toast({
-            title: "Paciente cadastrado",
-            description: `${name} foi cadastrado com sucesso.`,
+            title: "Paciente já cadastrado",
+            description: "Um paciente com este e-mail já existe. Redirecionando...",
           });
-
-          navigate("/dashboard");
+          navigate(`/prof/paciente/${errorBody.existingPatientId}`);
+          return;
         }
+        throw new Error(errorBody.message || errorBody.error || fnError.message || "Erro ao cadastrar");
       }
+      if (!result?.success) throw new Error(result?.error || "Erro ao cadastrar paciente");
+
+      const userId = result.userId;
+
+      if (!noPhone && phone.trim()) {
+        await supabase
+          .from("users")
+          .update({ phone: phone.replace(/\D/g, "") })
+          .eq("id", userId);
+      }
+
+      const { data: patientData } = await supabase
+        .from("patients")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (patientData) {
+        await supabase
+          .from("patients")
+          .update({ birthdate })
+          .eq("id", patientData.id);
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["patients-list"] });
+
+      toast({
+        title: "Paciente cadastrado",
+        description: `${name} foi cadastrado com sucesso.`,
+      });
+
+      // Reset form
+      setSearchName("");
+      setCpf("");
+      setName("");
+      setBirthdate("");
+      setEmail("");
+      setPhone("");
+      setNoEmail(false);
+      setNoPhone(false);
+      setDataCollectionConfirmed(false);
+      setExistingPatients([]);
+      setSearchDone(false);
+      setCanCreateNew(false);
     } catch (error: any) {
       console.error("Error creating patient:", error);
       toast({
@@ -264,7 +255,6 @@ const NewPatient = () => {
     }
   };
 
-  // Redirect if not authenticated or not professional
   if (!authLoading && !user) {
     navigate("/auth");
     return null;
@@ -281,7 +271,6 @@ const NewPatient = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header with Breadcrumbs */}
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">
           <Breadcrumb>
@@ -300,7 +289,6 @@ const NewPatient = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <Card>
           <CardHeader>
@@ -310,72 +298,94 @@ const NewPatient = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* CPF Search Section */}
+            {/* Name Search Section */}
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="cpf">CPF do paciente *</Label>
+                <Label htmlFor="searchName">Buscar paciente por nome *</Label>
                 <div className="flex gap-2">
                   <Input
-                    id="cpf"
-                    value={cpf}
-                    onChange={handleCpfChange}
-                    placeholder="000.000.000-00"
+                    id="searchName"
+                    value={searchName}
+                    onChange={(e) => {
+                      setSearchName(e.target.value);
+                      setSearchDone(false);
+                      setExistingPatients([]);
+                      setCanCreateNew(false);
+                    }}
+                    placeholder="Digite o nome do paciente"
                     className="flex-1"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSearchName();
+                    }}
                   />
                   <Button
                     type="button"
                     variant="secondary"
-                    onClick={handleSearchCpf}
-                    disabled={isSearching || cpf.replace(/\D/g, "").length !== 11}
+                    onClick={handleSearchName}
+                    disabled={isSearching || searchName.trim().length < 3}
                   >
                     {isSearching ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <>
                         <Search className="h-4 w-4 mr-2" />
-                        Buscar CPF
+                        Buscar
                       </>
                     )}
                   </Button>
                 </div>
               </div>
 
-              {/* Existing Patient Alert */}
-              {cpfChecked && existingPatient && (
+              {/* Existing Patients List */}
+              {searchDone && existingPatients.length > 0 && (
                 <Alert className="border-primary bg-primary/5">
                   <UserCheck className="h-4 w-4" />
                   <AlertDescription className="ml-2">
-                    <div className="space-y-2">
-                      <p className="font-medium">
-                        Paciente já cadastrado: {existingPatient.users?.name}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Você pode começar a atendê-lo.
-                      </p>
+                    <div className="space-y-3">
+                      <p className="font-medium">Pacientes encontrados:</p>
+                      {existingPatients.map((p) => (
+                        <div key={p.id} className="flex items-center justify-between p-2 rounded-md bg-background border">
+                          <div>
+                            <p className="font-medium text-sm">{p.users?.name}</p>
+                            {p.users?.email && (
+                              <p className="text-xs text-muted-foreground">{p.users.email}</p>
+                            )}
+                          </div>
+                          <Button size="sm" onClick={() => navigate(`/prof/paciente/${p.id}`)}>
+                            Abrir paciente
+                          </Button>
+                        </div>
+                      ))}
                       <Button
+                        variant="outline"
                         size="sm"
-                        onClick={() => navigate(`/prof/paciente/${existingPatient.id}`)}
+                        className="w-full mt-2"
+                        onClick={() => {
+                          setCanCreateNew(true);
+                          setName(searchName.trim());
+                        }}
                       >
-                        Abrir paciente
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Cadastrar novo paciente mesmo assim
                       </Button>
                     </div>
                   </AlertDescription>
                 </Alert>
               )}
 
-              {/* New Patient Alert */}
-              {cpfChecked && canCreateNew && (
+              {/* No results */}
+              {searchDone && existingPatients.length === 0 && canCreateNew && (
                 <Alert className="border-accent bg-accent/5">
                   <UserPlus className="h-4 w-4" />
                   <AlertDescription className="ml-2">
-                    <p>CPF não encontrado. Preencha os dados para cadastrar um novo paciente.</p>
+                    <p>Nenhum paciente encontrado. Preencha os dados abaixo para cadastrar.</p>
                   </AlertDescription>
                 </Alert>
               )}
             </div>
 
-            {/* Patient Form - Only show if CPF checked and can create */}
-            {cpfChecked && canCreateNew && (
+            {/* Patient Form */}
+            {searchDone && canCreateNew && (
               <div className="space-y-4 pt-4 border-t">
                 <div className="space-y-2">
                   <Label htmlFor="name">Nome completo *</Label>
@@ -384,6 +394,16 @@ const NewPatient = () => {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Digite o nome completo"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="cpf">CPF *</Label>
+                  <Input
+                    id="cpf"
+                    value={cpf}
+                    onChange={handleCpfChange}
+                    placeholder="000.000.000-00"
                   />
                 </div>
 
@@ -397,7 +417,6 @@ const NewPatient = () => {
                   />
                 </div>
 
-                {/* Email field */}
                 <div className="space-y-2">
                   <Label htmlFor="email">E-mail {!noEmail && "*"}</Label>
                   <Input
@@ -424,7 +443,6 @@ const NewPatient = () => {
                   </div>
                 </div>
 
-                {/* Phone field */}
                 <div className="space-y-2">
                   <Label htmlFor="phone">Telefone {!noPhone && "*"}</Label>
                   <Input
@@ -450,7 +468,6 @@ const NewPatient = () => {
                   </div>
                 </div>
 
-                {/* Data collection confirmation */}
                 <div className="flex items-start space-x-2 pt-4 p-4 rounded-lg bg-muted/50 border">
                   <Checkbox
                     id="dataCollection"
@@ -462,7 +479,6 @@ const NewPatient = () => {
                   </Label>
                 </div>
 
-                {/* Save Button */}
                 <div className="pt-4">
                   <Button
                     onClick={handleCreatePatient}
