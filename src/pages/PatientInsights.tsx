@@ -273,6 +273,11 @@ export default function PatientInsights() {
               ) : null}
             </TabsContent>
 
+            {/* === CHAT TAB === */}
+            <TabsContent value="chat" className="space-y-4 mt-4">
+              <DifyChatTab userId={user?.id || "anonymous"} />
+            </TabsContent>
+
             {/* === EVIDENCE SEARCH TAB === */}
             <TabsContent value="evidence" className="space-y-4 mt-4">
               <Card>
