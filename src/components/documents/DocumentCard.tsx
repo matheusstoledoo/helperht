@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { FileText, Download, Trash2, MessageSquare, Calendar, User } from "lucide-react";
+import { FileText, Download, Trash2, MessageSquare, Calendar, User, Eye } from "lucide-react";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
