@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Sparkles,
@@ -13,12 +12,8 @@ import {
   Activity,
   Heart,
   RefreshCw,
-  Search,
-  Send,
   Link2,
   Dumbbell,
-  ShieldCheck,
-  BookOpen,
   MessageCircle,
 } from "lucide-react";
 import PatientLayout from "@/components/patient/PatientLayout";
