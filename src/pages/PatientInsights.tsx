@@ -35,62 +35,6 @@ interface InsightsData {
   insights: Insight[];
 }
 
-interface EvidenceResult {
-  answer: string;
-  confidence: "high" | "medium" | "low";
-  sources_note: string;
-  disclaimer: string;
-}
-
-const categoryIcon = (cat: string) => {
-  switch (cat) {
-    case "exames": return <Activity className="h-4 w-4" />;
-    case "nutricao": return <Apple className="h-4 w-4" />;
-    case "treino": return <Dumbbell className="h-4 w-4" />;
-    case "conexao": return <Link2 className="h-4 w-4" />;
-    case "atencao": return <AlertTriangle className="h-4 w-4" />;
-    case "positivo": return <CheckCircle2 className="h-4 w-4" />;
-    default: return <Heart className="h-4 w-4" />;
-  }
-};
-
-const categoryLabel = (cat: string) => {
-  switch (cat) {
-    case "exames": return "Exames";
-    case "nutricao": return "Nutrição";
-    case "treino": return "Treino";
-    case "conexao": return "Conexão";
-    case "estilo_de_vida": return "Estilo de vida";
-    case "atencao": return "Atenção";
-    case "positivo": return "Positivo";
-    default: return cat;
-  }
-};
-
-const priorityStyles = (priority: string) => {
-  switch (priority) {
-    case "attention": return "border-amber-500/30 bg-amber-50 dark:bg-amber-950/20";
-    case "positive": return "border-green-500/30 bg-green-50 dark:bg-green-950/20";
-    default: return "border-border bg-card";
-  }
-};
-
-const priorityIcon = (priority: string) => {
-  switch (priority) {
-    case "attention": return <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />;
-    case "positive": return <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />;
-    default: return <Info className="h-4 w-4 text-primary shrink-0" />;
-  }
-};
-
-const confidenceBadge = (level: string) => {
-  switch (level) {
-    case "high": return <Badge variant="outline" className="text-xs gap-1 text-green-700 border-green-300"><ShieldCheck className="h-3 w-3" />Alta confiança</Badge>;
-    case "medium": return <Badge variant="outline" className="text-xs gap-1 text-amber-700 border-amber-300"><ShieldCheck className="h-3 w-3" />Confiança moderada</Badge>;
-    default: return <Badge variant="outline" className="text-xs gap-1 text-muted-foreground"><ShieldCheck className="h-3 w-3" />Baixa confiança</Badge>;
-  }
-};
-
 export default function PatientInsights() {
   const { user, loading: authLoading } = useAuth();
   const [data, setData] = useState<InsightsData | null>(null);
