@@ -86,6 +86,24 @@ export const DocumentCard = ({ document, userRole, userName, onDelete, style }: 
     showToasts: false,
   });
 
+  const getFileUrl = async () => {
+    const { data, error } = await supabase.storage
+      .from("patient-documents")
+      .createSignedUrl(document.file_path, 3600);
+    if (error) throw error;
+    return data.signedUrl;
+  };
+
+  const handleOpen = async () => {
+    try {
+      const url = await getFileUrl();
+      window.open(url, "_blank");
+    } catch (error) {
+      console.error("Open error:", error);
+      toast.error("Falha ao abrir documento");
+    }
+  };
+
   const handleDownload = async () => {
     try {
       const { data, error } = await supabase.storage
@@ -102,7 +120,7 @@ export const DocumentCard = ({ document, userRole, userName, onDelete, style }: 
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Download error:", error);
-      toast.error("Failed to download document");
+      toast.error("Falha ao baixar documento");
     }
   };
 
