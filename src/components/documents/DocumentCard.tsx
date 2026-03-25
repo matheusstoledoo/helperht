@@ -209,10 +209,13 @@ export const DocumentCard = ({ document, userRole, userName, onDelete, style }: 
           <div className="text-muted-foreground">{fileSize} KB</div>
         </CardContent>
         <CardFooter className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleDownload}>
+          <Button variant="outline" size="sm" onClick={handleOpen} title="Abrir documento">
+            <Eye className="w-4 h-4" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleDownload} title="Baixar documento">
             <Download className="w-4 h-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={openCommentsDialog}>
+          <Button variant="outline" size="sm" onClick={openCommentsDialog} title="Comentários">
             <MessageSquare className="w-4 h-4" />
           </Button>
           {userRole === "professional" && (
