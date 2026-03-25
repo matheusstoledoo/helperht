@@ -19,9 +19,11 @@ import {
   Dumbbell,
   ShieldCheck,
   BookOpen,
+  MessageCircle,
 } from "lucide-react";
 import PatientLayout from "@/components/patient/PatientLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { DifyChatTab } from "@/components/chat/DifyChatTab";
 import { supabase } from "@/integrations/supabase/client";
 import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import { toast } from "sonner";
