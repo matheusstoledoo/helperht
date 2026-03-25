@@ -19,9 +19,11 @@ import {
   Dumbbell,
   ShieldCheck,
   BookOpen,
+  MessageCircle,
 } from "lucide-react";
 import PatientLayout from "@/components/patient/PatientLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { DifyChatTab } from "@/components/chat/DifyChatTab";
 import { supabase } from "@/integrations/supabase/client";
 import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import { toast } from "sonner";
@@ -181,6 +183,9 @@ export default function PatientInsights() {
               <TabsTrigger value="insights" className="flex-1 gap-1">
                 <Sparkles className="h-3.5 w-3.5" /> Insights
               </TabsTrigger>
+              <TabsTrigger value="chat" className="flex-1 gap-1">
+                <MessageCircle className="h-3.5 w-3.5" /> Chat
+              </TabsTrigger>
               <TabsTrigger value="evidence" className="flex-1 gap-1">
                 <BookOpen className="h-3.5 w-3.5" /> Pesquisar
               </TabsTrigger>
@@ -266,6 +271,11 @@ export default function PatientInsights() {
                   </p>
                 </>
               ) : null}
+            </TabsContent>
+
+            {/* === CHAT TAB === */}
+            <TabsContent value="chat" className="space-y-4 mt-4">
+              <DifyChatTab userId={user?.id || "anonymous"} />
             </TabsContent>
 
             {/* === EVIDENCE SEARCH TAB === */}
