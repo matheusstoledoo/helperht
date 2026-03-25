@@ -35,12 +35,52 @@ interface InsightsData {
   insights: Insight[];
 }
 
+const categoryIcon = (cat: string) => {
+  switch (cat) {
+    case "exames": return <Activity className="h-4 w-4" />;
+    case "nutricao": return <Apple className="h-4 w-4" />;
+    case "treino": return <Dumbbell className="h-4 w-4" />;
+    case "conexao": return <Link2 className="h-4 w-4" />;
+    case "atencao": return <AlertTriangle className="h-4 w-4" />;
+    case "positivo": return <CheckCircle2 className="h-4 w-4" />;
+    default: return <Heart className="h-4 w-4" />;
+  }
+};
+
+const categoryLabel = (cat: string) => {
+  switch (cat) {
+    case "exames": return "Exames";
+    case "nutricao": return "Nutrição";
+    case "treino": return "Treino";
+    case "conexao": return "Conexão";
+    case "estilo_de_vida": return "Estilo de vida";
+    case "atencao": return "Atenção";
+    case "positivo": return "Positivo";
+    default: return cat;
+  }
+};
+
+const priorityStyles = (priority: string) => {
+  switch (priority) {
+    case "attention": return "border-amber-500/30 bg-amber-50 dark:bg-amber-950/20";
+    case "positive": return "border-green-500/30 bg-green-50 dark:bg-green-950/20";
+    default: return "border-border bg-card";
+  }
+};
+
+const priorityIcon = (priority: string) => {
+  switch (priority) {
+    case "attention": return <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />;
+    case "positive": return <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />;
+    default: return <Info className="h-4 w-4 text-primary shrink-0" />;
+  }
+};
+
 export default function PatientInsights() {
   const { user, loading: authLoading } = useAuth();
   const [data, setData] = useState<InsightsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
-
 
   const generateInsights = async () => {
     if (!user) {
@@ -65,41 +105,10 @@ export default function PatientInsights() {
     }
   };
 
-  const searchEvidence = async () => {
-    if (!user) {
-      toast.error("Você precisa estar logado.");
-      return;
-    }
-    if (!searchQuery.trim() || searchQuery.trim().length < 3) {
-      toast.error("Digite uma pergunta com pelo menos 3 caracteres.");
-      return;
-    }
-    setSearchLoading(true);
-    setEvidenceResult(null);
-    try {
-      const { data: result, error } = await supabase.functions.invoke("search-health-evidence", {
-        body: { query: searchQuery.trim() },
-      });
-      if (error) throw error;
-      if (result?.error) {
-        toast.error(result.error);
-        return;
-      }
-      const parsed = result as EvidenceResult;
-      setEvidenceResult(parsed);
-      setSearchHistory(prev => [{ query: searchQuery.trim(), result: parsed }, ...prev.slice(0, 4)]);
-    } catch (e: any) {
-      const message = e?.message || "Erro na pesquisa. Tente novamente.";
-      toast.error(typeof message === 'string' ? message : "Erro na pesquisa.");
-    } finally {
-      setSearchLoading(false);
-    }
-  };
-
   return (
     <PatientLayout
       title="Insights de Saúde"
-      subtitle="Análises inteligentes e pesquisa baseada em evidências"
+      subtitle="Análises inteligentes com IA"
       showHeader={false}
       breadcrumb={<PatientBreadcrumb currentPage="Insights de IA" />}
     >
@@ -208,7 +217,6 @@ export default function PatientInsights() {
             <TabsContent value="chat" className="space-y-4 mt-4">
               <DifyChatTab userId={user?.id || "anonymous"} />
             </TabsContent>
-
           </Tabs>
         )}
       </div>
