@@ -183,6 +183,9 @@ export default function PatientInsights() {
               <TabsTrigger value="insights" className="flex-1 gap-1">
                 <Sparkles className="h-3.5 w-3.5" /> Insights
               </TabsTrigger>
+              <TabsTrigger value="chat" className="flex-1 gap-1">
+                <MessageCircle className="h-3.5 w-3.5" /> Chat
+              </TabsTrigger>
               <TabsTrigger value="evidence" className="flex-1 gap-1">
                 <BookOpen className="h-3.5 w-3.5" /> Pesquisar
               </TabsTrigger>
