@@ -41,11 +41,6 @@ export default function PatientInsights() {
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
 
-  // Evidence search state
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [evidenceResult, setEvidenceResult] = useState<EvidenceResult | null>(null);
-  const [searchHistory, setSearchHistory] = useState<{ query: string; result: EvidenceResult }[]>([]);
 
   const generateInsights = async () => {
     if (!user) {
