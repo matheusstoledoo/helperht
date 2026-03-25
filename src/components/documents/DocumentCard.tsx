@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { FileText, Download, Trash2, MessageSquare, Calendar, User } from "lucide-react";
+import { FileText, Download, Trash2, MessageSquare, Calendar, User, Eye } from "lucide-react";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -86,6 +86,24 @@ export const DocumentCard = ({ document, userRole, userName, onDelete, style }: 
     showToasts: false,
   });
 
+  const getFileUrl = async () => {
+    const { data, error } = await supabase.storage
+      .from("patient-documents")
+      .createSignedUrl(document.file_path, 3600);
+    if (error) throw error;
+    return data.signedUrl;
+  };
+
+  const handleOpen = async () => {
+    try {
+      const url = await getFileUrl();
+      window.open(url, "_blank");
+    } catch (error) {
+      console.error("Open error:", error);
+      toast.error("Falha ao abrir documento");
+    }
+  };
+
   const handleDownload = async () => {
     try {
       const { data, error } = await supabase.storage
@@ -102,7 +120,7 @@ export const DocumentCard = ({ document, userRole, userName, onDelete, style }: 
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Download error:", error);
-      toast.error("Failed to download document");
+      toast.error("Falha ao baixar documento");
     }
   };
 
@@ -191,10 +209,13 @@ export const DocumentCard = ({ document, userRole, userName, onDelete, style }: 
           <div className="text-muted-foreground">{fileSize} KB</div>
         </CardContent>
         <CardFooter className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleDownload}>
+          <Button variant="outline" size="sm" onClick={handleOpen} title="Abrir documento">
+            <Eye className="w-4 h-4" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleDownload} title="Baixar documento">
             <Download className="w-4 h-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={openCommentsDialog}>
+          <Button variant="outline" size="sm" onClick={openCommentsDialog} title="Comentários">
             <MessageSquare className="w-4 h-4" />
           </Button>
           {userRole === "professional" && (
