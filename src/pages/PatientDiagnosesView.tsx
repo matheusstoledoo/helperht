@@ -112,7 +112,8 @@ const PatientDiagnosesView = () => {
 
   useEffect(() => {
     const fetchDiagnoses = async () => {
-      if (!user) return;
+      if (authLoading) return;
+      if (!user) { setLoading(false); return; }
 
       try {
         // Get patient ID
