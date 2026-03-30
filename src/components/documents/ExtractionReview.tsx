@@ -117,15 +117,26 @@ export const ExtractionReview = ({
         </Select>
       </div>
 
+      {/* Date missing prompt */}
+      {!editedData.document_date && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-500/10 text-blue-700 border border-blue-200 text-sm">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span>
+            <strong>Data não identificada automaticamente.</strong> Por favor, informe a data do exame abaixo para manter seus resultados em ordem cronológica.
+          </span>
+        </div>
+      )}
+
       {/* Basic info */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label>Data do Documento</Label>
+          <Label>Data do Documento {!editedData.document_date && <span className="text-red-500">*</span>}</Label>
           <Input
             type="date"
             value={editedData.document_date || ""}
             onChange={(e) => updateField("document_date", e.target.value)}
-            className={cn(!editedData.document_date && isLowConfidence && "border-amber-300")}
+            className={cn(!editedData.document_date && "border-red-400 ring-1 ring-red-300")}
+            autoFocus={!editedData.document_date}
           />
         </div>
         <div className="space-y-1.5">
@@ -296,7 +307,17 @@ export const ExtractionReview = ({
           <Button variant="outline" onClick={onSkip}>
             Pular extração
           </Button>
-          <Button onClick={() => onConfirm(editedData, category)}>
+          <Button
+            onClick={() => {
+              if (!editedData.document_date) {
+                const confirmWithout = window.confirm(
+                  "A data do documento não foi informada. Sem ela, os resultados podem ficar fora de ordem cronológica. Deseja continuar mesmo assim?"
+                );
+                if (!confirmWithout) return;
+              }
+              onConfirm(editedData, category);
+            }}
+          >
             <CheckCircle2 className="h-4 w-4 mr-1" />
             Confirmar e Salvar
           </Button>
