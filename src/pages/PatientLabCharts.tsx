@@ -62,8 +62,9 @@ export default function PatientLabCharts() {
   };
 
   useEffect(() => {
+    if (authLoading) return;
     fetchResults();
-  }, [user]);
+  }, [user, authLoading]);
 
   // Group by marker name
   const groupedByMarker = useMemo(() => {
