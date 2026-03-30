@@ -253,9 +253,9 @@ export default function PatientTraining() {
             </TabsList>
 
             <TabsContent value="plan" className="space-y-4 mt-4">
-              {showCreateForm ? (
+              {showCreateForm && user ? (
                 <ManualTrainingPlanForm
-                  userId={user!.id}
+                  userId={user.id}
                   patientId={patientId}
                   onSaved={() => { setShowCreateForm(false); window.location.reload(); }}
                   onCancel={() => setShowCreateForm(false)}
