@@ -82,7 +82,7 @@ const recurrenceLabels: Record<string, string> = {
 };
 
 export default function PatientAlerts() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);

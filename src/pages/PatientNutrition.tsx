@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import PatientLayout from "@/components/patient/PatientLayout";
 import { useAuth } from "@/contexts/AuthContext";
+// authLoading used below
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
