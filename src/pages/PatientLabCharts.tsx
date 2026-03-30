@@ -25,7 +25,7 @@ interface RawLabResult {
 }
 
 export default function PatientLabCharts() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [results, setResults] = useState<RawLabResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [patientId, setPatientId] = useState<string | null>(null);

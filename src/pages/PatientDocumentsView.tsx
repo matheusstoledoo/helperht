@@ -73,7 +73,7 @@ interface Document {
 }
 
 const PatientDocumentsView = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { professionalId } = useParams<{ professionalId?: string }>();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);

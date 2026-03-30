@@ -75,7 +75,7 @@ const SPORT_LABELS: Record<string, string> = {
 };
 
 export default function PatientTraining() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [plans, setPlans] = useState<TrainingPlan[]>([]);
   const [loading, setLoading] = useState(true);

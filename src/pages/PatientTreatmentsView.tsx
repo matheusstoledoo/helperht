@@ -81,7 +81,7 @@ interface Professional {
 }
 
 const PatientTreatmentsView = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { professionalId } = useParams<{ professionalId?: string }>();
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);

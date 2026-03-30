@@ -43,7 +43,7 @@ interface TrailEnrollment {
 
 export default function PatientTrailsView() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [enrollments, setEnrollments] = useState<TrailEnrollment[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEnrollment, setSelectedEnrollment] = useState<TrailEnrollment | null>(null);
