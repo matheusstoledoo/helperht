@@ -310,7 +310,16 @@ export default function PatientNutrition() {
             </TabsContent>
 
             <TabsContent value="supplements" className="mt-4">
-              {user && <SupplementsLog userId={user.id} patientId={patientId} />}
+              {user ? (
+                <SupplementsLog userId={user.id} patientId={patientId} />
+              ) : (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <Pill className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+                    <p className="text-muted-foreground">Faça login para registrar suplementação</p>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
           </Tabs>
         )}
