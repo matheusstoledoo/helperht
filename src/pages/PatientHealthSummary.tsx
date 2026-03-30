@@ -51,7 +51,7 @@ const SPORT_LABELS: Record<string, string> = {
 };
 
 export default function PatientHealthSummary() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [markers, setMarkers] = useState<LabMarkerSummary[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
@@ -62,7 +62,11 @@ export default function PatientHealthSummary() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (authLoading) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     const fetchData = async () => {
       const [patientRes, labRes, nutritionRes, trainingRes] = await Promise.all([
@@ -192,7 +196,7 @@ export default function PatientHealthSummary() {
     };
 
     fetchData();
-  }, [user]);
+  }, [user, authLoading]);
 
   const variationBadge = (m: LabMarkerSummary) => {
     if (m.variationPercent == null) return null;
