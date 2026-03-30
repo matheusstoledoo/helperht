@@ -68,7 +68,8 @@ export default function PatientNutrition() {
   const [showCreateForm, setShowCreateForm] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (authLoading) return;
+    if (!user) { setLoading(false); return; }
     const fetchData = async () => {
       const [patientRes, userRes, plansRes] = await Promise.all([
         supabase.from("patients").select("id").eq("user_id", user.id).maybeSingle(),
