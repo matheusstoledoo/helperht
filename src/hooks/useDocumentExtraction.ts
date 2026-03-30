@@ -206,8 +206,9 @@ export function useDocumentExtraction() {
         })
         .eq("document_id", documentId);
 
-      // Save lab results
+      // Save lab results (sorted chronologically by collection_date)
       if (data.lab_results && data.lab_results.length > 0) {
+        const collectionDate = data.document_date || new Date().toISOString().split("T")[0];
         const labRows = data.lab_results.map((lr) => ({
           user_id: userId,
           patient_id: patientId,
@@ -220,7 +221,7 @@ export function useDocumentExtraction() {
           reference_min: lr.reference_min,
           reference_max: lr.reference_max,
           reference_text: lr.reference_text,
-          collection_date: data.document_date || new Date().toISOString().split("T")[0],
+          collection_date: collectionDate,
           status: getLabStatus(lr.value, lr.reference_min, lr.reference_max),
         }));
 

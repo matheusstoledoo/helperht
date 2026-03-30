@@ -307,7 +307,17 @@ export const ExtractionReview = ({
           <Button variant="outline" onClick={onSkip}>
             Pular extração
           </Button>
-          <Button onClick={() => onConfirm(editedData, category)}>
+          <Button
+            onClick={() => {
+              if (!editedData.document_date) {
+                const confirmWithout = window.confirm(
+                  "A data do documento não foi informada. Sem ela, os resultados podem ficar fora de ordem cronológica. Deseja continuar mesmo assim?"
+                );
+                if (!confirmWithout) return;
+              }
+              onConfirm(editedData, category);
+            }}
+          >
             <CheckCircle2 className="h-4 w-4 mr-1" />
             Confirmar e Salvar
           </Button>
