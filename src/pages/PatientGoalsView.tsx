@@ -37,13 +37,14 @@ interface Goal {
 
 export default function PatientGoalsView() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchGoals = async () => {
-      if (!user) return;
+      if (authLoading) return;
+      if (!user) { setLoading(false); return; }
 
       // First get the patient record for this user
       const { data: patientData } = await supabase
@@ -86,7 +87,7 @@ export default function PatientGoalsView() {
     };
 
     fetchGoals();
-  }, [user]);
+  }, [user, authLoading]);
 
   const getStatusConfig = (status: string) => {
     switch (status) {

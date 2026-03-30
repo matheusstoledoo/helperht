@@ -74,7 +74,7 @@ interface Professional {
 }
 
 const PatientDiagnosesView = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { professionalId } = useParams<{ professionalId?: string }>();
   const [diagnoses, setDiagnoses] = useState<Diagnosis[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
@@ -112,7 +112,8 @@ const PatientDiagnosesView = () => {
 
   useEffect(() => {
     const fetchDiagnoses = async () => {
-      if (!user) return;
+      if (authLoading) return;
+      if (!user) { setLoading(false); return; }
 
       try {
         // Get patient ID
@@ -185,7 +186,7 @@ const PatientDiagnosesView = () => {
     };
 
     fetchDiagnoses();
-  }, [user, reloadKey]);
+  }, [user, authLoading, reloadKey]);
 
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from("diagnoses").delete().eq("id", id);

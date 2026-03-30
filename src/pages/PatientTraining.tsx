@@ -74,7 +74,7 @@ const SPORT_LABELS: Record<string, string> = {
 };
 
 export default function PatientTraining() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [plans, setPlans] = useState<TrainingPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +84,8 @@ export default function PatientTraining() {
   const [showCreateForm, setShowCreateForm] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (authLoading) return;
+    if (!user) { setLoading(false); return; }
     const fetchData = async () => {
       const [patientRes, userRes, plansRes] = await Promise.all([
         supabase.from("patients").select("id").eq("user_id", user.id).maybeSingle(),
@@ -101,7 +102,7 @@ export default function PatientTraining() {
       setLoading(false);
     };
     fetchData();
-  }, [user]);
+  }, [user, authLoading]);
 
   const activePlan = plans.find((p) => p.status === "active");
   const pastPlans = plans.filter((p) => p.status !== "active");

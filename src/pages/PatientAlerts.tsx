@@ -82,7 +82,7 @@ const recurrenceLabels: Record<string, string> = {
 };
 
 export default function PatientAlerts() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,7 +91,8 @@ export default function PatientAlerts() {
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    if (!user) return;
+    if (authLoading) return;
+    if (!user) { setLoading(false); return; }
 
     const fetchData = async () => {
       const patientRes = await supabase
@@ -193,7 +194,7 @@ export default function PatientAlerts() {
     };
 
     fetchData();
-  }, [user, reloadKey]);
+  }, [user, authLoading, reloadKey]);
 
   const dismiss = (id: string) => {
     setDismissedIds((prev) => new Set([...prev, id]));

@@ -27,7 +27,7 @@ interface Professional {
 
 const PatientProfessionals = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -35,7 +35,8 @@ const PatientProfessionals = () => {
 
   useEffect(() => {
     const fetchProfessionals = async () => {
-      if (!user) return;
+      if (authLoading) return;
+      if (!user) { setLoading(false); return; }
 
       try {
         // Get patient ID
@@ -97,7 +98,7 @@ const PatientProfessionals = () => {
     };
 
     fetchProfessionals();
-  }, [user]);
+  }, [user, authLoading]);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "Sem registro";

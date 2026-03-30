@@ -57,7 +57,7 @@ interface Meal {
 }
 
 export default function PatientNutrition() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [plans, setPlans] = useState<NutritionPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,7 +68,8 @@ export default function PatientNutrition() {
   const [showCreateForm, setShowCreateForm] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (authLoading) return;
+    if (!user) { setLoading(false); return; }
     const fetchData = async () => {
       const [patientRes, userRes, plansRes] = await Promise.all([
         supabase.from("patients").select("id").eq("user_id", user.id).maybeSingle(),
@@ -85,7 +86,7 @@ export default function PatientNutrition() {
       setLoading(false);
     };
     fetchData();
-  }, [user]);
+  }, [user, authLoading]);
 
   const activePlan = plans.find((p) => p.status === "active");
   const pastPlans = plans.filter((p) => p.status !== "active");

@@ -72,7 +72,7 @@ interface Document {
 }
 
 const PatientDocumentsView = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { professionalId } = useParams<{ professionalId?: string }>();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,7 +115,8 @@ const PatientDocumentsView = () => {
 
   useEffect(() => {
     const fetchDocuments = async () => {
-      if (!user) return;
+      if (authLoading) return;
+      if (!user) { setLoading(false); return; }
 
       try {
         const [patientResult, userResult] = await Promise.all([
@@ -160,7 +161,7 @@ const PatientDocumentsView = () => {
     };
 
     fetchDocuments();
-  }, [user]);
+  }, [user, authLoading]);
 
   useRealtimeSubscription<Document>({
     table: "documents",

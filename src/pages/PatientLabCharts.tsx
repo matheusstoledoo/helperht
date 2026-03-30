@@ -25,14 +25,14 @@ interface RawLabResult {
 }
 
 export default function PatientLabCharts() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [results, setResults] = useState<RawLabResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [patientId, setPatientId] = useState<string | null>(null);
   const [userName, setUserName] = useState("Paciente");
 
   const fetchResults = async () => {
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
     setLoading(true);
 
     const [patientRes, userRes] = await Promise.all([
@@ -62,8 +62,9 @@ export default function PatientLabCharts() {
   };
 
   useEffect(() => {
+    if (authLoading) return;
     fetchResults();
-  }, [user]);
+  }, [user, authLoading]);
 
   // Group by marker name
   const groupedByMarker = useMemo(() => {
