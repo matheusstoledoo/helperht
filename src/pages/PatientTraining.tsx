@@ -291,7 +291,16 @@ export default function PatientTraining() {
             </TabsContent>
 
             <TabsContent value="log" className="mt-4">
-              {user && <WorkoutLogger userId={user.id} patientId={patientId} />}
+              {user ? (
+                <WorkoutLogger userId={user.id} patientId={patientId} />
+              ) : (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <Dumbbell className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+                    <p className="text-muted-foreground">Faça login para registrar treinos</p>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
           </Tabs>
         )}
