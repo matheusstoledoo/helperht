@@ -43,7 +43,8 @@ export default function PatientGoalsView() {
 
   useEffect(() => {
     const fetchGoals = async () => {
-      if (!user) return;
+      if (authLoading) return;
+      if (!user) { setLoading(false); return; }
 
       // First get the patient record for this user
       const { data: patientData } = await supabase
