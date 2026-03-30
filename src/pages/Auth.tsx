@@ -48,8 +48,13 @@ const Auth = () => {
   const [signupRole, setSignupRole] = useState<'patient' | 'professional'>('patient');
 
   // Redirect if already authenticated
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
+
   if (user) {
-    navigate("/dashboard");
     return null;
   }
 
