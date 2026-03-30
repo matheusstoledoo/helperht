@@ -91,7 +91,8 @@ export default function PatientAlerts() {
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    if (!user) return;
+    if (authLoading) return;
+    if (!user) { setLoading(false); return; }
 
     const fetchData = async () => {
       const patientRes = await supabase
