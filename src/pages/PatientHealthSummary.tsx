@@ -196,7 +196,7 @@ export default function PatientHealthSummary() {
     };
 
     fetchData();
-  }, [user]);
+  }, [user, authLoading]);
 
   const variationBadge = (m: LabMarkerSummary) => {
     if (m.variationPercent == null) return null;
