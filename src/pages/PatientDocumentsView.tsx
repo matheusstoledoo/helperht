@@ -116,7 +116,8 @@ const PatientDocumentsView = () => {
 
   useEffect(() => {
     const fetchDocuments = async () => {
-      if (!user) return;
+      if (authLoading) return;
+      if (!user) { setLoading(false); return; }
 
       try {
         const [patientResult, userResult] = await Promise.all([
