@@ -50,7 +50,8 @@ export default function PatientTrailsView() {
 
   useEffect(() => {
     const fetchEnrollments = async () => {
-      if (!user) return;
+      if (authLoading) return;
+      if (!user) { setLoading(false); return; }
 
       const { data: patientData } = await supabase
         .from("patients")
