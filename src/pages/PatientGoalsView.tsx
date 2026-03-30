@@ -87,7 +87,7 @@ export default function PatientGoalsView() {
     };
 
     fetchGoals();
-  }, [user]);
+  }, [user, authLoading]);
 
   const getStatusConfig = (status: string) => {
     switch (status) {

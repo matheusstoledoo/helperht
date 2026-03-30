@@ -162,7 +162,7 @@ const PatientDocumentsView = () => {
     };
 
     fetchDocuments();
-  }, [user]);
+  }, [user, authLoading]);
 
   useRealtimeSubscription<Document>({
     table: "documents",

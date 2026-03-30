@@ -62,7 +62,7 @@ const ProfessionalSettings = () => {
   // Load user data
   useEffect(() => {
     const loadUserData = async () => {
-      if (!user) return;
+      if (!user) { return; }
 
       try {
         const { data: userData, error } = await supabase

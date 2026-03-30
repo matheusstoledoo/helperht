@@ -32,7 +32,7 @@ export default function PatientLabCharts() {
   const [userName, setUserName] = useState("Paciente");
 
   const fetchResults = async () => {
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
     setLoading(true);
 
     const [patientRes, userRes] = await Promise.all([

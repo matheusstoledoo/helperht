@@ -92,7 +92,7 @@ export default function PatientTrailsView() {
     };
 
     fetchEnrollments();
-  }, [user]);
+  }, [user, authLoading]);
 
   const getStatusConfig = (status: string) => {
     switch (status) {

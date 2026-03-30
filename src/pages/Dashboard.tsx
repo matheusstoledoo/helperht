@@ -78,7 +78,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchProfessionalName = async () => {
-      if (!user) return;
+      if (!user) { return; }
       const { data } = await supabase
         .from("users")
         .select("name")

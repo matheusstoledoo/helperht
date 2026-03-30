@@ -194,7 +194,7 @@ export default function PatientAlerts() {
     };
 
     fetchData();
-  }, [user, reloadKey]);
+  }, [user, authLoading, reloadKey]);
 
   const dismiss = (id: string) => {
     setDismissedIds((prev) => new Set([...prev, id]));

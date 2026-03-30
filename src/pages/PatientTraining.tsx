@@ -102,7 +102,7 @@ export default function PatientTraining() {
       setLoading(false);
     };
     fetchData();
-  }, [user]);
+  }, [user, authLoading]);
 
   const activePlan = plans.find((p) => p.status === "active");
   const pastPlans = plans.filter((p) => p.status !== "active");

@@ -186,7 +186,7 @@ const PatientDiagnosesView = () => {
     };
 
     fetchDiagnoses();
-  }, [user, reloadKey]);
+  }, [user, authLoading, reloadKey]);
 
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from("diagnoses").delete().eq("id", id);

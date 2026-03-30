@@ -98,7 +98,7 @@ const PatientProfessionals = () => {
     };
 
     fetchProfessionals();
-  }, [user]);
+  }, [user, authLoading]);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "Sem registro";
