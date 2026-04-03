@@ -88,7 +88,7 @@ const PatientDocumentsView = () => {
 
   // Upload form state
   const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploadCategory, setUploadCategory] = useState("laboratorial");
+  const [uploadCategory, setUploadCategory] = useState("exame_laboratorial");
   const [uploadDocName, setUploadDocName] = useState("");
   const [uploadDescription, setUploadDescription] = useState("");
   const [uploadHideFromProfessional, setUploadHideFromProfessional] = useState(false);
@@ -181,12 +181,12 @@ const PatientDocumentsView = () => {
     },
   });
 
-  // Map category keys for consistency
+  // Map category keys for consistency with tabs
   const getCategoryKey = (category: string) => {
-    if (category === "lab_results") return "laboratorial";
-    if (category === "imaging") return "imagem";
-    if (category === "prescriptions") return "receita";
-    if (category === "other" || category === "reports") return "outros";
+    if (category === "lab_results" || category === "exame_laboratorial") return "laboratorial";
+    if (category === "imaging" || category === "exame_imagem") return "imagem";
+    if (category === "prescriptions" || category === "receita") return "receita";
+    if (category === "other" || category === "reports" || category === "outros" || category === "laudo" || category === "resumo_internacao" || category === "prescricao_nutricional" || category === "prescricao_treino" || category === "prescricao_suplementacao") return "outros";
     return category;
   };
 
@@ -358,7 +358,7 @@ const PatientDocumentsView = () => {
       toast.success("Documento enviado com sucesso");
       setUploadDialogOpen(false);
       setUploadFile(null);
-      setUploadCategory("laboratorial");
+      setUploadCategory("exame_laboratorial");
       setUploadDocName("");
       setUploadDescription("");
       setUploadHideFromProfessional(false);
@@ -639,7 +639,7 @@ const PatientDocumentsView = () => {
             if (!open) {
               // Reset form when closing
               setUploadFile(null);
-              setUploadCategory("laboratorial");
+              setUploadCategory("exame_laboratorial");
               setUploadDocName("");
               setUploadDescription("");
               setUploadHideFromProfessional(false);
@@ -681,9 +681,14 @@ const PatientDocumentsView = () => {
                       <SelectValue placeholder="Selecione o tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="imagem">Exame de imagem</SelectItem>
-                      <SelectItem value="laboratorial">Exame laboratorial</SelectItem>
-                      <SelectItem value="receita">Receita</SelectItem>
+                      <SelectItem value="exame_imagem">Exame de imagem</SelectItem>
+                      <SelectItem value="exame_laboratorial">Exame laboratorial</SelectItem>
+                      <SelectItem value="laudo">Laudo / Relatório</SelectItem>
+                      <SelectItem value="receita">Receita Médica</SelectItem>
+                      <SelectItem value="resumo_internacao">Resumo de Internação</SelectItem>
+                      <SelectItem value="prescricao_nutricional">Prescrição Nutricional</SelectItem>
+                      <SelectItem value="prescricao_treino">Prescrição de Treino</SelectItem>
+                      <SelectItem value="prescricao_suplementacao">Suplementação</SelectItem>
                       <SelectItem value="outros">Outro documento</SelectItem>
                     </SelectContent>
                   </Select>
