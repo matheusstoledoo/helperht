@@ -94,7 +94,28 @@ const PatientDocumentsView = () => {
   const [uploadDescription, setUploadDescription] = useState("");
   const [uploadHideFromProfessional, setUploadHideFromProfessional] = useState(false);
 
-  useEffect(() => {
+  // Get professional name if filtering by professional
+  const { data: filterProfessional } = useQuery({
+    queryKey: ['professional-name', professionalId],
+    queryFn: async () => {
+      if (!professionalId) return null;
+      const { data } = await supabase
+        .from('users')
+        .select('id, name')
+        .eq('id', professionalId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!professionalId,
+  });
+
+  // Tabs
+  const [activeTab, setActiveTab] = useState<"imagem" | "laboratorial" | "receita" | "outros">("imagem");
+
+  // Filters
+  const [periodFilter, setPeriodFilter] = useState("all");
+  const [uploaderFilter, setUploaderFilter] = useState("all");
+
     const fetchDocuments = async () => {
       if (authLoading) return;
       if (!user) { setLoading(false); return; }
