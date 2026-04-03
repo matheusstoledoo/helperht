@@ -17,6 +17,7 @@ import logo from "@/assets/logo.png";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { InterestForm } from "@/components/landing/InterestForm";
+import { SignUpModal } from "@/components/landing/SignUpModal";
 import { FeatureSection } from "@/components/landing/FeatureSection";
 import { StatsSection } from "@/components/landing/StatsSection";
 import { ImageShowcase } from "@/components/landing/ImageShowcase";
