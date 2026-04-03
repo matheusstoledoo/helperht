@@ -61,14 +61,14 @@ export interface DocumentExtraction {
 }
 
 const CATEGORY_MAP: Record<string, string> = {
-  exame_laboratorial: "laboratorial",
-  exame_imagem: "imagem",
-  laudo: "outros",
+  exame_laboratorial: "exame_laboratorial",
+  exame_imagem: "exame_imagem",
+  laudo: "laudo",
   receita: "receita",
-  resumo_internacao: "outros",
-  prescricao_nutricional: "outros",
-  prescricao_treino: "outros",
-  prescricao_suplementacao: "outros",
+  resumo_internacao: "resumo_internacao",
+  prescricao_nutricional: "prescricao_nutricional",
+  prescricao_treino: "prescricao_treino",
+  prescricao_suplementacao: "prescricao_suplementacao",
   outros: "outros",
 };
 
