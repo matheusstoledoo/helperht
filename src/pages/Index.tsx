@@ -26,6 +26,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [interestFormOpen, setInterestFormOpen] = useState(false);
+  const [signUpOpen, setSignUpOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
