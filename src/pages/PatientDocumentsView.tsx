@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,7 +15,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -84,6 +83,16 @@ const PatientDocumentsView = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
 
+  // File input ref - placed outside dialog to avoid mobile reload issues
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Upload form state
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadCategory, setUploadCategory] = useState("laboratorial");
+  const [uploadDocName, setUploadDocName] = useState("");
+  const [uploadDescription, setUploadDescription] = useState("");
+  const [uploadHideFromProfessional, setUploadHideFromProfessional] = useState(false);
+
   // Get professional name if filtering by professional
   const { data: filterProfessional } = useQuery({
     queryKey: ['professional-name', professionalId],
@@ -105,13 +114,6 @@ const PatientDocumentsView = () => {
   // Filters
   const [periodFilter, setPeriodFilter] = useState("all");
   const [uploaderFilter, setUploaderFilter] = useState("all");
-
-  // Upload form
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploadCategory, setUploadCategory] = useState("laboratorial");
-  const [uploadDocName, setUploadDocName] = useState("");
-  const [uploadDescription, setUploadDescription] = useState("");
-  const [uploadHideFromProfessional, setUploadHideFromProfessional] = useState(false);
 
   useEffect(() => {
     const fetchDocuments = async () => {
@@ -297,7 +299,15 @@ const PatientDocumentsView = () => {
     const file = e.target.files?.[0];
     if (file) {
       setUploadFile(file);
+      // Open dialog after file is selected (mobile-safe: file picker happens BEFORE dialog opens)
+      setUploadDialogOpen(true);
     }
+    // Reset input so the same file can be re-selected
+    if (e.target) e.target.value = "";
+  };
+
+  const triggerFilePicker = () => {
+    fileInputRef.current?.click();
   };
 
   const handleUpload = async () => {
@@ -593,39 +603,60 @@ const PatientDocumentsView = () => {
             )}
           </div>
 
-          {/* Upload Button */}
-          <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Upload className="w-4 h-4 mr-2" />
-                Enviar documento
-              </Button>
-            </DialogTrigger>
+          {/* Hidden file input - OUTSIDE dialog to prevent mobile reload */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,.pdf,.doc,.docx"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+
+          {/* Upload Button - triggers file picker first, then opens dialog */}
+          <Button onClick={triggerFilePicker}>
+            <Upload className="w-4 h-4 mr-2" />
+            Enviar documento
+          </Button>
+
+          {/* Upload Dialog - opens AFTER file is selected */}
+          <Dialog open={uploadDialogOpen} onOpenChange={(open) => {
+            setUploadDialogOpen(open);
+            if (!open) {
+              // Reset form when closing
+              setUploadFile(null);
+              setUploadCategory("laboratorial");
+              setUploadDocName("");
+              setUploadDescription("");
+              setUploadHideFromProfessional(false);
+            }
+          }}>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Enviar novo documento</DialogTitle>
                 <DialogDescription>
-                  Faça upload de um documento para o seu prontuário.
+                  Preencha as informações do documento antes de enviar.
                 </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-4 py-4">
-                {/* File input */}
-                <div className="space-y-2">
-                  <Label htmlFor="file">Escolher arquivo *</Label>
-                  <Input
-                    id="file"
-                    type="file"
-                    accept="image/*,.pdf,.doc,.docx"
-                    onChange={handleFileChange}
-                    disabled={uploading}
-                  />
-                  {uploadFile && (
-                    <p className="text-xs text-muted-foreground">
-                      {uploadFile.name} ({formatFileSize(uploadFile.size)})
-                    </p>
-                  )}
-                </div>
+                {/* Selected file info */}
+                {uploadFile && (
+                  <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50">
+                    <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{uploadFile.name}</p>
+                      <p className="text-xs text-muted-foreground">{formatFileSize(uploadFile.size)}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={triggerFilePicker}
+                      disabled={uploading}
+                    >
+                      Trocar
+                    </Button>
+                  </div>
+                )}
 
                 {/* Document type / Category */}
                 <div className="space-y-2">
@@ -657,7 +688,7 @@ const PatientDocumentsView = () => {
 
                 {/* Description */}
                 <div className="space-y-2">
-                  <Label htmlFor="description">Descrição do documento</Label>
+                  <Label htmlFor="description">Observações</Label>
                   <Input
                     id="description"
                     value={uploadDescription}
@@ -666,8 +697,6 @@ const PatientDocumentsView = () => {
                     disabled={uploading}
                   />
                 </div>
-
-
 
                 <p className="text-xs text-muted-foreground text-center">
                   A data de upload será registrada automaticamente.
