@@ -300,7 +300,15 @@ const PatientDocumentsView = () => {
     const file = e.target.files?.[0];
     if (file) {
       setUploadFile(file);
+      // Open dialog after file is selected (mobile-safe: file picker happens BEFORE dialog opens)
+      setUploadDialogOpen(true);
     }
+    // Reset input so the same file can be re-selected
+    if (e.target) e.target.value = "";
+  };
+
+  const triggerFilePicker = () => {
+    fileInputRef.current?.click();
   };
 
   const handleUpload = async () => {
