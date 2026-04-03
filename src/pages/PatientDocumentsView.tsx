@@ -337,7 +337,7 @@ const PatientDocumentsView = () => {
         throw new Error(`Erro no envio do arquivo: ${uploadError.message}`);
       }
 
-      const { error: dbError } = await supabase.from("documents").insert({
+      const { data: docData, error: dbError } = await supabase.from("documents").insert({
         patient_id: patientId,
         file_name: uploadDocName.trim() || uploadFile.name,
         file_path: filePath,
@@ -348,26 +348,163 @@ const PatientDocumentsView = () => {
         uploaded_by: user.id,
         uploaded_by_role: "patient",
         is_public: true,
-      });
+      }).select("id").single();
 
       if (dbError) {
         console.error("DB insert error:", dbError);
         throw new Error(`Erro ao salvar documento: ${dbError.message}`);
       }
 
-      toast.success("Documento enviado com sucesso");
+      toast.success("Documento enviado! Processando extração...");
       setUploadDialogOpen(false);
       setUploadFile(null);
       setUploadCategory("exame_laboratorial");
       setUploadDocName("");
       setUploadDescription("");
       setUploadHideFromProfessional(false);
+
+      // Trigger AI extraction in background
+      const documentId = docData.id;
+      try {
+        // Create extraction record
+        await supabase.from("document_extractions").insert({
+          document_id: documentId,
+          user_id: user.id,
+          extraction_status: "pending",
+          suggested_category: uploadCategory,
+        });
+
+        // Get file URL for extraction
+        const { data: urlData } = supabase.storage
+          .from("patient-documents")
+          .getPublicUrl(filePath);
+
+        // If bucket is private, use signed URL instead
+        let fileUrl = urlData.publicUrl;
+        const { data: signedData } = await supabase.storage
+          .from("patient-documents")
+          .createSignedUrl(filePath, 600);
+        if (signedData?.signedUrl) {
+          fileUrl = signedData.signedUrl;
+        }
+
+        // Call extraction edge function
+        const { data: fnData, error: fnError } = await supabase.functions.invoke(
+          "extract-document",
+          {
+            body: {
+              document_id: documentId,
+              file_url: fileUrl,
+              file_type: uploadFile.type,
+              category_hint: uploadCategory,
+            },
+          }
+        );
+
+        if (fnError) {
+          console.error("Extraction function error:", fnError);
+          toast.error("Erro na extração automática. Verifique o documento manualmente.");
+        } else {
+          // Fetch extraction result and save lab results
+          const { data: extractionResult } = await supabase
+            .from("document_extractions")
+            .select("*")
+            .eq("document_id", documentId)
+            .single();
+
+          if (extractionResult?.extraction_status === "completed" && extractionResult.extracted_data) {
+            const extracted = extractionResult.extracted_data as any;
+
+            // Save lab results if present
+            if (extracted.lab_results && extracted.lab_results.length > 0) {
+              const collectionDate = extracted.document_date || new Date().toISOString().split("T")[0];
+              const labRows = extracted.lab_results.map((lr: any) => ({
+                user_id: user.id,
+                patient_id: patientId,
+                document_id: documentId,
+                marker_name: lr.marker_name,
+                marker_category: lr.category || "other",
+                value: typeof lr.value === "number" ? lr.value : parseFloat(lr.value) || null,
+                value_text: typeof lr.value === "string" ? lr.value : null,
+                unit: lr.unit,
+                reference_min: lr.reference_min,
+                reference_max: lr.reference_max,
+                reference_text: lr.reference_text,
+                collection_date: collectionDate,
+                status: getLabStatus(lr.value, lr.reference_min, lr.reference_max),
+              }));
+
+              const { error: labError } = await supabase.from("lab_results").insert(labRows);
+              if (labError) {
+                console.error("Lab results insert error:", labError);
+              } else {
+                toast.success(`${labRows.length} marcador(es) laboratorial(is) extraído(s) e salvo(s) nos gráficos! 🎉`);
+              }
+            }
+
+            // Save nutrition plan if present
+            if (extracted.nutrition_data && (extracted.nutrition_data.total_calories || extracted.nutrition_data.meals?.length)) {
+              await supabase.from("nutrition_plans").insert({
+                user_id: user.id,
+                patient_id: patientId,
+                document_id: documentId,
+                professional_name: extracted.professional_name,
+                professional_registry: extracted.professional_registry,
+                total_calories: extracted.nutrition_data.total_calories,
+                carbs_grams: extracted.nutrition_data.carbs_grams,
+                carbs_percent: extracted.nutrition_data.carbs_percent,
+                protein_grams: extracted.nutrition_data.protein_grams,
+                protein_percent: extracted.nutrition_data.protein_percent,
+                fat_grams: extracted.nutrition_data.fat_grams,
+                fat_percent: extracted.nutrition_data.fat_percent,
+                meals: extracted.nutrition_data.meals,
+                restrictions: extracted.nutrition_data.restrictions,
+                supplements: extracted.nutrition_data.supplements,
+              });
+            }
+
+            // Save training plan if present
+            if (extracted.training_data && extracted.training_data.sessions?.length) {
+              await supabase.from("training_plans").insert({
+                user_id: user.id,
+                patient_id: patientId,
+                document_id: documentId,
+                professional_name: extracted.professional_name,
+                professional_registry: extracted.professional_registry,
+                sport: extracted.training_data.sport,
+                frequency_per_week: extracted.training_data.frequency_per_week,
+                sessions: extracted.training_data.sessions,
+              });
+            }
+
+            if (!extracted.lab_results?.length) {
+              toast.success("Documento processado com sucesso!");
+            }
+          } else if (extractionResult?.extraction_status === "failed") {
+            toast.error(extractionResult.error_message || "Não foi possível interpretar o documento.");
+          }
+        }
+      } catch (extractError: any) {
+        console.error("Background extraction error:", extractError);
+        // Don't show error toast here - document was saved successfully
+      }
     } catch (error: any) {
       console.error("Upload error:", error);
       toast.error(error.message || "Erro ao enviar documento");
     } finally {
       setUploading(false);
     }
+  };
+
+  // Helper to determine lab result status
+  const getLabStatus = (value: any, refMin: number | null, refMax: number | null): string => {
+    const numVal = typeof value === "number" ? value : parseFloat(value);
+    if (isNaN(numVal) || (refMin === null && refMax === null)) return "normal";
+    if (refMin !== null && numVal < refMin) return "abnormal";
+    if (refMax !== null && numVal > refMax) return "abnormal";
+    if (refMin !== null && numVal < refMin * 1.1) return "attention";
+    if (refMax !== null && numVal > refMax * 0.9) return "attention";
+    return "normal";
   };
 
   const handleDownload = async (doc: Document) => {
