@@ -88,7 +88,7 @@ const PatientDocumentsView = () => {
 
   // Upload form state
   const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploadCategory, setUploadCategory] = useState("laboratorial");
+  const [uploadCategory, setUploadCategory] = useState("exame_laboratorial");
   const [uploadDocName, setUploadDocName] = useState("");
   const [uploadDescription, setUploadDescription] = useState("");
   const [uploadHideFromProfessional, setUploadHideFromProfessional] = useState(false);
