@@ -404,6 +404,12 @@ const Index = () => {
         open={interestFormOpen} 
         onOpenChange={setInterestFormOpen}
       />
+
+      {/* Sign Up Modal */}
+      <SignUpModal
+        open={signUpOpen}
+        onOpenChange={setSignUpOpen}
+      />
     </div>
   );
 };
