@@ -57,65 +57,7 @@ export const DailyTasksList = () => {
   const [showCompleted, setShowCompleted] = useState(false);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
 
-  const mockTasks: TaskWithPatient[] = [
-    {
-      id: "mock-1",
-      title: "Verificar adesão ao tratamento",
-      description: "Entrar em contato para confirmar uso correto da medicação prescrita",
-      action_category: "communication",
-      status: "pending",
-      scheduled_date: format(new Date(), "yyyy-MM-dd"),
-      scheduled_time: "09:00:00",
-      patient_id: "mock-p1",
-      professional_id: "mock-prof",
-      enrollment_id: "mock-e1",
-      contact_point_id: "mock-cp1",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      completed_at: null, postponed_to: null, ignored_at: null, ignore_reason: null, notes: null,
-      patient_name: "Maria Silva",
-      trail_name: "Pós-operatório Ortopédico",
-    },
-    {
-      id: "mock-2",
-      title: "Revisar exames laboratoriais",
-      description: "Avaliar resultados de hemograma e glicemia solicitados na última consulta",
-      action_category: "review",
-      status: "pending",
-      scheduled_date: format(new Date(), "yyyy-MM-dd"),
-      scheduled_time: "10:30:00",
-      patient_id: "mock-p2",
-      professional_id: "mock-prof",
-      enrollment_id: "mock-e2",
-      contact_point_id: "mock-cp2",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      completed_at: null, postponed_to: null, ignored_at: null, ignore_reason: null, notes: null,
-      patient_name: "João Santos",
-      trail_name: "Controle Glicêmico",
-    },
-    {
-      id: "mock-3",
-      title: "Acompanhamento nutricional",
-      description: "Checar evolução do plano alimentar e registrar peso atual",
-      action_category: "clinical_task",
-      status: "pending",
-      scheduled_date: format(new Date(), "yyyy-MM-dd"),
-      scheduled_time: "14:00:00",
-      patient_id: "mock-p3",
-      professional_id: "mock-prof",
-      enrollment_id: "mock-e3",
-      contact_point_id: "mock-cp3",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      completed_at: null, postponed_to: null, ignored_at: null, ignore_reason: null, notes: null,
-      patient_name: "Ana Oliveira",
-      trail_name: "Reeducação Alimentar",
-    },
-  ];
-
-  const useMock = realTasks.length === 0 && !isLoading;
-  const tasks = useMock ? mockTasks : realTasks;
+  const tasks = realTasks;
 
   const pendingTasks = tasks.filter(t => t.status === "pending");
   const completedTasks = tasks.filter(t => t.status !== "pending");
@@ -179,11 +121,6 @@ export const DailyTasksList = () => {
             <CardTitle className="text-lg flex items-center gap-2">
               <CalendarClock className="h-5 w-5 text-primary" />
               Tarefas de Hoje
-              {useMock && (
-                <Badge variant="outline" className="text-xs font-normal">
-                  Exemplo
-                </Badge>
-              )}
             </CardTitle>
             <Badge variant={pendingTasks.length > 0 ? "default" : "secondary"}>
               {pendingTasks.length} pendente{pendingTasks.length !== 1 ? "s" : ""}
