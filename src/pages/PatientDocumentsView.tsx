@@ -604,39 +604,60 @@ const PatientDocumentsView = () => {
             )}
           </div>
 
-          {/* Upload Button */}
-          <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Upload className="w-4 h-4 mr-2" />
-                Enviar documento
-              </Button>
-            </DialogTrigger>
+          {/* Hidden file input - OUTSIDE dialog to prevent mobile reload */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,.pdf,.doc,.docx"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+
+          {/* Upload Button - triggers file picker first, then opens dialog */}
+          <Button onClick={triggerFilePicker}>
+            <Upload className="w-4 h-4 mr-2" />
+            Enviar documento
+          </Button>
+
+          {/* Upload Dialog - opens AFTER file is selected */}
+          <Dialog open={uploadDialogOpen} onOpenChange={(open) => {
+            setUploadDialogOpen(open);
+            if (!open) {
+              // Reset form when closing
+              setUploadFile(null);
+              setUploadCategory("laboratorial");
+              setUploadDocName("");
+              setUploadDescription("");
+              setUploadHideFromProfessional(false);
+            }
+          }}>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Enviar novo documento</DialogTitle>
                 <DialogDescription>
-                  Faça upload de um documento para o seu prontuário.
+                  Preencha as informações do documento antes de enviar.
                 </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-4 py-4">
-                {/* File input */}
-                <div className="space-y-2">
-                  <Label htmlFor="file">Escolher arquivo *</Label>
-                  <Input
-                    id="file"
-                    type="file"
-                    accept="image/*,.pdf,.doc,.docx"
-                    onChange={handleFileChange}
-                    disabled={uploading}
-                  />
-                  {uploadFile && (
-                    <p className="text-xs text-muted-foreground">
-                      {uploadFile.name} ({formatFileSize(uploadFile.size)})
-                    </p>
-                  )}
-                </div>
+                {/* Selected file info */}
+                {uploadFile && (
+                  <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50">
+                    <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{uploadFile.name}</p>
+                      <p className="text-xs text-muted-foreground">{formatFileSize(uploadFile.size)}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={triggerFilePicker}
+                      disabled={uploading}
+                    >
+                      Trocar
+                    </Button>
+                  </div>
+                )}
 
                 {/* Document type / Category */}
                 <div className="space-y-2">
@@ -668,7 +689,7 @@ const PatientDocumentsView = () => {
 
                 {/* Description */}
                 <div className="space-y-2">
-                  <Label htmlFor="description">Descrição do documento</Label>
+                  <Label htmlFor="description">Observações</Label>
                   <Input
                     id="description"
                     value={uploadDescription}
@@ -677,8 +698,6 @@ const PatientDocumentsView = () => {
                     disabled={uploading}
                   />
                 </div>
-
-
 
                 <p className="text-xs text-muted-foreground text-center">
                   A data de upload será registrada automaticamente.
