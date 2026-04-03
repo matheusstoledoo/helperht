@@ -2573,6 +2573,10 @@ export type Database = {
         Args: { _trail_id: string; _user_id: string }
         Returns: boolean
       }
+      professional_has_access_to_patient: {
+        Args: { _patient_id: string; _professional_id: string }
+        Returns: boolean
+      }
       search_patients_for_linking: {
         Args: { _professional_id: string; _search_name: string }
         Returns: {
