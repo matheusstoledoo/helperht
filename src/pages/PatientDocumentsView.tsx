@@ -181,12 +181,12 @@ const PatientDocumentsView = () => {
     },
   });
 
-  // Map category keys for consistency
+  // Map category keys for consistency with tabs
   const getCategoryKey = (category: string) => {
-    if (category === "lab_results") return "laboratorial";
-    if (category === "imaging") return "imagem";
-    if (category === "prescriptions") return "receita";
-    if (category === "other" || category === "reports") return "outros";
+    if (category === "lab_results" || category === "exame_laboratorial") return "laboratorial";
+    if (category === "imaging" || category === "exame_imagem") return "imagem";
+    if (category === "prescriptions" || category === "receita") return "receita";
+    if (category === "other" || category === "reports" || category === "outros" || category === "laudo" || category === "resumo_internacao" || category === "prescricao_nutricional" || category === "prescricao_treino" || category === "prescricao_suplementacao") return "outros";
     return category;
   };
 
