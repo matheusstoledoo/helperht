@@ -84,29 +84,10 @@ const PatientDocumentsView = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
 
-  // Get professional name if filtering by professional
-  const { data: filterProfessional } = useQuery({
-    queryKey: ['professional-name', professionalId],
-    queryFn: async () => {
-      if (!professionalId) return null;
-      const { data } = await supabase
-        .from('users')
-        .select('id, name')
-        .eq('id', professionalId)
-        .maybeSingle();
-      return data;
-    },
-    enabled: !!professionalId,
-  });
+  // File input ref - placed outside dialog to avoid mobile reload issues
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Tabs
-  const [activeTab, setActiveTab] = useState<"imagem" | "laboratorial" | "receita" | "outros">("imagem");
-
-  // Filters
-  const [periodFilter, setPeriodFilter] = useState("all");
-  const [uploaderFilter, setUploaderFilter] = useState("all");
-
-  // Upload form
+  // Upload form state
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadCategory, setUploadCategory] = useState("laboratorial");
   const [uploadDocName, setUploadDocName] = useState("");
