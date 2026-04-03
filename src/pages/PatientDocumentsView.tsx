@@ -681,9 +681,14 @@ const PatientDocumentsView = () => {
                       <SelectValue placeholder="Selecione o tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="imagem">Exame de imagem</SelectItem>
-                      <SelectItem value="laboratorial">Exame laboratorial</SelectItem>
-                      <SelectItem value="receita">Receita</SelectItem>
+                      <SelectItem value="exame_imagem">Exame de imagem</SelectItem>
+                      <SelectItem value="exame_laboratorial">Exame laboratorial</SelectItem>
+                      <SelectItem value="laudo">Laudo / Relatório</SelectItem>
+                      <SelectItem value="receita">Receita Médica</SelectItem>
+                      <SelectItem value="resumo_internacao">Resumo de Internação</SelectItem>
+                      <SelectItem value="prescricao_nutricional">Prescrição Nutricional</SelectItem>
+                      <SelectItem value="prescricao_treino">Prescrição de Treino</SelectItem>
+                      <SelectItem value="prescricao_suplementacao">Suplementação</SelectItem>
                       <SelectItem value="outros">Outro documento</SelectItem>
                     </SelectContent>
                   </Select>
