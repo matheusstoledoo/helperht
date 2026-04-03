@@ -116,6 +116,7 @@ const PatientDocumentsView = () => {
   const [periodFilter, setPeriodFilter] = useState("all");
   const [uploaderFilter, setUploaderFilter] = useState("all");
 
+  useEffect(() => {
     const fetchDocuments = async () => {
       if (authLoading) return;
       if (!user) { setLoading(false); return; }
