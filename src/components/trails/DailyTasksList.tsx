@@ -121,11 +121,6 @@ export const DailyTasksList = () => {
             <CardTitle className="text-lg flex items-center gap-2">
               <CalendarClock className="h-5 w-5 text-primary" />
               Tarefas de Hoje
-              {useMock && (
-                <Badge variant="outline" className="text-xs font-normal">
-                  Exemplo
-                </Badge>
-              )}
             </CardTitle>
             <Badge variant={pendingTasks.length > 0 ? "default" : "secondary"}>
               {pendingTasks.length} pendente{pendingTasks.length !== 1 ? "s" : ""}
