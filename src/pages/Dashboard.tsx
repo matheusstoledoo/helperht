@@ -95,22 +95,58 @@ const Dashboard = () => {
     const fetchPatients = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("patients")
-          .select(`
-            id,
-            user_id,
-            created_at,
-            updated_at,
-            users (
-              name,
-              email
-            )
-          `)
-          .order("updated_at", { ascending: false });
+        if (isAdmin) {
+          // Admins see all patients
+          const { data, error } = await supabase
+            .from("patients")
+            .select(`
+              id,
+              user_id,
+              created_at,
+              updated_at,
+              users (
+                name,
+                email
+              )
+            `)
+            .order("updated_at", { ascending: false });
 
-        if (error) throw error;
-        setPatients(data || []);
+          if (error) throw error;
+          setPatients(data || []);
+        } else {
+          // Professionals see only linked patients with active status
+          const { data: links, error: linksError } = await supabase
+            .from("professional_patient_links")
+            .select("patient_id")
+            .eq("professional_id", user!.id)
+            .eq("status", "active");
+
+          if (linksError) throw linksError;
+
+          const linkedPatientIds = (links || []).map((l) => l.patient_id);
+
+          if (linkedPatientIds.length === 0) {
+            setPatients([]);
+          } else {
+            const { data, error } = await supabase
+              .from("patients")
+              .select(`
+                id,
+                user_id,
+                created_at,
+                updated_at,
+                users (
+                  name,
+                  email
+                )
+              `)
+              .in("id", linkedPatientIds)
+              .order("updated_at", { ascending: false });
+
+            if (error) throw error;
+            setPatients(data || []);
+          }
+        }
       } catch (error) {
         console.error("Error fetching patients:", error);
         toast({
