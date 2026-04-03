@@ -639,7 +639,7 @@ const PatientDocumentsView = () => {
             if (!open) {
               // Reset form when closing
               setUploadFile(null);
-              setUploadCategory("laboratorial");
+              setUploadCategory("exame_laboratorial");
               setUploadDocName("");
               setUploadDescription("");
               setUploadHideFromProfessional(false);
