@@ -17,6 +17,7 @@ import logo from "@/assets/logo.png";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { InterestForm } from "@/components/landing/InterestForm";
+import { SignUpModal } from "@/components/landing/SignUpModal";
 import { FeatureSection } from "@/components/landing/FeatureSection";
 import { StatsSection } from "@/components/landing/StatsSection";
 import { ImageShowcase } from "@/components/landing/ImageShowcase";
@@ -25,6 +26,7 @@ const Index = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [interestFormOpen, setInterestFormOpen] = useState(false);
+  const [signUpOpen, setSignUpOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
@@ -61,6 +63,12 @@ const Index = () => {
                 >
                   <LogIn className="w-4 h-4 mr-2" />
                   Entrar
+                </Button>
+                <Button
+                  onClick={() => setSignUpOpen(true)}
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Criar conta
                 </Button>
               </div>
             </div>
@@ -395,6 +403,12 @@ const Index = () => {
       <InterestForm 
         open={interestFormOpen} 
         onOpenChange={setInterestFormOpen}
+      />
+
+      {/* Sign Up Modal */}
+      <SignUpModal
+        open={signUpOpen}
+        onOpenChange={setSignUpOpen}
       />
     </div>
   );
