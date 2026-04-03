@@ -64,6 +64,12 @@ const Index = () => {
                   <LogIn className="w-4 h-4 mr-2" />
                   Entrar
                 </Button>
+                <Button
+                  onClick={() => setSignUpOpen(true)}
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Criar conta
+                </Button>
               </div>
             </div>
           </div>
