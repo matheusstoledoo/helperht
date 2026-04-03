@@ -311,7 +311,16 @@ const PatientDocumentsView = () => {
   };
 
   const handleUpload = async () => {
-    if (!uploadFile || !patientId) return;
+    if (!uploadFile || !patientId || !user) {
+      toast.error("Dados insuficientes para upload. Tente recarregar a página.");
+      return;
+    }
+
+    // File size check (max 20MB)
+    if (uploadFile.size > 20 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. O tamanho máximo é 20MB.");
+      return;
+    }
 
     setUploading(true);
     try {
@@ -323,7 +332,10 @@ const PatientDocumentsView = () => {
         .from("patient-documents")
         .upload(filePath, uploadFile);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("Storage upload error:", uploadError);
+        throw new Error(`Erro no envio do arquivo: ${uploadError.message}`);
+      }
 
       const { error: dbError } = await supabase.from("documents").insert({
         patient_id: patientId,
@@ -333,12 +345,15 @@ const PatientDocumentsView = () => {
         file_size: uploadFile.size,
         category: uploadCategory,
         description: uploadDescription || null,
-        uploaded_by: userName,
+        uploaded_by: user.id,
         uploaded_by_role: "patient",
-        is_public: !uploadHideFromProfessional, // Invert: hide from professional = not public
+        is_public: true,
       });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error("DB insert error:", dbError);
+        throw new Error(`Erro ao salvar documento: ${dbError.message}`);
+      }
 
       toast.success("Documento enviado com sucesso");
       setUploadDialogOpen(false);
@@ -347,9 +362,9 @@ const PatientDocumentsView = () => {
       setUploadDocName("");
       setUploadDescription("");
       setUploadHideFromProfessional(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Upload error:", error);
-      toast.error("Erro ao enviar documento");
+      toast.error(error.message || "Erro ao enviar documento");
     } finally {
       setUploading(false);
     }
