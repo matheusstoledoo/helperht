@@ -358,7 +358,7 @@ const PatientDocumentsView = () => {
       toast.success("Documento enviado com sucesso");
       setUploadDialogOpen(false);
       setUploadFile(null);
-      setUploadCategory("laboratorial");
+      setUploadCategory("exame_laboratorial");
       setUploadDocName("");
       setUploadDescription("");
       setUploadHideFromProfessional(false);
