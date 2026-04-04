@@ -1635,6 +1635,36 @@ export type Database = {
           },
         ]
       }
+      strava_tokens: {
+        Row: {
+          access_token: string | null
+          athlete_id: number | null
+          created_at: string | null
+          expires_at: number | null
+          id: string
+          refresh_token: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          athlete_id?: number | null
+          created_at?: string | null
+          expires_at?: number | null
+          id?: string
+          refresh_token?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          athlete_id?: number | null
+          created_at?: string | null
+          expires_at?: number | null
+          id?: string
+          refresh_token?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       supplements_log: {
         Row: {
           created_at: string
