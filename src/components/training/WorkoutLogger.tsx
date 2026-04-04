@@ -12,6 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import StravaImport from "./StravaImport";
+import { Separator } from "@/components/ui/separator";
 
 interface WorkoutLoggerProps {
   userId: string;
@@ -120,8 +122,20 @@ export default function WorkoutLogger({ userId, patientId }: WorkoutLoggerProps)
     return acc;
   }, {});
 
+  const handleStravaSelect = (data: { workoutType: string; duration: string; notes: string }) => {
+    setWorkoutType(data.workoutType);
+    setDuration(data.duration);
+    setNotes(data.notes);
+    setShowForm(true);
+  };
+
   return (
     <div className="space-y-4">
+      {/* Strava Import Section */}
+      <StravaImport userId={userId} onSelectActivity={handleStravaSelect} />
+
+      <Separator />
+
       <div className="flex items-center justify-between">
         <h3 className="text-base font-medium flex items-center gap-2">
           <Dumbbell className="h-4 w-4 text-blue-500" />
