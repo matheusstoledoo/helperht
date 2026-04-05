@@ -6,10 +6,6 @@ serve(async (req) => {
   const code = url.searchParams.get("code")
   const userId = url.searchParams.get("state")
 
-  if (!code || !userId) {
-    return new Response("Missing code or state", { status: 400 })
-  }
-
   const res = await fetch("https://www.strava.com/oauth/token", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -22,10 +18,6 @@ serve(async (req) => {
   })
 
   const tokens = await res.json()
-
-  if (!tokens.access_token) {
-    return new Response(JSON.stringify({ error: "Token exchange failed", details: tokens }), { status: 400 })
-  }
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -40,6 +32,7 @@ serve(async (req) => {
     athlete_id: tokens.athlete?.id,
   })
 
-  const appUrl = Deno.env.get("APP_URL") || "https://helperht.lovable.app"
-  return Response.redirect(`${appUrl}/patient/workouts?strava=connected`, 302)
+  return Response.redirect(
+    `${Deno.env.get("APP_URL")}/patient/workouts?strava=connected`, 302
+  )
 })

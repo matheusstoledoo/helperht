@@ -6,13 +6,9 @@ serve(async (req) => {
   const clientId = Deno.env.get("STRAVA_CLIENT_ID")
   const redirectUri = Deno.env.get("STRAVA_REDIRECT_URI")
 
-  if (!clientId || !redirectUri) {
-    return new Response(JSON.stringify({ error: "Strava not configured" }), { status: 500 })
-  }
-
   const authUrl = new URL("https://www.strava.com/oauth/authorize")
-  authUrl.searchParams.set("client_id", clientId)
-  authUrl.searchParams.set("redirect_uri", redirectUri)
+  authUrl.searchParams.set("client_id", clientId!)
+  authUrl.searchParams.set("redirect_uri", redirectUri!)
   authUrl.searchParams.set("response_type", "code")
   authUrl.searchParams.set("approval_prompt", "force")
   authUrl.searchParams.set("scope", "activity:read_all")
