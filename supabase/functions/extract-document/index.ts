@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,7 +14,7 @@ serve(async (req) => {
   }
 
   try {
-    const { document_id, file_url, file_type, category_hint } = await req.json();
+    const { document_id, file_path, file_type, category_hint } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
@@ -27,6 +28,34 @@ serve(async (req) => {
       .from("document_extractions")
       .update({ extraction_status: "processing" })
       .eq("document_id", document_id);
+
+    // Download the file from private storage using service role
+    console.log("Downloading file from storage:", file_path);
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from("patient-documents")
+      .download(file_path);
+
+    if (downloadError || !fileData) {
+      console.error("Storage download error:", downloadError);
+      await supabase
+        .from("document_extractions")
+        .update({
+          extraction_status: "failed",
+          error_message: "Não foi possível acessar o arquivo no armazenamento.",
+        })
+        .eq("document_id", document_id);
+      return new Response(
+        JSON.stringify({ error: "Failed to download file from storage" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Convert file to base64 for the AI
+    const arrayBuffer = await fileData.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    const base64Data = base64Encode(uint8Array);
+
+    console.log("File downloaded, size:", uint8Array.length, "bytes, type:", file_type);
 
     // Build the prompt based on document type
     const systemPrompt = `You are a medical document extraction AI for a Brazilian healthcare app. 
@@ -60,18 +89,32 @@ If a section is not applicable, return empty arrays or null values. Always try t
       },
     ];
 
-    // For images, include inline; for PDFs/docs, include the URL
-    if (file_type?.startsWith("image/")) {
+    // Determine the MIME type for the AI
+    const mimeType = file_type || "application/octet-stream";
+
+    if (mimeType.startsWith("image/")) {
+      // Send image inline as base64
       userContent.push({
         type: "image_url",
-        image_url: { url: file_url },
+        image_url: { url: `data:${mimeType};base64,${base64Data}` },
+      });
+    } else if (mimeType === "application/pdf") {
+      // Send PDF as inline data for Gemini (supports PDF natively)
+      userContent.push({
+        type: "image_url",
+        image_url: { url: `data:application/pdf;base64,${base64Data}` },
       });
     } else {
+      // For other types, try to send as text
+      const textDecoder = new TextDecoder();
+      const textContent = textDecoder.decode(uint8Array);
       userContent.push({
         type: "text",
-        text: `Document URL: ${file_url}\n\nNote: If you cannot access this URL, extract whatever information you can from the filename and context.`,
+        text: `Document content:\n${textContent.substring(0, 50000)}`,
       });
     }
+
+    console.log("Calling AI gateway...");
 
     const aiResponse = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -128,6 +171,8 @@ If a section is not applicable, return empty arrays or null values. Always try t
     const aiData = await aiResponse.json();
     const content = aiData.choices?.[0]?.message?.content || "";
 
+    console.log("AI response received, parsing...");
+
     // Parse the JSON from AI response
     let extracted;
     try {
@@ -167,6 +212,8 @@ If a section is not applicable, return empty arrays or null values. Always try t
         raw_text: extracted.raw_text_summary,
       })
       .eq("document_id", document_id);
+
+    console.log("Extraction completed successfully for document:", document_id);
 
     return new Response(
       JSON.stringify({ success: true, extraction: extracted }),
