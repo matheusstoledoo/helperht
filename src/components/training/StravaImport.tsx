@@ -80,8 +80,7 @@ export default function StravaImport({ userId, onSelectActivity }: StravaImportP
   };
 
   const handleConnect = () => {
-    const projectRef = import.meta.env.VITE_SUPABASE_URL?.replace("https://", "").replace(".supabase.co", "");
-    window.location.href = `https://${projectRef}.supabase.co/functions/v1/strava-auth?state=${userId}`;
+    window.location.href = `https://abhaduqjqbxamjxcvsng.supabase.co/functions/v1/strava-auth?state=${userId}`;
   };
 
   const fetchActivities = async () => {
