@@ -102,14 +102,7 @@ export function useDocumentExtraction() {
 
       if (uploadError) throw uploadError;
 
-      // 2. Get file URL
-      const { data: urlData } = supabase.storage
-        .from("patient-documents")
-        .getPublicUrl(fileName);
-
-      const fileUrl = urlData.publicUrl;
-
-      // 3. Create document record
+      // 2. Create document record
       const { data: docData, error: docError } = await supabase
         .from("documents")
         .insert({
@@ -149,7 +142,7 @@ export function useDocumentExtraction() {
         {
           body: {
             document_id: docData.id,
-            file_url: fileUrl,
+            file_path: fileName,
             file_type: file.type,
             category_hint: categoryHint,
           },
