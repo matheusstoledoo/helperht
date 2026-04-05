@@ -87,10 +87,9 @@ export default function StravaImport({ userId, onSelectActivity }: StravaImportP
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const projectRef = import.meta.env.VITE_SUPABASE_URL?.replace("https://", "").replace(".supabase.co", "");
 
       const res = await fetch(
-        `https://${projectRef}.supabase.co/functions/v1/strava-activities`,
+        `https://abhaduqjqbxamjxcvsng.supabase.co/functions/v1/strava-activities`,
         {
           method: "POST",
           headers: {
