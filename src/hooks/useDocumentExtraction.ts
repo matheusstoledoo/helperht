@@ -142,7 +142,7 @@ export function useDocumentExtraction() {
         {
           body: {
             document_id: docData.id,
-            file_url: fileUrl,
+            file_path: fileName,
             file_type: file.type,
             category_hint: categoryHint,
           },
