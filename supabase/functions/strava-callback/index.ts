@@ -33,6 +33,6 @@ serve(async (req) => {
   })
 
   return Response.redirect(
-    `${Deno.env.get("APP_URL")}/patient/workouts?strava=connected`, 302
+    `${Deno.env.get("APP_URL")}/pac/treinos?strava=connected`, 302
   )
 })
