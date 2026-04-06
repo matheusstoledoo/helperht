@@ -55,7 +55,7 @@ const PatientLayout = ({ children, title, subtitle, showHeader = false, breadcru
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Development Banner */}
-      <div className="w-full bg-amber-400 text-amber-900 text-center text-xs sm:text-sm font-medium py-1.5 px-4">
+      <div className="w-full text-amber-900 text-center text-xs sm:text-sm font-medium py-1.5 px-4" style={{ backgroundColor: '#FFFFC5' }}>
         🛠️ Ferramenta em desenvolvimento 🛠️
       </div>
 
