@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX idx_lab_results_document_marker ON public.lab_results (document_id, marker_name) WHERE document_id IS NOT NULL;
