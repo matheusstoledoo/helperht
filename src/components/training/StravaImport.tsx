@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink, MapPin, Clock, Loader2 } from "lucide-react";
+import { ExternalLink, MapPin, Clock, Loader2, Heart, TrendingUp, Flame, Mountain } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -14,8 +14,21 @@ interface StravaActivity {
   type: string;
   distance: number;
   moving_time: number;
+  elapsed_time?: number;
   start_date_local: string;
   sport_type?: string;
+  average_heartrate?: number;
+  max_heartrate?: number;
+  average_speed?: number;
+  max_speed?: number;
+  average_cadence?: number;
+  total_elevation_gain?: number;
+  elev_high?: number;
+  elev_low?: number;
+  suffer_score?: number;
+  calories?: number;
+  has_heartrate?: boolean;
+  laps?: any[];
 }
 
 interface StravaImportProps {
