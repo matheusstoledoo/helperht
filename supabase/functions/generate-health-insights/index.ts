@@ -52,7 +52,7 @@ serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(2),
       supabase.from("training_plans")
-        .select("sport, frequency_per_week, sessions, periodization_notes, observations, status, start_date")
+        .select("sport, frequency_per_week, sessions, periodization_notes, observations, status, start_date, strava_details")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(2),
