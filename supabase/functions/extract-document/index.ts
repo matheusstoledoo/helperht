@@ -241,36 +241,68 @@ If a section is not applicable, return empty arrays or null values. Always try t
 
       const collectionDate = extracted.document_date || new Date().toISOString().split("T")[0];
 
-      const labRows = extracted.lab_results.map((item: any) => {
-        const numValue = parseFloat(item.value);
-        const value = isNaN(numValue) ? null : numValue;
-        const refMin = item.reference_min != null ? parseFloat(item.reference_min) : null;
-        const refMax = item.reference_max != null ? parseFloat(item.reference_max) : null;
+      const MARKER_NAMES: Record<string, string> = {
+        "glucose": "Glicose", "glicemia": "Glicose", "blood glucose": "Glicose", "fasting glucose": "Glicose",
+        "total cholesterol": "Colesterol Total", "cholesterol": "Colesterol Total",
+        "ldl cholesterol": "LDL", "ldl-c": "LDL", "hdl cholesterol": "HDL", "hdl-c": "HDL",
+        "triglycerides": "Triglicerídeos", "triglyceride": "Triglicerídeos",
+        "hemoglobin": "Hemoglobina", "haemoglobin": "Hemoglobina",
+        "hba1c": "Hemoglobina Glicada", "hemoglobin a1c": "Hemoglobina Glicada", "glycated hemoglobin": "Hemoglobina Glicada",
+        "creatinine": "Creatinina", "urea": "Ureia", "uric acid": "Ácido Úrico",
+        "tsh": "TSH", "t4": "T4 Livre", "free t4": "T4 Livre", "t3": "T3",
+        "vitamin d": "Vitamina D", "25-oh vitamin d": "Vitamina D",
+        "ferritin": "Ferritina", "iron": "Ferro",
+        "crp": "PCR", "c-reactive protein": "PCR",
+        "sodium": "Sódio", "potassium": "Potássio", "calcium": "Cálcio", "magnesium": "Magnésio",
+        "albumin": "Albumina", "ast": "AST (TGO)", "alt": "ALT (TGP)", "ggt": "GGT",
+        "alkaline phosphatase": "Fosfatase Alcalina",
+        "platelets": "Plaquetas", "platelet count": "Plaquetas", "hematocrit": "Hematócrito",
+        "wbc": "Leucócitos", "white blood cells": "Leucócitos",
+        "rbc": "Hemácias", "red blood cells": "Hemácias",
+        "insulin": "Insulina", "cortisol": "Cortisol",
+        "testosterone": "Testosterona", "estradiol": "Estradiol", "progesterone": "Progesterona",
+        "vitamin b12": "Vitamina B12", "folic acid": "Ácido Fólico", "folate": "Ácido Fólico",
+      };
 
-        let status: string | null = null;
-        if (value !== null && refMin !== null && refMax !== null) {
-          if (value > refMax) status = "high";
-          else if (value < refMin) status = "low";
-          else status = "normal";
-        }
+      function normalizeMarkerName(name: string): string {
+        const key = name.toLowerCase().trim();
+        return MARKER_NAMES[key] || name;
+      }
 
-        return {
-          document_id,
-          patient_id: patientId,
-          user_id: userId,
-          marker_name: item.marker_name,
-          value,
-          value_text: String(item.value),
-          unit: item.unit || null,
-          reference_min: isNaN(refMin as number) ? null : refMin,
-          reference_max: isNaN(refMax as number) ? null : refMax,
-          reference_text: item.reference_text || null,
-          marker_category: item.category || "other",
-          collection_date: collectionDate,
-          lab_name: extracted.institution || null,
-          status,
-        };
-      });
+      const labRows = extracted.lab_results
+        .filter((item: any) => {
+          if (item.value == null || item.value === "") return false;
+          return !isNaN(parseFloat(item.value));
+        })
+        .map((item: any) => {
+          const numValue = parseFloat(item.value);
+          const refMin = item.reference_min != null ? parseFloat(item.reference_min) : null;
+          const refMax = item.reference_max != null ? parseFloat(item.reference_max) : null;
+
+          let status: string | null = null;
+          if (refMin !== null && refMax !== null) {
+            if (numValue > refMax) status = "high";
+            else if (numValue < refMin) status = "low";
+            else status = "normal";
+          }
+
+          return {
+            document_id,
+            patient_id: patientId,
+            user_id: userId,
+            marker_name: normalizeMarkerName(item.marker_name),
+            value: numValue,
+            value_text: String(item.value),
+            unit: item.unit || null,
+            reference_min: isNaN(refMin as number) ? null : refMin,
+            reference_max: isNaN(refMax as number) ? null : refMax,
+            reference_text: item.reference_text || null,
+            marker_category: item.category || "other",
+            collection_date: collectionDate,
+            lab_name: extracted.institution || null,
+            status,
+          };
+        });
 
       const { error: labError } = await supabase
         .from("lab_results")
