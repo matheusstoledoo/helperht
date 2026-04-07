@@ -200,6 +200,7 @@ Fonte: Strava (dados sincronizados)`;
       activeTreatments.length > 0 ||
       activeNutrition !== null ||
       activeTraining !== null ||
+      stravaActivities.length > 0 ||
       completedExams.length > 0 ||
       supplements.length > 0;
 
@@ -224,6 +225,13 @@ IMPORTANTE:
 - CONECTE os dados entre si: analise como diagnósticos se relacionam com tratamentos, como a nutrição pode impactar os exames, como o treino se conecta com os resultados laboratoriais
 - Identifique sinergias e potenciais conflitos entre tratamentos, nutrição e atividade física
 - Se uma seção mostrar "Sem registros", considere isso como lacuna informacional e sugira ao paciente registrar esses dados
+- Se houver dados detalhados do Strava (frequência cardíaca, pace, elevação, suffer score, laps), analise especificamente:
+  * Impacto cardiovascular dos treinos considerando diagnósticos e medicações do paciente
+  * Se há sinais de sobrecarga (FC muito elevada, suffer score alto, redução de pace ao longo das sessões)
+  * Relação entre volume de treino e resultados de exames (ex: glicemia, colesterol, pressão)
+  * Adequação da intensidade ao perfil clínico do paciente
+  * Evolução do condicionamento (melhora ou piora de pace/FC entre atividades)
+  * Recomendações de ajuste de treino baseadas no histórico médico completo
 
 Com base em TODAS as informações integradas do paciente, forneça:
 1. Resumo geral do estado de saúde atual
