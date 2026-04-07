@@ -129,15 +129,66 @@ serve(async (req) => {
       ? supplements.map((s: any) => `- ${s.product}${s.quantity ? ` (${s.quantity})` : ""} | Horário: ${s.timing} | Data: ${s.log_date}${s.notes ? ` | Obs: ${s.notes}` : ""}`).join("\n")
       : "Sem registros de suplementação";
 
-    const trainingSection = activeTraining
-      ? [
-          `Modalidade: ${activeTraining.sport || "não informada"}`,
-          `Frequência: ${activeTraining.frequency_per_week ?? "N/A"}x/semana`,
-          `Sessões planejadas: ${Array.isArray(activeTraining.sessions) ? activeTraining.sessions.length : 0}`,
-          activeTraining.periodization_notes ? `Periodização: ${activeTraining.periodization_notes}` : null,
-          activeTraining.observations ? `Observações: ${activeTraining.observations}` : null,
-        ].filter(Boolean).join("\n")
-      : "Sem plano de treino ativo";
+    // Training + Strava detailed data
+    const stravaDetails = activeTraining?.strava_details as any;
+    const stravaActivities: any[] = stravaDetails?.activities || [];
+
+    const formatPace = (speedMs: number) => {
+      if (!speedMs || speedMs <= 0) return "N/A";
+      const paceMin = 1000 / speedMs / 60;
+      const mins = Math.floor(paceMin);
+      const secs = Math.round((paceMin - mins) * 60);
+      return `${mins}:${secs.toString().padStart(2, "0")} min/km`;
+    };
+
+    let trainingSection: string;
+    if (stravaActivities.length > 0) {
+      // Detailed Strava section
+      const activityLines = stravaActivities.map((a: any) => {
+        const distKm = ((a.distance || 0) / 1000).toFixed(2);
+        const durMin = Math.round((a.moving_time || 0) / 60);
+        const date = a.start_date_local ? a.start_date_local.split("T")[0] : "N/A";
+        let line = `📍 ${a.name} | ${a.type} | ${date}\n`;
+        line += `  Distância: ${distKm} km | Duração: ${durMin} min | Pace médio: ${a.average_speed ? formatPace(a.average_speed) : "N/A"}\n`;
+        line += `  FC média: ${a.average_heartrate ?? "N/A"} bpm | FC máxima: ${a.max_heartrate ?? "N/A"} bpm\n`;
+        line += `  Velocidade média: ${a.average_speed ? ((a.average_speed * 3.6).toFixed(1) + " km/h") : "N/A"} | Velocidade máxima: ${a.max_speed ? ((a.max_speed * 3.6).toFixed(1) + " km/h") : "N/A"}\n`;
+        line += `  Ganho de elevação: ${a.total_elevation_gain ?? "N/A"} m | Alt. máxima: ${a.elev_high ?? "N/A"} m | Alt. mínima: ${a.elev_low ?? "N/A"} m\n`;
+        line += `  Carga estimada (suffer score): ${a.suffer_score ?? "N/A"} | Calorias: ${a.calories ?? "N/A"} kcal`;
+        if (a.laps && a.laps.length > 0) {
+          line += "\n  Análise por trechos (laps):";
+          a.laps.forEach((lap: any, i: number) => {
+            const lapDist = ((lap.distance || 0) / 1000).toFixed(2);
+            line += `\n    Trecho ${i + 1}: ${lapDist} km | Pace ${lap.average_speed ? formatPace(lap.average_speed) : "N/A"} | FC ${lap.average_heartrate ?? "N/A"} bpm | Vel. ${lap.average_speed ? ((lap.average_speed * 3.6).toFixed(1) + " km/h") : "N/A"} | Elevação +${lap.total_elevation_gain ?? 0} m`;
+          });
+        }
+        return line;
+      }).join("\n\n");
+
+      // Summary stats
+      const totalDist = stravaActivities.reduce((s: number, a: any) => s + (a.distance || 0), 0);
+      const totalTime = stravaActivities.reduce((s: number, a: any) => s + (a.moving_time || 0), 0);
+      const avgHrs = stravaActivities.filter((a: any) => a.average_heartrate);
+      const avgHr = avgHrs.length > 0 ? Math.round(avgHrs.reduce((s: number, a: any) => s + a.average_heartrate, 0) / avgHrs.length) : null;
+      const maxHr = stravaActivities.reduce((max: number, a: any) => Math.max(max, a.max_heartrate || 0), 0);
+
+      trainingSection = `${activityLines}
+
+RESUMO DO PERÍODO:
+Volume total: ${(totalDist / 1000).toFixed(1)} km | ${(totalTime / 3600).toFixed(1)} horas de treino
+FC média geral: ${avgHr ?? "N/A"} bpm | FC máxima registrada: ${maxHr || "N/A"} bpm
+Total de atividades: ${stravaActivities.length}
+Fonte: Strava (dados sincronizados)`;
+    } else if (activeTraining) {
+      trainingSection = [
+        `Modalidade: ${activeTraining.sport || "não informada"}`,
+        `Frequência: ${activeTraining.frequency_per_week ?? "N/A"}x/semana`,
+        `Sessões planejadas: ${Array.isArray(activeTraining.sessions) ? activeTraining.sessions.length : 0}`,
+        activeTraining.periodization_notes ? `Periodização: ${activeTraining.periodization_notes}` : null,
+        activeTraining.observations ? `Observações: ${activeTraining.observations}` : null,
+      ].filter(Boolean).join("\n");
+    } else {
+      trainingSection = "Sem plano de treino ativo e sem dados do Strava";
+    }
 
     const goalsSection = (goalsRes.data || []).length > 0
       ? (goalsRes.data || []).map((g: any) => `- ${g.title} | Categoria: ${g.category || "geral"} | Progresso: ${g.progress ?? 0}%${g.target_date ? ` | Meta: ${g.target_date}` : ""}`).join("\n")
