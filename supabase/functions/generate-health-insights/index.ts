@@ -282,7 +282,7 @@ ${nutritionSection}
 SUPLEMENTAÇÃO RECENTE:
 ${supplementsSection}
 
-PLANO DE TREINO ATIVO:
+ATIVIDADE FÍSICA — DADOS DE TREINO${stravaActivities.length > 0 ? " (STRAVA DETALHADO)" : ""}:
 ${trainingSection}
 
 METAS DE SAÚDE ATIVAS:
