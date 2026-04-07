@@ -13,6 +13,59 @@ async function fetchActivities(accessToken: string) {
   )
 }
 
+async function fetchLaps(activityId: number, accessToken: string) {
+  try {
+    const res = await fetch(
+      `https://www.strava.com/api/v3/activities/${activityId}/laps`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    )
+    if (!res.ok) return []
+    const laps = await res.json()
+    return Array.isArray(laps)
+      ? laps.map((l: any) => ({
+          name: l.name,
+          distance: l.distance,
+          moving_time: l.moving_time,
+          elapsed_time: l.elapsed_time,
+          average_speed: l.average_speed,
+          max_speed: l.max_speed,
+          average_heartrate: l.average_heartrate,
+          max_heartrate: l.max_heartrate,
+          average_cadence: l.average_cadence,
+          total_elevation_gain: l.total_elevation_gain,
+          lap_index: l.lap_index,
+        }))
+      : []
+  } catch {
+    return []
+  }
+}
+
+function enrichActivity(a: any) {
+  return {
+    id: a.id,
+    name: a.name,
+    type: a.type,
+    sport_type: a.sport_type,
+    distance: a.distance,
+    moving_time: a.moving_time,
+    elapsed_time: a.elapsed_time,
+    start_date_local: a.start_date_local,
+    average_heartrate: a.average_heartrate ?? null,
+    max_heartrate: a.max_heartrate ?? null,
+    average_speed: a.average_speed ?? null,
+    max_speed: a.max_speed ?? null,
+    average_cadence: a.average_cadence ?? null,
+    total_elevation_gain: a.total_elevation_gain ?? null,
+    elev_high: a.elev_high ?? null,
+    elev_low: a.elev_low ?? null,
+    suffer_score: a.suffer_score ?? null,
+    calories: a.calories ?? null,
+    has_heartrate: a.has_heartrate ?? false,
+    laps: [], // will be filled for top 5
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -54,8 +107,10 @@ serve(async (req) => {
     )
   }
 
+  let accessToken = tokenData.access_token
+
   // First attempt
-  let res = await fetchActivities(tokenData.access_token)
+  let res = await fetchActivities(accessToken)
 
   // If 401, try refreshing the token
   if (res.status === 401 && tokenData.refresh_token) {
@@ -78,6 +133,7 @@ serve(async (req) => {
     }
 
     const newTokens = await refreshRes.json()
+    accessToken = newTokens.access_token
 
     await supabase.from("strava_tokens").update({
       access_token: newTokens.access_token,
@@ -86,7 +142,7 @@ serve(async (req) => {
     }).eq("user_id", userId)
 
     // Retry with new token
-    res = await fetchActivities(newTokens.access_token)
+    res = await fetchActivities(accessToken)
   }
 
   if (!res.ok) {
@@ -97,7 +153,49 @@ serve(async (req) => {
     )
   }
 
-  const activities = await res.json()
+  const rawActivities = await res.json()
+  if (!Array.isArray(rawActivities)) {
+    return new Response(JSON.stringify([]), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    })
+  }
+
+  // Enrich all activities with detailed fields
+  const activities = rawActivities.map(enrichActivity)
+
+  // Fetch laps for the 5 most recent activities in parallel
+  const top5 = activities.slice(0, 5)
+  const lapsResults = await Promise.all(
+    top5.map((a: any) => fetchLaps(a.id, accessToken))
+  )
+  top5.forEach((a: any, i: number) => {
+    a.laps = lapsResults[i]
+  })
+
+  // Save strava_details to training_plans for this user (upsert into a dedicated strava cache)
+  // Store in the sessions JSONB of the active training plan if one exists
+  try {
+    const { data: activePlan } = await supabase
+      .from("training_plans")
+      .select("id, sessions")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (activePlan) {
+      // Merge strava data into strava_details column
+      await supabase.from("training_plans").update({
+        strava_details: {
+          last_sync: new Date().toISOString(),
+          activities: activities,
+        },
+      }).eq("id", activePlan.id)
+    }
+  } catch (e) {
+    console.error("Failed to save strava_details:", e)
+  }
 
   return new Response(JSON.stringify(activities), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
