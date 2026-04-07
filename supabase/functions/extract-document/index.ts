@@ -213,6 +213,76 @@ If a section is not applicable, return empty arrays or null values. Always try t
       })
       .eq("document_id", document_id);
 
+    // Auto-insert lab_results if category is exame_laboratorial
+    if (
+      Array.isArray(extracted.lab_results) &&
+      extracted.lab_results.length > 0 &&
+      extracted.suggested_category === "exame_laboratorial"
+    ) {
+      // Fetch patient_id and uploaded_by from documents table
+      const { data: docRow } = await supabase
+        .from("documents")
+        .select("patient_id, uploaded_by")
+        .eq("id", document_id)
+        .single();
+
+      let patientId = docRow?.patient_id ?? null;
+      let userId = docRow?.uploaded_by ?? null;
+
+      // Fallback: fetch from document_extractions
+      if (!patientId || !userId) {
+        const { data: extRow } = await supabase
+          .from("document_extractions")
+          .select("user_id")
+          .eq("document_id", document_id)
+          .single();
+        if (!userId && extRow?.user_id) userId = extRow.user_id;
+      }
+
+      const collectionDate = extracted.document_date || new Date().toISOString().split("T")[0];
+
+      const labRows = extracted.lab_results.map((item: any) => {
+        const numValue = parseFloat(item.value);
+        const value = isNaN(numValue) ? null : numValue;
+        const refMin = item.reference_min != null ? parseFloat(item.reference_min) : null;
+        const refMax = item.reference_max != null ? parseFloat(item.reference_max) : null;
+
+        let status: string | null = null;
+        if (value !== null && refMin !== null && refMax !== null) {
+          if (value > refMax) status = "high";
+          else if (value < refMin) status = "low";
+          else status = "normal";
+        }
+
+        return {
+          document_id,
+          patient_id: patientId,
+          user_id: userId,
+          marker_name: item.marker_name,
+          value,
+          value_text: String(item.value),
+          unit: item.unit || null,
+          reference_min: isNaN(refMin as number) ? null : refMin,
+          reference_max: isNaN(refMax as number) ? null : refMax,
+          reference_text: item.reference_text || null,
+          marker_category: item.category || "other",
+          collection_date: collectionDate,
+          lab_name: extracted.institution || null,
+          status,
+        };
+      });
+
+      const { error: labError } = await supabase
+        .from("lab_results")
+        .upsert(labRows, { onConflict: "document_id,marker_name" });
+
+      if (labError) {
+        console.error("Error inserting lab_results:", labError);
+      } else {
+        console.log("lab_results inseridos:", labRows.length);
+      }
+    }
+
     console.log("Extraction completed successfully for document:", document_id);
 
     return new Response(
