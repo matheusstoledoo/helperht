@@ -43,7 +43,9 @@ const categoryIcon = (cat: string) => {
     case "conexao": return <Link2 className="h-4 w-4" />;
     case "atencao": return <AlertTriangle className="h-4 w-4" />;
     case "positivo": return <CheckCircle2 className="h-4 w-4" />;
-    default: return <Heart className="h-4 w-4" />;
+    case "medicacao": return <Heart className="h-4 w-4" />;
+    case "meta": return <CheckCircle2 className="h-4 w-4" />;
+    default: return <Info className="h-4 w-4" />;
   }
 };
 
@@ -56,6 +58,8 @@ const categoryLabel = (cat: string) => {
     case "estilo_de_vida": return "Estilo de vida";
     case "atencao": return "Atenção";
     case "positivo": return "Positivo";
+    case "medicacao": return "Medicação";
+    case "meta": return "Meta";
     default: return cat;
   }
 };
