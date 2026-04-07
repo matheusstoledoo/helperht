@@ -213,6 +213,33 @@ export default function StravaImport({ userId, onSelectActivity }: StravaImportP
                             {format(new Date(activity.start_date_local), "dd/MM", { locale: ptBR })}
                           </span>
                         </div>
+                        {/* Detailed metrics row */}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1">
+                          {activity.average_heartrate && (
+                            <span className="flex items-center gap-0.5 text-red-500">
+                              <Heart className="h-3 w-3" />
+                              {Math.round(activity.average_heartrate)} bpm
+                            </span>
+                          )}
+                          {activity.total_elevation_gain != null && activity.total_elevation_gain > 0 && (
+                            <span className="flex items-center gap-0.5">
+                              <Mountain className="h-3 w-3" />
+                              +{Math.round(activity.total_elevation_gain)} m
+                            </span>
+                          )}
+                          {activity.calories != null && activity.calories > 0 && (
+                            <span className="flex items-center gap-0.5">
+                              <Flame className="h-3 w-3" />
+                              {Math.round(activity.calories)} kcal
+                            </span>
+                          )}
+                          {activity.suffer_score != null && (
+                            <span className="flex items-center gap-0.5">
+                              <TrendingUp className="h-3 w-3" />
+                              Carga: {activity.suffer_score}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <Button
                         size="sm"
