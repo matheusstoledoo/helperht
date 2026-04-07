@@ -2345,6 +2345,7 @@ export type Database = {
           sport: string | null
           start_date: string | null
           status: string | null
+          strava_details: Json | null
           updated_at: string
           user_id: string
         }
@@ -2363,6 +2364,7 @@ export type Database = {
           sport?: string | null
           start_date?: string | null
           status?: string | null
+          strava_details?: Json | null
           updated_at?: string
           user_id: string
         }
@@ -2381,6 +2383,7 @@ export type Database = {
           sport?: string | null
           start_date?: string | null
           status?: string | null
+          strava_details?: Json | null
           updated_at?: string
           user_id?: string
         }

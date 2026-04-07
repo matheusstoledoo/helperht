@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink, MapPin, Clock, Loader2 } from "lucide-react";
+import { ExternalLink, MapPin, Clock, Loader2, Heart, TrendingUp, Flame, Mountain } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -14,8 +14,21 @@ interface StravaActivity {
   type: string;
   distance: number;
   moving_time: number;
+  elapsed_time?: number;
   start_date_local: string;
   sport_type?: string;
+  average_heartrate?: number;
+  max_heartrate?: number;
+  average_speed?: number;
+  max_speed?: number;
+  average_cadence?: number;
+  total_elevation_gain?: number;
+  elev_high?: number;
+  elev_low?: number;
+  suffer_score?: number;
+  calories?: number;
+  has_heartrate?: boolean;
+  laps?: any[];
 }
 
 interface StravaImportProps {
@@ -118,11 +131,15 @@ export default function StravaImport({ userId, onSelectActivity }: StravaImportP
     const durationMin = Math.round(activity.moving_time / 60);
     const distanceKm = (activity.distance / 1000).toFixed(2);
     const dateStr = format(new Date(activity.start_date_local), "dd/MM/yyyy", { locale: ptBR });
+    const hrInfo = activity.average_heartrate ? `\n❤️ FC média: ${Math.round(activity.average_heartrate)} bpm | FC máx: ${activity.max_heartrate ?? "N/A"} bpm` : "";
+    const elevInfo = activity.total_elevation_gain ? `\n⛰️ Elevação: +${Math.round(activity.total_elevation_gain)} m` : "";
+    const calInfo = activity.calories ? `\n🔥 Calorias: ${Math.round(activity.calories)} kcal` : "";
+    const sufferInfo = activity.suffer_score ? ` | Carga: ${activity.suffer_score}` : "";
 
     onSelectActivity({
       workoutType,
       duration: String(durationMin),
-      notes: `🏃 Importado do Strava: ${activity.name}\n📏 Distância: ${distanceKm} km\n📅 Data: ${dateStr}`,
+      notes: `🏃 Importado do Strava: ${activity.name}\n📏 Distância: ${distanceKm} km\n📅 Data: ${dateStr}${hrInfo}${elevInfo}${calInfo}${sufferInfo}`,
     });
 
     toast.success("Dados do treino preenchidos!");
@@ -195,6 +212,33 @@ export default function StravaImport({ userId, onSelectActivity }: StravaImportP
                           <span>
                             {format(new Date(activity.start_date_local), "dd/MM", { locale: ptBR })}
                           </span>
+                        </div>
+                        {/* Detailed metrics row */}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1">
+                          {activity.average_heartrate && (
+                            <span className="flex items-center gap-0.5 text-red-500">
+                              <Heart className="h-3 w-3" />
+                              {Math.round(activity.average_heartrate)} bpm
+                            </span>
+                          )}
+                          {activity.total_elevation_gain != null && activity.total_elevation_gain > 0 && (
+                            <span className="flex items-center gap-0.5">
+                              <Mountain className="h-3 w-3" />
+                              +{Math.round(activity.total_elevation_gain)} m
+                            </span>
+                          )}
+                          {activity.calories != null && activity.calories > 0 && (
+                            <span className="flex items-center gap-0.5">
+                              <Flame className="h-3 w-3" />
+                              {Math.round(activity.calories)} kcal
+                            </span>
+                          )}
+                          {activity.suffer_score != null && (
+                            <span className="flex items-center gap-0.5">
+                              <TrendingUp className="h-3 w-3" />
+                              Carga: {activity.suffer_score}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <Button
