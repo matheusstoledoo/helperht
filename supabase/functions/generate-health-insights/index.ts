@@ -295,6 +295,7 @@ ${goalsSection}`;
       exams: completedExams.length,
       hasNutrition: !!activeNutrition,
       hasTraining: !!activeTraining,
+      stravaActivities: stravaActivities.length,
       supplements: supplements.length,
       goals: (goalsRes.data || []).length,
     });
