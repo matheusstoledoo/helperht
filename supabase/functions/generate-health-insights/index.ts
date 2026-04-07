@@ -22,76 +22,135 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) throw new Error("Unauthorized");
 
-    // Step 1: get patient + lab results
-    const [patientRes, labRes] = await Promise.all([
-      supabase.from("patients").select("id, allergies, blood_type").eq("user_id", user.id).maybeSingle(),
+    // Step 1: get patient profile + user info + lab results
+    const [patientRes, userRes, labRes] = await Promise.all([
+      supabase.from("patients").select("id, allergies, blood_type, birthdate").eq("user_id", user.id).maybeSingle(),
+      supabase.from("users").select("name").eq("id", user.id).maybeSingle(),
       supabase.from("lab_results")
-        .select("marker_name, value, unit, status, collection_date, reference_min, reference_max")
+        .select("marker_name, value, unit, status, collection_date, reference_min, reference_max, marker_category")
         .eq("user_id", user.id)
         .order("collection_date", { ascending: false })
         .limit(50),
     ]);
 
     const patientId = patientRes?.data?.id || "00000000-0000-0000-0000-000000000000";
+    const patientName = userRes?.data?.name || "Paciente";
+    const birthdate = patientRes?.data?.birthdate;
+    const age = birthdate ? Math.floor((Date.now() - new Date(birthdate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null;
 
-    // Step 2: diagnoses, treatments, nutrition, training
-    const [diagRes, treatRes, nutritionRes, trainingRes] = await Promise.all([
+    // Step 2: all clinical data in parallel
+    const [diagRes, treatRes, nutritionRes, trainingRes, examsRes, supplementsRes, goalsRes] = await Promise.all([
       supabase.from("diagnoses")
-        .select("name, status, severity, icd_code, diagnosed_date")
-        .eq("patient_id", patientId)
-        .eq("status", "active"),
+        .select("name, status, severity, icd_code, diagnosed_date, resolved_date, public_notes")
+        .eq("patient_id", patientId),
       supabase.from("treatments")
-        .select("name, status, dosage, frequency, start_date")
-        .eq("patient_id", patientId)
-        .eq("status", "active"),
+        .select("name, status, dosage, frequency, start_date, end_date, description, public_notes")
+        .eq("patient_id", patientId),
       supabase.from("nutrition_plans")
-        .select("total_calories, protein_grams, carbs_grams, fat_grams, restrictions, recommended_foods, avoided_foods, meals, supplements, observations, status")
+        .select("total_calories, protein_grams, carbs_grams, fat_grams, restrictions, recommended_foods, avoided_foods, meals, supplements, observations, status, start_date")
         .eq("user_id", user.id)
-        .eq("status", "active")
         .order("created_at", { ascending: false })
-        .limit(1),
+        .limit(2),
       supabase.from("training_plans")
-        .select("sport, frequency_per_week, sessions, periodization_notes, observations, status")
+        .select("sport, frequency_per_week, sessions, periodization_notes, observations, status, start_date")
         .eq("user_id", user.id)
-        .eq("status", "active")
         .order("created_at", { ascending: false })
-        .limit(1),
+        .limit(2),
+      supabase.from("exams")
+        .select("name, exam_type, status, result, findings, interpretation, requested_date, completed_date")
+        .eq("patient_id", patientId)
+        .order("requested_date", { ascending: false })
+        .limit(20),
+      supabase.from("supplements_log")
+        .select("product, quantity, timing, log_date, notes")
+        .eq("user_id", user.id)
+        .order("log_date", { ascending: false })
+        .limit(20),
+      supabase.from("goals")
+        .select("title, status, category, progress, target_date")
+        .eq("patient_id", patientId)
+        .eq("status", "active")
+        .limit(10),
     ]);
 
-    const activeNutrition = nutritionRes.data?.[0] || null;
-    const activeTraining = trainingRes.data?.[0] || null;
+    // Separate active and resolved diagnoses
+    const allDiagnoses = diagRes.data || [];
+    const activeDiagnoses = allDiagnoses.filter((d: any) => d.status === "active");
+    const resolvedDiagnoses = allDiagnoses.filter((d: any) => d.status !== "active");
 
-    const patientContext = {
-      allergies: patientRes.data?.allergies || [],
-      blood_type: patientRes.data?.blood_type || null,
-      lab_results: (labRes.data || []).slice(0, 30),
-      active_diagnoses: diagRes.data || [],
-      active_treatments: treatRes.data || [],
-      nutrition: activeNutrition ? {
-        calories: activeNutrition.total_calories,
-        protein_g: activeNutrition.protein_grams,
-        carbs_g: activeNutrition.carbs_grams,
-        fat_g: activeNutrition.fat_grams,
-        restrictions: activeNutrition.restrictions,
-        recommended_foods: activeNutrition.recommended_foods,
-        avoided_foods: activeNutrition.avoided_foods,
-        supplements: activeNutrition.supplements,
-        observations: activeNutrition.observations,
-      } : null,
-      training: activeTraining ? {
-        sport: activeTraining.sport,
-        frequency_per_week: activeTraining.frequency_per_week,
-        periodization: activeTraining.periodization_notes,
-        observations: activeTraining.observations,
-        session_count: Array.isArray(activeTraining.sessions) ? activeTraining.sessions.length : 0,
-      } : null,
-    };
+    // Separate active and past treatments
+    const allTreatments = treatRes.data || [];
+    const activeTreatments = allTreatments.filter((t: any) => t.status === "active");
+    const pastTreatments = allTreatments.filter((t: any) => t.status !== "active").slice(0, 10);
 
-    const hasData = patientContext.lab_results.length > 0 ||
-      patientContext.active_diagnoses.length > 0 ||
-      patientContext.active_treatments.length > 0 ||
-      patientContext.nutrition !== null ||
-      patientContext.training !== null;
+    // Nutrition
+    const activeNutrition = (nutritionRes.data || []).find((n: any) => n.status === "active") || null;
+
+    // Training
+    const activeTraining = (trainingRes.data || []).find((t: any) => t.status === "active") || null;
+
+    // Build structured sections
+    const diagSection = activeDiagnoses.length > 0
+      ? activeDiagnoses.map((d: any) => `- ${d.name}${d.icd_code ? ` (CID: ${d.icd_code})` : ""} | Severidade: ${d.severity || "não informada"} | Desde: ${d.diagnosed_date}${d.public_notes ? ` | Obs: ${d.public_notes}` : ""}`).join("\n")
+      : "Sem diagnósticos ativos registrados";
+
+    const resolvedDiagSection = resolvedDiagnoses.length > 0
+      ? resolvedDiagnoses.slice(0, 5).map((d: any) => `- ${d.name} (${d.status}) | Resolvido em: ${d.resolved_date || "não informado"}`).join("\n")
+      : "Nenhum";
+
+    const treatSection = activeTreatments.length > 0
+      ? activeTreatments.map((t: any) => `- ${t.name}${t.dosage ? ` | Dose: ${t.dosage}` : ""}${t.frequency ? ` | Frequência: ${t.frequency}` : ""} | Início: ${t.start_date || "não informado"}${t.public_notes ? ` | Obs: ${t.public_notes}` : ""}`).join("\n")
+      : "Sem medicamentos ou tratamentos ativos";
+
+    const labResults = (labRes.data || []).slice(0, 30);
+    const labSection = labResults.length > 0
+      ? labResults.map((l: any) => `- ${l.marker_name}: ${l.value ?? "N/A"} ${l.unit || ""} (Ref: ${l.reference_min ?? "?"}-${l.reference_max ?? "?"}) | Status: ${l.status || "N/A"} | Data: ${l.collection_date}`).join("\n")
+      : "Sem exames laboratoriais registrados";
+
+    const exams = examsRes.data || [];
+    const completedExams = exams.filter((e: any) => e.status === "completed");
+    const examsSection = completedExams.length > 0
+      ? completedExams.map((e: any) => `- ${e.name}${e.exam_type ? ` (${e.exam_type})` : ""} | Data: ${e.completed_date || e.requested_date}${e.result ? ` | Resultado: ${e.result}` : ""}${e.findings ? ` | Achados: ${e.findings}` : ""}${e.interpretation ? ` | Interpretação: ${e.interpretation}` : ""}`).join("\n")
+      : "Sem exames de imagem/complementares registrados";
+
+    const nutritionSection = activeNutrition
+      ? [
+          `Calorias: ${activeNutrition.total_calories ?? "N/A"} kcal`,
+          `Proteínas: ${activeNutrition.protein_grams ?? "N/A"}g | Carboidratos: ${activeNutrition.carbs_grams ?? "N/A"}g | Gorduras: ${activeNutrition.fat_grams ?? "N/A"}g`,
+          activeNutrition.restrictions?.length ? `Restrições: ${activeNutrition.restrictions.join(", ")}` : null,
+          activeNutrition.recommended_foods?.length ? `Alimentos recomendados: ${activeNutrition.recommended_foods.join(", ")}` : null,
+          activeNutrition.avoided_foods?.length ? `Alimentos evitados: ${activeNutrition.avoided_foods.join(", ")}` : null,
+          activeNutrition.observations ? `Observações: ${activeNutrition.observations}` : null,
+        ].filter(Boolean).join("\n")
+      : "Sem plano nutricional ativo";
+
+    const supplements = supplementsRes.data || [];
+    const supplementsSection = supplements.length > 0
+      ? supplements.map((s: any) => `- ${s.product}${s.quantity ? ` (${s.quantity})` : ""} | Horário: ${s.timing} | Data: ${s.log_date}${s.notes ? ` | Obs: ${s.notes}` : ""}`).join("\n")
+      : "Sem registros de suplementação";
+
+    const trainingSection = activeTraining
+      ? [
+          `Modalidade: ${activeTraining.sport || "não informada"}`,
+          `Frequência: ${activeTraining.frequency_per_week ?? "N/A"}x/semana`,
+          `Sessões planejadas: ${Array.isArray(activeTraining.sessions) ? activeTraining.sessions.length : 0}`,
+          activeTraining.periodization_notes ? `Periodização: ${activeTraining.periodization_notes}` : null,
+          activeTraining.observations ? `Observações: ${activeTraining.observations}` : null,
+        ].filter(Boolean).join("\n")
+      : "Sem plano de treino ativo";
+
+    const goalsSection = (goalsRes.data || []).length > 0
+      ? (goalsRes.data || []).map((g: any) => `- ${g.title} | Categoria: ${g.category || "geral"} | Progresso: ${g.progress ?? 0}%${g.target_date ? ` | Meta: ${g.target_date}` : ""}`).join("\n")
+      : "Sem metas ativas";
+
+    // Check if there's any data at all
+    const hasData = labResults.length > 0 ||
+      activeDiagnoses.length > 0 ||
+      activeTreatments.length > 0 ||
+      activeNutrition !== null ||
+      activeTraining !== null ||
+      completedExams.length > 0 ||
+      supplements.length > 0;
 
     if (!hasData) {
       return new Response(JSON.stringify({
@@ -103,35 +162,83 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const systemPrompt = `Você é um assistente de saúde que analisa dados clínicos de pacientes e gera insights educativos e acolhedores em português brasileiro.
+    const systemPrompt = `Você é um assistente médico de suporte clínico especializado em análise integrada de saúde, respondendo em português brasileiro.
+
+Analise o perfil completo do paciente abaixo, considerando TODAS as dimensões de saúde de forma integrada. Identifique relações entre diagnósticos, medicações, exames, nutrição e atividade física. Gere insights clínicos relevantes, padrões e recomendações personalizadas.
 
 IMPORTANTE:
-- NÃO faça diagnósticos nem prescrições
-- Use linguagem simples e acessível
-- Sempre recomende consultar o profissional de saúde
-- Foque em tendências nos exames, possíveis correlações e dicas gerais de bem-estar
-- Seja empático e encorajador
-- CONECTE os dados entre si: analise como diagnósticos se relacionam com tratamentos, como a nutrição pode impactar os exames, como o treino se conecta com os resultados laboratoriais e diagnósticos
-- Se houver dados de nutrição, analise se a dieta é adequada para os diagnósticos e exames do paciente
-- Se houver dados de treino, analise se a modalidade e frequência são compatíveis com o quadro clínico
+- NÃO faça diagnósticos definitivos nem prescrições
+- Use linguagem simples, acessível e acolhedora
+- Sempre recomende consultar o profissional de saúde para decisões clínicas
+- CONECTE os dados entre si: analise como diagnósticos se relacionam com tratamentos, como a nutrição pode impactar os exames, como o treino se conecta com os resultados laboratoriais
 - Identifique sinergias e potenciais conflitos entre tratamentos, nutrição e atividade física
+- Se uma seção mostrar "Sem registros", considere isso como lacuna informacional e sugira ao paciente registrar esses dados
+
+Com base em TODAS as informações integradas do paciente, forneça:
+1. Resumo geral do estado de saúde atual
+2. Relações importantes entre as diferentes áreas (ex: como os treinos impactam os exames, como a nutrição se relaciona com os diagnósticos)
+3. Alertas ou pontos de atenção
+4. Recomendações práticas e personalizadas
+5. Evolução percebida com base nos dados disponíveis
 
 Responda EXCLUSIVAMENTE com um JSON válido (sem markdown, sem backticks) no formato:
 {
-  "summary": "Resumo geral de 2-3 frases sobre a saúde do paciente, conectando os diferentes aspectos",
+  "summary": "Resumo geral de 3-5 frases sobre a saúde do paciente, conectando os diferentes aspectos e a evolução percebida",
   "insights": [
     {
-      "category": "exames" | "nutricao" | "treino" | "estilo_de_vida" | "atencao" | "positivo" | "conexao",
+      "category": "exames" | "nutricao" | "treino" | "estilo_de_vida" | "atencao" | "positivo" | "conexao" | "medicacao" | "meta",
       "title": "Título curto do insight",
-      "description": "Descrição de 2-3 frases",
+      "description": "Descrição de 2-4 frases com recomendação prática",
       "priority": "info" | "attention" | "positive"
     }
   ]
 }
 
-Gere entre 3 e 8 insights relevantes. Use a categoria "conexao" para insights que cruzam dados de diferentes áreas (ex: relação entre exames e nutrição, treino e diagnóstico).`;
+Gere entre 4 e 10 insights relevantes. Use a categoria "conexao" para insights que cruzam dados de diferentes áreas. Use "atencao" para alertas clínicos. Use "positivo" para pontos favoráveis.`;
 
-    const userPrompt = `Dados do paciente:\n${JSON.stringify(patientContext, null, 2)}`;
+    const userPrompt = `PERFIL DO PACIENTE:
+Nome: ${patientName}
+Idade: ${age !== null ? `${age} anos` : "não informada"}
+Tipo sanguíneo: ${patientRes.data?.blood_type || "não informado"}
+Alergias: ${(patientRes.data?.allergies || []).length > 0 ? patientRes.data.allergies.join(", ") : "nenhuma registrada"}
+
+DIAGNÓSTICOS ATIVOS:
+${diagSection}
+
+HISTÓRICO DE DIAGNÓSTICOS RESOLVIDOS:
+${resolvedDiagSection}
+
+MEDICAMENTOS E TRATAMENTOS ATUAIS:
+${treatSection}
+
+EXAMES LABORATORIAIS RECENTES:
+${labSection}
+
+EXAMES COMPLEMENTARES/IMAGEM:
+${examsSection}
+
+PLANO NUTRICIONAL ATIVO:
+${nutritionSection}
+
+SUPLEMENTAÇÃO RECENTE:
+${supplementsSection}
+
+PLANO DE TREINO ATIVO:
+${trainingSection}
+
+METAS DE SAÚDE ATIVAS:
+${goalsSection}`;
+
+    console.log("Sending context to AI with sections:", {
+      diagnoses: activeDiagnoses.length,
+      treatments: activeTreatments.length,
+      labResults: labResults.length,
+      exams: completedExams.length,
+      hasNutrition: !!activeNutrition,
+      hasTraining: !!activeTraining,
+      supplements: supplements.length,
+      goals: (goalsRes.data || []).length,
+    });
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -140,7 +247,7 @@ Gere entre 3 e 8 insights relevantes. Use a categoria "conexao" para insights qu
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
