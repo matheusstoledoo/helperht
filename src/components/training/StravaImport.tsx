@@ -131,11 +131,15 @@ export default function StravaImport({ userId, onSelectActivity }: StravaImportP
     const durationMin = Math.round(activity.moving_time / 60);
     const distanceKm = (activity.distance / 1000).toFixed(2);
     const dateStr = format(new Date(activity.start_date_local), "dd/MM/yyyy", { locale: ptBR });
+    const hrInfo = activity.average_heartrate ? `\n❤️ FC média: ${Math.round(activity.average_heartrate)} bpm | FC máx: ${activity.max_heartrate ?? "N/A"} bpm` : "";
+    const elevInfo = activity.total_elevation_gain ? `\n⛰️ Elevação: +${Math.round(activity.total_elevation_gain)} m` : "";
+    const calInfo = activity.calories ? `\n🔥 Calorias: ${Math.round(activity.calories)} kcal` : "";
+    const sufferInfo = activity.suffer_score ? ` | Carga: ${activity.suffer_score}` : "";
 
     onSelectActivity({
       workoutType,
       duration: String(durationMin),
-      notes: `🏃 Importado do Strava: ${activity.name}\n📏 Distância: ${distanceKm} km\n📅 Data: ${dateStr}`,
+      notes: `🏃 Importado do Strava: ${activity.name}\n📏 Distância: ${distanceKm} km\n📅 Data: ${dateStr}${hrInfo}${elevInfo}${calInfo}${sufferInfo}`,
     });
 
     toast.success("Dados do treino preenchidos!");
