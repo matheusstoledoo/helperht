@@ -13,6 +13,10 @@ import {
   ArrowRight,
   Apple,
   Dumbbell,
+  Sparkles,
+  RefreshCw,
+  Info,
+  Link2,
 } from "lucide-react";
 import PatientLayout from "@/components/patient/PatientLayout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 
 interface LabMarkerSummary {
   marker_name: string;
@@ -34,10 +39,16 @@ interface LabMarkerSummary {
   reference_max: number | null;
 }
 
-interface Insight {
-  type: "warning" | "improvement" | "stable" | "attention";
+interface AIInsight {
+  category: string;
   title: string;
   description: string;
+  priority: "info" | "attention" | "positive";
+}
+
+interface AIInsightsData {
+  summary: string;
+  insights: AIInsight[];
 }
 
 const SPORT_LABELS: Record<string, string> = {
@@ -50,16 +61,65 @@ const SPORT_LABELS: Record<string, string> = {
   outro: "Outro",
 };
 
+const categoryIcon = (cat: string) => {
+  switch (cat) {
+    case "exames": return <Activity className="h-3.5 w-3.5" />;
+    case "nutricao": return <Apple className="h-3.5 w-3.5" />;
+    case "treino": return <Dumbbell className="h-3.5 w-3.5" />;
+    case "conexao": return <Link2 className="h-3.5 w-3.5" />;
+    case "atencao": return <AlertTriangle className="h-3.5 w-3.5" />;
+    case "positivo": return <CheckCircle2 className="h-3.5 w-3.5" />;
+    case "medicacao": return <Heart className="h-3.5 w-3.5" />;
+    case "meta": return <CheckCircle2 className="h-3.5 w-3.5" />;
+    default: return <Info className="h-3.5 w-3.5" />;
+  }
+};
+
+const categoryLabel = (cat: string) => {
+  switch (cat) {
+    case "exames": return "Exames";
+    case "nutricao": return "Nutrição";
+    case "treino": return "Treino";
+    case "conexao": return "Conexão";
+    case "estilo_de_vida": return "Estilo de vida";
+    case "atencao": return "Atenção";
+    case "positivo": return "Positivo";
+    case "medicacao": return "Medicação";
+    case "meta": return "Meta";
+    default: return cat;
+  }
+};
+
+const priorityStyles = (priority: string) => {
+  switch (priority) {
+    case "attention": return "border-amber-500/30 bg-amber-50 dark:bg-amber-950/20";
+    case "positive": return "border-green-500/30 bg-green-50 dark:bg-green-950/20";
+    default: return "border-border bg-card";
+  }
+};
+
+const priorityIcon = (priority: string) => {
+  switch (priority) {
+    case "attention": return <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />;
+    case "positive": return <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />;
+    default: return <Info className="h-4 w-4 text-primary shrink-0" />;
+  }
+};
+
 export default function PatientHealthSummary() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [markers, setMarkers] = useState<LabMarkerSummary[]>([]);
-  const [insights, setInsights] = useState<Insight[]>([]);
   const [allergies, setAllergies] = useState<string[] | null>(null);
   const [bloodType, setBloodType] = useState<string | null>(null);
   const [nutritionSummary, setNutritionSummary] = useState<any>(null);
   const [trainingSummary, setTrainingSummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // AI Insights state
+  const [aiInsights, setAiInsights] = useState<AIInsightsData | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiGenerated, setAiGenerated] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -146,57 +206,30 @@ export default function PatientHealthSummary() {
       });
 
       setMarkers(summaries);
-
-      // Generate insights
-      const newInsights: Insight[] = [];
-      const abnormal = summaries.filter(m => m.status === "high" || m.status === "low");
-      const worsened = summaries.filter(m => {
-        if (m.variationPercent == null) return false;
-        return (m.status === "high" || m.status === "low") && Math.abs(m.variationPercent) > 10;
-      });
-      const improved = summaries.filter(m => {
-        if (m.variationPercent == null || !m.previousValue) return false;
-        return m.status === "normal" && m.variationPercent !== 0;
-      });
-
-      if (abnormal.length === 0 && summaries.length > 0) {
-        newInsights.push({
-          type: "stable",
-          title: "Todos os marcadores dentro da normalidade",
-          description: "Seus resultados recentes estão dentro das faixas de referência.",
-        });
-      }
-
-      for (const m of worsened.slice(0, 3)) {
-        newInsights.push({
-          type: "warning",
-          title: `${m.marker_name} ${m.status === "high" ? "elevado" : "baixo"}`,
-          description: `Variação de ${m.variationPercent! > 0 ? "+" : ""}${m.variationPercent}% em relação ao exame anterior${m.latestValue != null ? ` (${m.latestValue} ${m.unit || ""})` : ""}.`,
-        });
-      }
-
-      for (const m of improved.slice(0, 2)) {
-        newInsights.push({
-          type: "improvement",
-          title: `${m.marker_name} normalizado`,
-          description: `Valor atual ${m.latestValue} ${m.unit || ""} — voltou à faixa normal.`,
-        });
-      }
-
-      if (abnormal.length > 0 && worsened.length === 0) {
-        newInsights.push({
-          type: "attention",
-          title: `${abnormal.length} marcador${abnormal.length > 1 ? "es" : ""} fora da faixa`,
-          description: abnormal.map(m => m.marker_name).join(", "),
-        });
-      }
-
-      setInsights(newInsights);
       setLoading(false);
     };
 
     fetchData();
   }, [user, authLoading]);
+
+  const generateAIInsights = async () => {
+    if (!user) return;
+    setAiLoading(true);
+    try {
+      const { data: result, error } = await supabase.functions.invoke("generate-health-insights");
+      if (error) throw error;
+      if (result?.error) {
+        toast.error(result.error);
+        return;
+      }
+      setAiInsights(result as AIInsightsData);
+      setAiGenerated(true);
+    } catch (e: any) {
+      toast.error("Erro ao gerar insights. Tente novamente.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const variationBadge = (m: LabMarkerSummary) => {
     if (m.variationPercent == null) return null;
@@ -224,28 +257,10 @@ export default function PatientHealthSummary() {
     return null;
   };
 
-  const insightIcon = (type: Insight["type"]) => {
-    switch (type) {
-      case "warning": return <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />;
-      case "attention": return <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />;
-      case "improvement": return <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />;
-      case "stable": return <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />;
-    }
-  };
-
-  const insightBg = (type: Insight["type"]) => {
-    switch (type) {
-      case "warning": return "border-destructive/30 bg-destructive/5";
-      case "attention": return "border-amber-500/30 bg-amber-50 dark:bg-amber-950/20";
-      case "improvement": return "border-green-500/30 bg-green-50 dark:bg-green-950/20";
-      case "stable": return "border-green-500/30 bg-green-50 dark:bg-green-950/20";
-    }
-  };
-
   return (
     <PatientLayout
       title="Resumo de Saúde"
-      subtitle="Variações nos seus exames e insights"
+      subtitle="Visão integrada da sua saúde"
       showHeader={false}
       breadcrumb={<PatientBreadcrumb currentPage="Resumo de Saúde" />}
     >
@@ -323,24 +338,72 @@ export default function PatientHealthSummary() {
               </div>
             )}
 
-            {/* Insights */}
-            {insights.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-primary" />
-                  Insights
-                </h3>
-                {insights.map((insight, i) => (
-                  <div key={i} className={`flex items-start gap-3 p-3 rounded-lg border ${insightBg(insight.type)}`}>
-                    {insightIcon(insight.type)}
+            {/* AI Insights Section */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Insights Integrados de IA
+              </h3>
+
+              {!aiGenerated ? (
+                <Card>
+                  <CardContent className="p-6 text-center space-y-3">
+                    <Sparkles className="h-10 w-10 mx-auto text-primary/50" />
                     <div>
-                      <p className="text-sm font-medium text-foreground">{insight.title}</p>
-                      <p className="text-xs text-muted-foreground">{insight.description}</p>
+                      <p className="text-sm font-medium text-foreground">Análise integrada de saúde</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Nossa IA analisa seus exames, diagnósticos, tratamentos, nutrição e treinos para gerar insights personalizados.
+                      </p>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                    <Button onClick={generateAIInsights} disabled={aiLoading} size="sm" className="gap-2">
+                      {aiLoading ? (
+                        <><RefreshCw className="h-3.5 w-3.5 animate-spin" /> Analisando...</>
+                      ) : (
+                        <><Sparkles className="h-3.5 w-3.5" /> Gerar insights</>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : aiInsights ? (
+                <>
+                  {aiInsights.summary && (
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                          <p className="text-sm text-foreground leading-relaxed">{aiInsights.summary}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {aiInsights.insights.map((insight, i) => (
+                    <Card key={i} className={`border ${priorityStyles(insight.priority)}`}>
+                      <CardContent className="p-3">
+                        <div className="flex items-start gap-3">
+                          {priorityIcon(insight.priority)}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                              <p className="text-sm font-medium text-foreground">{insight.title}</p>
+                              <Badge variant="outline" className="text-xs gap-1 shrink-0">
+                                {categoryIcon(insight.category)}
+                                {categoryLabel(insight.category)}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{insight.description}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+
+                  <Button variant="ghost" size="sm" onClick={generateAIInsights} disabled={aiLoading} className="w-full gap-1 text-xs">
+                    {aiLoading ? <RefreshCw className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                    Atualizar insights
+                  </Button>
+                </>
+              ) : null}
+            </div>
 
             {/* Lab markers */}
             {markers.length > 0 ? (
