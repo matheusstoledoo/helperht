@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import { Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -91,7 +92,7 @@ const App = () => (
               <Route path="/pac/alertas" element={<PatientAlerts />} />
               <Route path="/pac/resumo" element={<PatientHealthSummary />} />
               {/* /pac/mensagens archived */}
-              <Route path="/pac/insights" element={<PatientGoalsInsights />} />
+              <Route path="/pac/insights" element={<Navigate to="/pac/objetivos?tab=insights" replace />} />
               <Route path="/pac/objetivos" element={<PatientGoalsInsights />} />
               <Route path="/pac/config" element={<PatientSettings />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
