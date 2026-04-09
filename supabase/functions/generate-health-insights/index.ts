@@ -199,6 +199,36 @@ Fonte: Strava (dados sincronizados)`;
       ? (goalsRes.data || []).map((g: any) => `- ${g.title} | Categoria: ${g.category || "geral"} | Progresso: ${g.progress ?? 0}%${g.target_date ? ` | Meta: ${g.target_date}` : ""}`).join("\n")
       : "Sem metas ativas";
 
+    // Patient Goals (structured health goals with metrics)
+    const GOAL_LABELS: Record<string, string> = {
+      longevidade: "Longevidade",
+      performance_aerobica: "Performance Aeróbica",
+      performance_forca: "Performance e Força",
+      perda_de_peso: "Perda de Peso",
+      ganho_de_massa: "Ganho de Massa",
+      saude_metabolica: "Saúde Metabólica",
+      saude_cardiovascular: "Saúde Cardiovascular",
+      bem_estar_geral: "Bem-estar Geral",
+    };
+
+    const patientGoals = patientGoalsRes.data || [];
+    const patientGoalsSection = patientGoals.length > 0
+      ? patientGoals.map((g: any) => {
+          const label = GOAL_LABELS[g.goal] || g.goal;
+          const priority = g.priority === "primario" ? "Principal" : "Secundário";
+          let line = `- ${label} (${priority}) | Status: ${g.status}`;
+          if (g.target_date) line += ` | Prazo: ${g.target_date}`;
+          if (g.target_metrics && Object.keys(g.target_metrics).length > 0) {
+            line += ` | Métricas alvo: ${JSON.stringify(g.target_metrics)}`;
+          }
+          if (g.baseline_snapshot) {
+            line += `\n  Linha de base quando definiu o objetivo: ${JSON.stringify(g.baseline_snapshot)}`;
+          }
+          if (g.notes) line += `\n  Notas: ${g.notes}`;
+          return line;
+        }).join("\n")
+      : "Sem objetivos de saúde definidos";
+
     // Check if there's any data at all
     const hasData = labResults.length > 0 ||
       activeDiagnoses.length > 0 ||
