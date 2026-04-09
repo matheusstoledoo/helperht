@@ -268,12 +268,15 @@ IMPORTANTE:
   * Evolução do condicionamento (melhora ou piora de pace/FC entre atividades)
   * Recomendações de ajuste de treino baseadas no histórico médico completo
 
+- Se o paciente tiver OBJETIVOS DE SAÚDE definidos (com métricas alvo e linha de base), direcione os insights para esses objetivos específicos: compare a linha de base com os dados atuais, avalie o progresso, sugira ajustes e identifique se os tratamentos/treinos/nutrição estão alinhados com os objetivos
+
 Com base em TODAS as informações integradas do paciente, forneça:
 1. Resumo geral do estado de saúde atual
 2. Relações importantes entre as diferentes áreas (ex: como os treinos impactam os exames, como a nutrição se relaciona com os diagnósticos)
 3. Alertas ou pontos de atenção
 4. Recomendações práticas e personalizadas
 5. Evolução percebida com base nos dados disponíveis
+6. Progresso em relação aos objetivos definidos pelo paciente
 
 Responda EXCLUSIVAMENTE com um JSON válido (sem markdown, sem backticks) no formato:
 {
