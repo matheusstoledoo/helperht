@@ -39,7 +39,7 @@ serve(async (req) => {
     const age = birthdate ? Math.floor((Date.now() - new Date(birthdate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null;
 
     // Step 2: all clinical data in parallel
-    const [diagRes, treatRes, nutritionRes, trainingRes, examsRes, supplementsRes, goalsRes] = await Promise.all([
+    const [diagRes, treatRes, nutritionRes, trainingRes, examsRes, supplementsRes, goalsRes, patientGoalsRes] = await Promise.all([
       supabase.from("diagnoses")
         .select("name, status, severity, icd_code, diagnosed_date, resolved_date, public_notes")
         .eq("patient_id", patientId),
@@ -70,6 +70,11 @@ serve(async (req) => {
         .select("title, status, category, progress, target_date")
         .eq("patient_id", patientId)
         .eq("status", "active")
+        .limit(10),
+      supabase.from("patient_goals")
+        .select("goal, priority, status, target_date, target_metrics, baseline_snapshot, notes")
+        .eq("patient_id", patientId)
+        .in("status", ["ativo", "pausado"])
         .limit(10),
     ]);
 
@@ -194,6 +199,36 @@ Fonte: Strava (dados sincronizados)`;
       ? (goalsRes.data || []).map((g: any) => `- ${g.title} | Categoria: ${g.category || "geral"} | Progresso: ${g.progress ?? 0}%${g.target_date ? ` | Meta: ${g.target_date}` : ""}`).join("\n")
       : "Sem metas ativas";
 
+    // Patient Goals (structured health goals with metrics)
+    const GOAL_LABELS: Record<string, string> = {
+      longevidade: "Longevidade",
+      performance_aerobica: "Performance Aeróbica",
+      performance_forca: "Performance e Força",
+      perda_de_peso: "Perda de Peso",
+      ganho_de_massa: "Ganho de Massa",
+      saude_metabolica: "Saúde Metabólica",
+      saude_cardiovascular: "Saúde Cardiovascular",
+      bem_estar_geral: "Bem-estar Geral",
+    };
+
+    const patientGoals = patientGoalsRes.data || [];
+    const patientGoalsSection = patientGoals.length > 0
+      ? patientGoals.map((g: any) => {
+          const label = GOAL_LABELS[g.goal] || g.goal;
+          const priority = g.priority === "primario" ? "Principal" : "Secundário";
+          let line = `- ${label} (${priority}) | Status: ${g.status}`;
+          if (g.target_date) line += ` | Prazo: ${g.target_date}`;
+          if (g.target_metrics && Object.keys(g.target_metrics).length > 0) {
+            line += ` | Métricas alvo: ${JSON.stringify(g.target_metrics)}`;
+          }
+          if (g.baseline_snapshot) {
+            line += `\n  Linha de base quando definiu o objetivo: ${JSON.stringify(g.baseline_snapshot)}`;
+          }
+          if (g.notes) line += `\n  Notas: ${g.notes}`;
+          return line;
+        }).join("\n")
+      : "Sem objetivos de saúde definidos";
+
     // Check if there's any data at all
     const hasData = labResults.length > 0 ||
       activeDiagnoses.length > 0 ||
@@ -233,12 +268,15 @@ IMPORTANTE:
   * Evolução do condicionamento (melhora ou piora de pace/FC entre atividades)
   * Recomendações de ajuste de treino baseadas no histórico médico completo
 
+- Se o paciente tiver OBJETIVOS DE SAÚDE definidos (com métricas alvo e linha de base), direcione os insights para esses objetivos específicos: compare a linha de base com os dados atuais, avalie o progresso, sugira ajustes e identifique se os tratamentos/treinos/nutrição estão alinhados com os objetivos
+
 Com base em TODAS as informações integradas do paciente, forneça:
 1. Resumo geral do estado de saúde atual
 2. Relações importantes entre as diferentes áreas (ex: como os treinos impactam os exames, como a nutrição se relaciona com os diagnósticos)
 3. Alertas ou pontos de atenção
 4. Recomendações práticas e personalizadas
 5. Evolução percebida com base nos dados disponíveis
+6. Progresso em relação aos objetivos definidos pelo paciente
 
 Responda EXCLUSIVAMENTE com um JSON válido (sem markdown, sem backticks) no formato:
 {
@@ -286,7 +324,10 @@ ATIVIDADE FÍSICA — DADOS DE TREINO${stravaActivities.length > 0 ? " (STRAVA D
 ${trainingSection}
 
 METAS DE SAÚDE ATIVAS:
-${goalsSection}`;
+${goalsSection}
+
+OBJETIVOS ATIVOS DO PACIENTE (com métricas e linha de base):
+${patientGoalsSection}`;
 
     console.log("Sending context to AI with sections:", {
       diagnoses: activeDiagnoses.length,
@@ -298,6 +339,7 @@ ${goalsSection}`;
       stravaActivities: stravaActivities.length,
       supplements: supplements.length,
       goals: (goalsRes.data || []).length,
+      patientGoals: patientGoals.length,
     });
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
