@@ -321,7 +321,10 @@ ATIVIDADE FÍSICA — DADOS DE TREINO${stravaActivities.length > 0 ? " (STRAVA D
 ${trainingSection}
 
 METAS DE SAÚDE ATIVAS:
-${goalsSection}`;
+${goalsSection}
+
+OBJETIVOS ATIVOS DO PACIENTE (com métricas e linha de base):
+${patientGoalsSection}`;
 
     console.log("Sending context to AI with sections:", {
       diagnoses: activeDiagnoses.length,
