@@ -150,6 +150,13 @@ export type Database = {
             foreignKeyName: "clinical_events_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "clinical_events_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
@@ -206,6 +213,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "consultations_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
           {
             foreignKeyName: "consultations_patient_id_fkey"
             columns: ["patient_id"]
@@ -287,6 +301,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "consultations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diagnoses_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
           },
           {
             foreignKeyName: "diagnoses_patient_id_fkey"
@@ -687,6 +708,13 @@ export type Database = {
             foreignKeyName: "evidence_quality_analyses_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "evidence_quality_analyses_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
@@ -832,6 +860,13 @@ export type Database = {
             foreignKeyName: "evidence_searches_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "evidence_searches_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
@@ -909,6 +944,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "consultations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exams_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
           },
           {
             foreignKeyName: "exams_patient_id_fkey"
@@ -1053,6 +1095,13 @@ export type Database = {
             foreignKeyName: "goals_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "goals_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
@@ -1061,6 +1110,79 @@ export type Database = {
             columns: ["source_trail_id"]
             isOneToOne: false
             referencedRelation: "care_trails"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      insight_feedback: {
+        Row: {
+          action_notes: string | null
+          action_taken: Database["public"]["Enums"]["feedback_action"] | null
+          feedback_at: string
+          id: string
+          insight_id: string
+          outcome_30d: Json | null
+          outcome_30d_at: string | null
+          outcome_60d: Json | null
+          outcome_60d_at: string | null
+          outcome_90d: Json | null
+          outcome_90d_at: string | null
+          patient_id: string
+          rating: number | null
+          was_relevant: boolean | null
+        }
+        Insert: {
+          action_notes?: string | null
+          action_taken?: Database["public"]["Enums"]["feedback_action"] | null
+          feedback_at?: string
+          id?: string
+          insight_id: string
+          outcome_30d?: Json | null
+          outcome_30d_at?: string | null
+          outcome_60d?: Json | null
+          outcome_60d_at?: string | null
+          outcome_90d?: Json | null
+          outcome_90d_at?: string | null
+          patient_id: string
+          rating?: number | null
+          was_relevant?: boolean | null
+        }
+        Update: {
+          action_notes?: string | null
+          action_taken?: Database["public"]["Enums"]["feedback_action"] | null
+          feedback_at?: string
+          id?: string
+          insight_id?: string
+          outcome_30d?: Json | null
+          outcome_30d_at?: string | null
+          outcome_60d?: Json | null
+          outcome_60d_at?: string | null
+          outcome_90d?: Json | null
+          outcome_90d_at?: string | null
+          patient_id?: string
+          rating?: number | null
+          was_relevant?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insight_feedback_insight_id_fkey"
+            columns: ["insight_id"]
+            isOneToOne: false
+            referencedRelation: "patient_insights"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insight_feedback_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "insight_feedback_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]
@@ -1092,6 +1214,72 @@ export type Database = {
           phone?: string | null
           specialty?: string | null
           user_type?: string
+        }
+        Relationships: []
+      }
+      knowledge_base: {
+        Row: {
+          category: Database["public"]["Enums"]["knowledge_category"]
+          content: string
+          created_at: string
+          doi: string | null
+          embedding: string | null
+          evidence_level: Database["public"]["Enums"]["evidence_level"]
+          goal_relevance: Database["public"]["Enums"]["goal_type"][] | null
+          id: string
+          is_active: boolean
+          key_findings: string[] | null
+          last_retrieved: string | null
+          published_year: number | null
+          source_name: string
+          source_url: string | null
+          subcategory: string | null
+          summary: string | null
+          times_retrieved: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["knowledge_category"]
+          content: string
+          created_at?: string
+          doi?: string | null
+          embedding?: string | null
+          evidence_level?: Database["public"]["Enums"]["evidence_level"]
+          goal_relevance?: Database["public"]["Enums"]["goal_type"][] | null
+          id?: string
+          is_active?: boolean
+          key_findings?: string[] | null
+          last_retrieved?: string | null
+          published_year?: number | null
+          source_name: string
+          source_url?: string | null
+          subcategory?: string | null
+          summary?: string | null
+          times_retrieved?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["knowledge_category"]
+          content?: string
+          created_at?: string
+          doi?: string | null
+          embedding?: string | null
+          evidence_level?: Database["public"]["Enums"]["evidence_level"]
+          goal_relevance?: Database["public"]["Enums"]["goal_type"][] | null
+          id?: string
+          is_active?: boolean
+          key_findings?: string[] | null
+          last_retrieved?: string | null
+          published_year?: number | null
+          source_name?: string
+          source_url?: string | null
+          subcategory?: string | null
+          summary?: string | null
+          times_retrieved?: number
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1165,6 +1353,13 @@ export type Database = {
             foreignKeyName: "lab_results_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "lab_results_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
@@ -1202,6 +1397,13 @@ export type Database = {
           sender_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "messages_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
           {
             foreignKeyName: "messages_patient_id_fkey"
             columns: ["patient_id"]
@@ -1356,6 +1558,146 @@ export type Database = {
             foreignKeyName: "nutrition_plans_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "nutrition_plans_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_goals: {
+        Row: {
+          baseline_snapshot: Json | null
+          created_at: string
+          goal: Database["public"]["Enums"]["goal_type"]
+          id: string
+          notes: string | null
+          patient_id: string
+          priority: Database["public"]["Enums"]["goal_priority"]
+          status: Database["public"]["Enums"]["goal_status"]
+          target_date: string | null
+          target_metrics: Json | null
+          updated_at: string
+        }
+        Insert: {
+          baseline_snapshot?: Json | null
+          created_at?: string
+          goal: Database["public"]["Enums"]["goal_type"]
+          id?: string
+          notes?: string | null
+          patient_id: string
+          priority?: Database["public"]["Enums"]["goal_priority"]
+          status?: Database["public"]["Enums"]["goal_status"]
+          target_date?: string | null
+          target_metrics?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          baseline_snapshot?: Json | null
+          created_at?: string
+          goal?: Database["public"]["Enums"]["goal_type"]
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          priority?: Database["public"]["Enums"]["goal_priority"]
+          status?: Database["public"]["Enums"]["goal_status"]
+          target_date?: string | null
+          target_metrics?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_goals_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "patient_goals_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_insights: {
+        Row: {
+          category: Database["public"]["Enums"]["insight_category"]
+          content: string
+          created_at: string
+          data_snapshot: Json | null
+          expires_at: string | null
+          goal_id: string | null
+          id: string
+          knowledge_chunk_ids: string[] | null
+          model_used: string | null
+          patient_id: string
+          priority_score: number | null
+          prompt_version: string | null
+          recommendations: string[] | null
+          status: Database["public"]["Enums"]["insight_status"]
+          title: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["insight_category"]
+          content: string
+          created_at?: string
+          data_snapshot?: Json | null
+          expires_at?: string | null
+          goal_id?: string | null
+          id?: string
+          knowledge_chunk_ids?: string[] | null
+          model_used?: string | null
+          patient_id: string
+          priority_score?: number | null
+          prompt_version?: string | null
+          recommendations?: string[] | null
+          status?: Database["public"]["Enums"]["insight_status"]
+          title: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["insight_category"]
+          content?: string
+          created_at?: string
+          data_snapshot?: Json | null
+          expires_at?: string | null
+          goal_id?: string | null
+          id?: string
+          knowledge_chunk_ids?: string[] | null
+          model_used?: string | null
+          patient_id?: string
+          priority_score?: number | null
+          prompt_version?: string | null
+          recommendations?: string[] | null
+          status?: Database["public"]["Enums"]["insight_status"]
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_insights_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "patient_goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_insights_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "patient_insights_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
@@ -1428,6 +1770,13 @@ export type Database = {
             foreignKeyName: "patient_outcomes_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "patient_outcomes_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
@@ -1450,6 +1799,77 @@ export type Database = {
             columns: ["related_treatment_id"]
             isOneToOne: false
             referencedRelation: "treatments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_protocols: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          current_phase: number
+          goal_id: string | null
+          id: string
+          patient_id: string
+          phase_outcomes: Json | null
+          protocol_id: string
+          started_at: string
+          status: Database["public"]["Enums"]["goal_status"]
+          updated_at: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_phase?: number
+          goal_id?: string | null
+          id?: string
+          patient_id: string
+          phase_outcomes?: Json | null
+          protocol_id: string
+          started_at?: string
+          status?: Database["public"]["Enums"]["goal_status"]
+          updated_at?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_phase?: number
+          goal_id?: string | null
+          id?: string
+          patient_id?: string
+          phase_outcomes?: Json | null
+          protocol_id?: string
+          started_at?: string
+          status?: Database["public"]["Enums"]["goal_status"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_protocols_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "patient_goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_protocols_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "patient_protocols_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_protocols_protocol_id_fkey"
+            columns: ["protocol_id"]
+            isOneToOne: false
+            referencedRelation: "protocols"
             referencedColumns: ["id"]
           },
         ]
@@ -1492,6 +1912,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "patient_reminders_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
           {
             foreignKeyName: "patient_reminders_patient_id_fkey"
             columns: ["patient_id"]
@@ -1581,6 +2008,13 @@ export type Database = {
             foreignKeyName: "professional_patient_links_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "professional_patient_links_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
@@ -1592,6 +2026,101 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      protocol_phases: {
+        Row: {
+          biomarkers_to_track: string[] | null
+          created_at: string | null
+          id: string
+          knowledge_refs: string[] | null
+          lifestyle_focus: string | null
+          name: string
+          nutrition_focus: string | null
+          phase_number: number
+          phase_targets: Json | null
+          protocol_id: string
+          supplementation: string | null
+          training_focus: string | null
+          week_end: number
+          week_start: number
+        }
+        Insert: {
+          biomarkers_to_track?: string[] | null
+          created_at?: string | null
+          id?: string
+          knowledge_refs?: string[] | null
+          lifestyle_focus?: string | null
+          name: string
+          nutrition_focus?: string | null
+          phase_number: number
+          phase_targets?: Json | null
+          protocol_id: string
+          supplementation?: string | null
+          training_focus?: string | null
+          week_end: number
+          week_start: number
+        }
+        Update: {
+          biomarkers_to_track?: string[] | null
+          created_at?: string | null
+          id?: string
+          knowledge_refs?: string[] | null
+          lifestyle_focus?: string | null
+          name?: string
+          nutrition_focus?: string | null
+          phase_number?: number
+          phase_targets?: Json | null
+          protocol_id?: string
+          supplementation?: string | null
+          training_focus?: string | null
+          week_end?: number
+          week_start?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "protocol_phases_protocol_id_fkey"
+            columns: ["protocol_id"]
+            isOneToOne: false
+            referencedRelation: "protocols"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      protocols: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          evidence_level: Database["public"]["Enums"]["evidence_level"] | null
+          goal: Database["public"]["Enums"]["goal_type"]
+          id: string
+          is_active: boolean | null
+          name: string
+          source_refs: string[] | null
+          total_weeks: number
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          evidence_level?: Database["public"]["Enums"]["evidence_level"] | null
+          goal: Database["public"]["Enums"]["goal_type"]
+          id?: string
+          is_active?: boolean | null
+          name: string
+          source_refs?: string[] | null
+          total_weeks: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          evidence_level?: Database["public"]["Enums"]["evidence_level"] | null
+          goal?: Database["public"]["Enums"]["goal_type"]
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          source_refs?: string[] | null
+          total_weeks?: number
+        }
+        Relationships: []
       }
       quality_analysis_audit_logs: {
         Row: {
@@ -1703,6 +2232,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "supplements_log_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
           {
             foreignKeyName: "supplements_log_patient_id_fkey"
             columns: ["patient_id"]
@@ -1999,6 +2535,13 @@ export type Database = {
             foreignKeyName: "trail_enrollments_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "trail_enrollments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
@@ -2240,6 +2783,13 @@ export type Database = {
             foreignKeyName: "trail_task_instances_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "trail_task_instances_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
@@ -2399,6 +2949,13 @@ export type Database = {
             foreignKeyName: "training_plans_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "training_plans_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
@@ -2487,6 +3044,13 @@ export type Database = {
             foreignKeyName: "treatments_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "treatments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
@@ -2568,7 +3132,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      patient_ai_context: {
+        Row: {
+          active_goals: Json | null
+          active_protocol: Json | null
+          adherence_rate_pct: number | null
+          latest_insights_by_category: Json | null
+          patient_id: string | null
+        }
+        Insert: {
+          active_goals?: never
+          active_protocol?: never
+          adherence_rate_pct?: never
+          latest_insights_by_category?: never
+          patient_id?: string | null
+        }
+        Update: {
+          active_goals?: never
+          active_protocol?: never
+          adherence_rate_pct?: never
+          latest_insights_by_category?: never
+          patient_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       bootstrap_user_profile: {
@@ -2579,6 +3166,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      expire_old_insights: { Args: never; Returns: undefined }
       export_evidence_audit_report: {
         Args: {
           _end_date?: string
@@ -2602,6 +3190,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_kb_retrieval: {
+        Args: { chunk_ids: string[] }
+        Returns: undefined
+      }
       patient_is_enrolled_in_trail: {
         Args: { _trail_id: string; _user_id: string }
         Returns: boolean
@@ -2609,6 +3201,26 @@ export type Database = {
       professional_has_access_to_patient: {
         Args: { _patient_id: string; _professional_id: string }
         Returns: boolean
+      }
+      search_knowledge: {
+        Args: {
+          filter_category?: Database["public"]["Enums"]["knowledge_category"]
+          filter_goal?: Database["public"]["Enums"]["goal_type"]
+          match_count?: number
+          min_evidence?: Database["public"]["Enums"]["evidence_level"]
+          query_embedding: string
+        }
+        Returns: {
+          category: Database["public"]["Enums"]["knowledge_category"]
+          content: string
+          evidence_level: Database["public"]["Enums"]["evidence_level"]
+          id: string
+          key_findings: string[]
+          similarity: number
+          source_name: string
+          summary: string
+          title: string
+        }[]
       }
       search_patients_for_linking: {
         Args: { _professional_id: string; _search_name: string }
@@ -2619,6 +3231,8 @@ export type Database = {
           patient_user_id: string
         }[]
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       app_role: "patient" | "professional" | "admin"
@@ -2642,8 +3256,48 @@ export type Database = {
         | "professional_task"
       diagnosis_status: "active" | "resolved" | "under_observation"
       evidence_certainty: "high" | "moderate" | "low" | "very_low"
+      evidence_level: "A" | "B" | "C" | "D" | "expert_opinion"
       evidence_search_status: "pending" | "processing" | "completed" | "failed"
       exam_status: "requested" | "in_progress" | "completed" | "cancelled"
+      feedback_action:
+        | "seguiu"
+        | "nao_seguiu"
+        | "parcialmente"
+        | "nao_aplicavel"
+      goal_priority: "primario" | "secundario"
+      goal_status: "ativo" | "pausado" | "concluido" | "cancelado"
+      goal_type:
+        | "longevidade"
+        | "performance_aerobica"
+        | "performance_forca"
+        | "perda_de_peso"
+        | "ganho_de_massa"
+        | "saude_metabolica"
+        | "saude_cardiovascular"
+        | "bem_estar_geral"
+      insight_category:
+        | "exames"
+        | "nutricao"
+        | "treinos"
+        | "medicamentos"
+        | "diagnosticos"
+        | "correlacao_cruzada"
+        | "alerta"
+        | "progresso_objetivo"
+      insight_status: "ativo" | "arquivado" | "superado"
+      knowledge_category:
+        | "cardiologia"
+        | "metabolismo"
+        | "nutricao"
+        | "exercicio_aerobico"
+        | "exercicio_forca"
+        | "longevidade"
+        | "sono"
+        | "saude_mental"
+        | "endocrinologia"
+        | "biomarcadores"
+        | "farmacologia"
+        | "suplementacao"
       methodology_quality: "high" | "moderate" | "low" | "critically_low"
       structured_data_type:
         | "glucose"
@@ -2830,8 +3484,52 @@ export const Constants = {
       ],
       diagnosis_status: ["active", "resolved", "under_observation"],
       evidence_certainty: ["high", "moderate", "low", "very_low"],
+      evidence_level: ["A", "B", "C", "D", "expert_opinion"],
       evidence_search_status: ["pending", "processing", "completed", "failed"],
       exam_status: ["requested", "in_progress", "completed", "cancelled"],
+      feedback_action: [
+        "seguiu",
+        "nao_seguiu",
+        "parcialmente",
+        "nao_aplicavel",
+      ],
+      goal_priority: ["primario", "secundario"],
+      goal_status: ["ativo", "pausado", "concluido", "cancelado"],
+      goal_type: [
+        "longevidade",
+        "performance_aerobica",
+        "performance_forca",
+        "perda_de_peso",
+        "ganho_de_massa",
+        "saude_metabolica",
+        "saude_cardiovascular",
+        "bem_estar_geral",
+      ],
+      insight_category: [
+        "exames",
+        "nutricao",
+        "treinos",
+        "medicamentos",
+        "diagnosticos",
+        "correlacao_cruzada",
+        "alerta",
+        "progresso_objetivo",
+      ],
+      insight_status: ["ativo", "arquivado", "superado"],
+      knowledge_category: [
+        "cardiologia",
+        "metabolismo",
+        "nutricao",
+        "exercicio_aerobico",
+        "exercicio_forca",
+        "longevidade",
+        "sono",
+        "saude_mental",
+        "endocrinologia",
+        "biomarcadores",
+        "farmacologia",
+        "suplementacao",
+      ],
       methodology_quality: ["high", "moderate", "low", "critically_low"],
       structured_data_type: [
         "glucose",
