@@ -339,6 +339,7 @@ ${patientGoalsSection}`;
       stravaActivities: stravaActivities.length,
       supplements: supplements.length,
       goals: (goalsRes.data || []).length,
+      patientGoals: patientGoals.length,
     });
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
