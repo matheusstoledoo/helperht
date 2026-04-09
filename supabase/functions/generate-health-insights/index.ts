@@ -39,7 +39,7 @@ serve(async (req) => {
     const age = birthdate ? Math.floor((Date.now() - new Date(birthdate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null;
 
     // Step 2: all clinical data in parallel
-    const [diagRes, treatRes, nutritionRes, trainingRes, examsRes, supplementsRes, goalsRes] = await Promise.all([
+    const [diagRes, treatRes, nutritionRes, trainingRes, examsRes, supplementsRes, goalsRes, patientGoalsRes] = await Promise.all([
       supabase.from("diagnoses")
         .select("name, status, severity, icd_code, diagnosed_date, resolved_date, public_notes")
         .eq("patient_id", patientId),
@@ -70,6 +70,11 @@ serve(async (req) => {
         .select("title, status, category, progress, target_date")
         .eq("patient_id", patientId)
         .eq("status", "active")
+        .limit(10),
+      supabase.from("patient_goals")
+        .select("goal, priority, status, target_date, target_metrics, baseline_snapshot, notes")
+        .eq("patient_id", patientId)
+        .in("status", ["ativo", "pausado"])
         .limit(10),
     ]);
 
