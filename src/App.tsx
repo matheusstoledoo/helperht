@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import { Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -43,8 +44,7 @@ const PatientNutrition = lazy(() => import("./pages/PatientNutrition"));
 const PatientTraining = lazy(() => import("./pages/PatientTraining"));
 const PatientAlerts = lazy(() => import("./pages/PatientAlerts"));
 const PatientHealthSummary = lazy(() => import("./pages/PatientHealthSummary"));
-const PatientInsights = lazy(() => import("./pages/PatientInsights"));
-const PatientHealthGoals = lazy(() => import("./pages/PatientHealthGoals"));
+const PatientGoalsInsights = lazy(() => import("./pages/PatientGoalsInsights"));
 // PatientTrailsView removed - trails are now professional-only
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -92,9 +92,8 @@ const App = () => (
               <Route path="/pac/alertas" element={<PatientAlerts />} />
               <Route path="/pac/resumo" element={<PatientHealthSummary />} />
               {/* /pac/mensagens archived */}
-              <Route path="/pac/insights" element={<PatientInsights />} />
-              <Route path="/pac/objetivos" element={<PatientHealthGoals />} />
-              {/* /pac/trilhas removed - trails are now professional-only */}
+              <Route path="/pac/insights" element={<Navigate to="/pac/objetivos?tab=insights" replace />} />
+              <Route path="/pac/objetivos" element={<PatientGoalsInsights />} />
               <Route path="/pac/config" element={<PatientSettings />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/profissionais" element={<AdminProfessionals />} />

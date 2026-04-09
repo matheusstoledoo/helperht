@@ -10,7 +10,6 @@ import {
   Dumbbell,
   Bell,
   Heart,
-  Sparkles,
   Target,
 } from "lucide-react";
 import PatientLayout from "@/components/patient/PatientLayout";
@@ -93,19 +92,11 @@ export default function PatientDashboardMain() {
       color: "bg-red-500/10 text-red-600 dark:text-red-400"
     },
     {
-      id: "goals",
-      title: "Objetivos de Saúde",
-      description: "Defina e acompanhe seus objetivos pessoais",
+      id: "goals-insights",
+      title: "Objetivos & Insights",
+      description: "Defina metas e receba análises inteligentes de IA",
       icon: <Target className="h-8 w-8 sm:h-10 sm:w-10" />,
       route: `/pac/objetivos`,
-      color: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
-    },
-    {
-      id: "insights",
-      title: "Insights de IA",
-      description: "Análises inteligentes dos seus dados de saúde",
-      icon: <Sparkles className="h-8 w-8 sm:h-10 sm:w-10" />,
-      route: `/pac/insights`,
       color: "bg-violet-500/10 text-violet-600 dark:text-violet-400"
     },
   ];
