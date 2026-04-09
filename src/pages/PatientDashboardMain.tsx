@@ -10,7 +10,6 @@ import {
   Dumbbell,
   Bell,
   Heart,
-  Sparkles,
   Target,
 } from "lucide-react";
 import PatientLayout from "@/components/patient/PatientLayout";

@@ -91,9 +91,8 @@ const App = () => (
               <Route path="/pac/alertas" element={<PatientAlerts />} />
               <Route path="/pac/resumo" element={<PatientHealthSummary />} />
               {/* /pac/mensagens archived */}
-              <Route path="/pac/insights" element={<PatientInsights />} />
-              <Route path="/pac/objetivos" element={<PatientHealthGoals />} />
-              {/* /pac/trilhas removed - trails are now professional-only */}
+              <Route path="/pac/insights" element={<PatientGoalsInsights />} />
+              <Route path="/pac/objetivos" element={<PatientGoalsInsights />} />
               <Route path="/pac/config" element={<PatientSettings />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/profissionais" element={<AdminProfessionals />} />
