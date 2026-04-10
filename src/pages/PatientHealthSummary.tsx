@@ -192,7 +192,7 @@ export default function PatientHealthSummary() {
     for (let i = 0; i < pendingDocs.length; i++) {
       setAnalyzeProgress({ current: i + 1, total: pendingDocs.length });
       const { error } = await supabase.functions.invoke("analyze-lab", {
-        body: { exam_id: pendingDocs[i].id, user_id: user.id },
+        body: { document_id: pendingDocs[i].id, user_id: user.id },
       });
       if (error) {
         toast({ title: `Erro ao analisar ${pendingDocs[i].file_name}`, variant: "destructive" });
@@ -209,7 +209,7 @@ export default function PatientHealthSummary() {
     if (!user || !latestDocId) return;
     setReanalyzing(true);
     const { error } = await supabase.functions.invoke("analyze-lab", {
-      body: { exam_id: latestDocId, user_id: user.id },
+      body: { document_id: latestDocId, user_id: user.id },
     });
     if (error) {
       toast({ title: "Erro ao reanalisar exame", variant: "destructive" });
