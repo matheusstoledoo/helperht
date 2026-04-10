@@ -690,6 +690,23 @@ const PatientDocumentsView = () => {
               >
                 <Download className="h-4 w-4" />
               </Button>
+              {/* Analyze with AI - only for lab documents */}
+              {isLabCategory && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handleAnalyzeWithAI(doc)}
+                  disabled={isAnalyzing}
+                  title="Analisar com IA"
+                >
+                  {isAnalyzing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 text-primary" />
+                  )}
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
