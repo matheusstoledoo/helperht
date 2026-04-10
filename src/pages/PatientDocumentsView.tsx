@@ -18,6 +18,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -42,11 +52,10 @@ import {
   ImageIcon,
   Receipt,
   File,
-  Eye,
-  EyeOff,
   Loader2,
   ExternalLink,
   ChevronRight,
+  Trash2,
 } from "lucide-react";
 import { format, parseISO, subDays, subMonths, subYears, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -534,20 +543,25 @@ const PatientDocumentsView = () => {
     window.open(data.publicUrl, "_blank");
   };
 
-  const handleToggleVisibility = async (doc: Document) => {
+  const [deleteTarget, setDeleteTarget] = useState<Document | null>(null);
+
+  const handleDeleteDocument = async (doc: Document) => {
     try {
-      const newIsPublic = !doc.is_public;
+      await supabase.storage
+        .from("patient-documents")
+        .remove([doc.file_path]);
+
       const { error } = await supabase
         .from("documents")
-        .update({ is_public: newIsPublic })
+        .delete()
         .eq("id", doc.id);
 
       if (error) throw error;
-
-      toast.success(newIsPublic ? "Documento visível para profissionais" : "Documento oculto para profissionais");
+      toast.success("Documento excluído");
+      setDeleteTarget(null);
     } catch (error) {
-      console.error("Toggle visibility error:", error);
-      toast.error("Erro ao alterar visibilidade");
+      console.error("Delete error:", error);
+      toast.error("Erro ao excluir documento");
     }
   };
 
@@ -600,8 +614,6 @@ const PatientDocumentsView = () => {
   };
 
   const renderDocumentCard = (doc: Document, index: number) => {
-    const canToggleVisibility = doc.uploaded_by_role === "patient";
-
     return (
       <Card
         key={doc.id}
@@ -626,22 +638,6 @@ const PatientDocumentsView = () => {
             </div>
 
             <div className="flex items-center gap-1 shrink-0">
-              {/* Visibility toggle - only for patient-uploaded docs */}
-              {canToggleVisibility && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => handleToggleVisibility(doc)}
-                  title={doc.is_public ? "Visível para profissionais - clique para ocultar" : "Oculto para profissionais - clique para tornar visível"}
-                >
-                  {doc.is_public ? (
-                    <Eye className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </Button>
-              )}
               {/* Open in new tab */}
               <Button
                 variant="ghost"
@@ -661,6 +657,16 @@ const PatientDocumentsView = () => {
                 title="Baixar documento"
               >
                 <Download className="h-4 w-4" />
+              </Button>
+              {/* Delete */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive"
+                onClick={() => setDeleteTarget(doc)}
+                title="Excluir documento"
+              >
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           </div>
