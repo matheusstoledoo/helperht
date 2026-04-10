@@ -76,14 +76,6 @@ export default function PatientDashboardMain() {
       color: "bg-sky-500/10 text-sky-600 dark:text-sky-400"
     },
     {
-      id: "alerts",
-      title: "Alertas e Lembretes",
-      description: "Medicações, exames e notificações importantes",
-      icon: <Bell className="h-8 w-8 sm:h-10 sm:w-10" />,
-      route: `/pac/alertas`,
-      color: "bg-rose-500/10 text-rose-600 dark:text-rose-400"
-    },
-    {
       id: "summary",
       title: "Resumo de Saúde",
       description: "Visão geral do seu estado clínico",
