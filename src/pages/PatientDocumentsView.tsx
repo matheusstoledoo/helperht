@@ -627,6 +627,8 @@ const PatientDocumentsView = () => {
 
   const renderDocumentCard = (doc: Document, index: number) => {
     const canToggleVisibility = doc.uploaded_by_role === "patient";
+    const isLabCategory = getCategoryKey(doc.category) === "laboratorial";
+    const isAnalyzing = analyzingDocId === doc.id;
 
     return (
       <Card
