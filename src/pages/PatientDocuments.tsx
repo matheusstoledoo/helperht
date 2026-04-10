@@ -622,12 +622,15 @@ const PatientDocuments = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                asChild
                 title="Abrir em nova guia"
+                onClick={() => {
+                  const { data } = supabase.storage
+                    .from("patient-documents")
+                    .getPublicUrl(doc.file_path);
+                  window.open(data.publicUrl, "_blank");
+                }}
               >
-                <a href={doc.file_path} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="w-4 h-4" />
-                </a>
+                <ExternalLink className="w-4 h-4" />
               </Button>
 
               {/* Download */}
