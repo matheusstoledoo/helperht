@@ -538,20 +538,28 @@ const PatientDocumentsView = () => {
   };
 
   const handleOpenInNewTab = async (doc: Document) => {
-    try {
-      const { data, error } = await supabase.storage
-        .from("patient-documents")
-        .createSignedUrl(doc.file_path, 60);
+    const isPdf = doc.file_path.toLowerCase().endsWith('.pdf') || doc.file_type === 'application/pdf';
 
-      if (error || !data?.signedUrl) {
+    if (isPdf) {
+      // Open PDF in internal preview modal
+      handleView(doc);
+    } else {
+      // Non-PDF: open in new tab
+      try {
+        const { data, error } = await supabase.storage
+          .from("patient-documents")
+          .createSignedUrl(doc.file_path, 300);
+
+        if (error || !data?.signedUrl) {
+          toast.error("Erro ao abrir documento");
+          return;
+        }
+
+        window.open(data.signedUrl, "_blank");
+      } catch (error) {
+        console.error("Open error:", error);
         toast.error("Erro ao abrir documento");
-        return;
       }
-
-      window.open(data.signedUrl, "_blank");
-    } catch (error) {
-      console.error("Open error:", error);
-      toast.error("Erro ao abrir documento");
     }
   };
 
