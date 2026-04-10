@@ -3,16 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Heart,
-  Activity,
-  TrendingUp,
-  TrendingDown,
-  AlertTriangle,
-  CheckCircle2,
+  FileText,
   ArrowRight,
-  Apple,
-  Dumbbell,
+  CheckCircle2,
+  AlertTriangle,
+  Info,
 } from "lucide-react";
 import PatientLayout from "@/components/patient/PatientLayout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,386 +18,319 @@ import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-interface LabMarkerSummary {
-  marker_name: string;
-  latestValue: number | null;
-  previousValue: number | null;
-  unit: string | null;
-  status: string | null;
-  latestDate: string;
-  previousDate: string | null;
-  variationPercent: number | null;
-  reference_min: number | null;
-  reference_max: number | null;
+interface Marcador {
+  nome: string;
+  valor: string;
+  unidade: string;
+  status: "normal" | "atenção" | "alterado";
+  acao?: string;
 }
 
-interface Insight {
-  type: "warning" | "improvement" | "stable" | "attention";
-  title: string;
-  description: string;
+interface AnaliseCompleta {
+  score: number;
+  resumo_geral: string;
+  marcadores: Marcador[];
+  prioridades: string[];
+  proximos_passos: string;
 }
 
-const SPORT_LABELS: Record<string, string> = {
-  musculacao: "Musculação",
-  corrida: "Corrida",
-  ciclismo: "Ciclismo",
-  natacao: "Natação",
-  triatlo: "Triátlo",
-  funcional: "Funcional",
-  outro: "Outro",
-};
+interface DocRow {
+  id: string;
+  file_name: string;
+  created_at: string;
+  analise_completa: AnaliseCompleta | null;
+}
+
+// --- Score helpers ---
+
+function scoreColor(score: number) {
+  if (score <= 40) return "hsl(0 84% 60%)";
+  if (score <= 70) return "hsl(45 93% 47%)";
+  if (score <= 89) return "hsl(142 71% 45%)";
+  return "hsl(142 76% 36%)";
+}
+
+function scoreLabel(score: number) {
+  if (score <= 40) return "Precisa de atenção";
+  if (score <= 70) return "Regular";
+  if (score <= 89) return "Bom — com pontos de atenção";
+  return "Ótimo";
+}
+
+function statusDotClass(status: string) {
+  if (status === "normal") return "bg-green-500";
+  if (status === "atenção") return "bg-amber-500";
+  return "bg-destructive";
+}
+
+function statusBadgeVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
+  if (status === "alterado") return "destructive";
+  if (status === "atenção") return "secondary";
+  return "outline";
+}
+
+// --- SVG circle progress ---
+
+function ScoreCircle({ score }: { score: number }) {
+  const size = 96;
+  const stroke = 8;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+  const color = scoreColor(score);
+
+  return (
+    <svg width={size} height={size} className="shrink-0">
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="hsl(var(--muted))"
+        strokeWidth={stroke}
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke={color}
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        className="transition-all duration-700"
+      />
+      <text
+        x="50%"
+        y="50%"
+        dominantBaseline="central"
+        textAnchor="middle"
+        className="text-2xl font-bold"
+        fill={color}
+      >
+        {score}
+      </text>
+    </svg>
+  );
+}
+
+// --- Loading skeleton ---
+
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-4">
+      <Skeleton className="h-28 w-full rounded-lg" />
+      <Skeleton className="h-6 w-48" />
+      <Skeleton className="h-40 w-full rounded-lg" />
+      <Skeleton className="h-6 w-36" />
+      <Skeleton className="h-24 w-full rounded-lg" />
+    </div>
+  );
+}
 
 export default function PatientHealthSummary() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [markers, setMarkers] = useState<LabMarkerSummary[]>([]);
-  const [insights, setInsights] = useState<Insight[]>([]);
-  const [allergies, setAllergies] = useState<string[] | null>(null);
-  const [bloodType, setBloodType] = useState<string | null>(null);
-  const [nutritionSummary, setNutritionSummary] = useState<any>(null);
-  const [trainingSummary, setTrainingSummary] = useState<any>(null);
+  const [analise, setAnalise] = useState<AnaliseCompleta | null>(null);
+  const [allDocs, setAllDocs] = useState<DocRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      setLoading(false);
+    if (authLoading || !user) {
+      if (!authLoading) setLoading(false);
       return;
     }
 
-    const fetchData = async () => {
-      const [patientRes, labRes, nutritionRes, trainingRes] = await Promise.all([
-        supabase.from("patients").select("id, allergies, blood_type").eq("user_id", user.id).maybeSingle(),
+    const fetch = async () => {
+      // Get patient id
+      const { data: patient } = await supabase
+        .from("patients")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      const patientId = patient?.id;
+      if (!patientId) {
+        setLoading(false);
+        return;
+      }
+
+      // Fetch latest doc with analise_completa + all docs for history
+      const [latestRes, allRes] = await Promise.all([
         supabase
-          .from("lab_results")
-          .select("marker_name, value, unit, status, collection_date, reference_min, reference_max")
-          .eq("user_id", user.id)
-          .order("collection_date", { ascending: false })
-          .limit(200),
-        supabase
-          .from("nutrition_plans")
-          .select("total_calories, protein_grams, carbs_grams, fat_grams, restrictions, supplements, observations, status")
-          .eq("user_id", user.id)
-          .eq("status", "active")
+          .from("documents")
+          .select("id, file_name, created_at, analise_completa")
+          .eq("patient_id", patientId)
+          .not("analise_completa", "is", null)
           .order("created_at", { ascending: false })
-          .limit(1),
+          .limit(1)
+          .maybeSingle(),
         supabase
-          .from("training_plans")
-          .select("sport, frequency_per_week, observations, status")
-          .eq("user_id", user.id)
-          .eq("status", "active")
-          .order("created_at", { ascending: false })
-          .limit(1),
+          .from("documents")
+          .select("id, file_name, created_at, analise_completa")
+          .eq("patient_id", patientId)
+          .order("created_at", { ascending: false }),
       ]);
 
-      if (patientRes.data) {
-        setAllergies(patientRes.data.allergies);
-        setBloodType(patientRes.data.blood_type);
+      if (latestRes.data?.analise_completa) {
+        setAnalise(latestRes.data.analise_completa as unknown as AnaliseCompleta);
       }
 
-      if (nutritionRes.data?.[0]) setNutritionSummary(nutritionRes.data[0]);
-      if (trainingRes.data?.[0]) setTrainingSummary(trainingRes.data[0]);
-
-      const labs = (labRes.data || []) as {
-        marker_name: string;
-        value: number | null;
-        unit: string | null;
-        status: string | null;
-        collection_date: string;
-        reference_min: number | null;
-        reference_max: number | null;
-      }[];
-
-      const grouped: Record<string, typeof labs> = {};
-      for (const r of labs) {
-        if (!grouped[r.marker_name]) grouped[r.marker_name] = [];
-        if (grouped[r.marker_name].length < 2) grouped[r.marker_name].push(r);
-      }
-
-      const summaries: LabMarkerSummary[] = Object.entries(grouped).map(([name, readings]) => {
-        const latest = readings[0];
-        const previous = readings.length > 1 ? readings[1] : null;
-        let variationPercent: number | null = null;
-        if (latest.value != null && previous?.value != null && previous.value !== 0) {
-          variationPercent = Math.round(((latest.value - previous.value) / Math.abs(previous.value)) * 100);
-        }
-        return {
-          marker_name: name,
-          latestValue: latest.value,
-          previousValue: previous?.value ?? null,
-          unit: latest.unit,
-          status: latest.status,
-          latestDate: latest.collection_date,
-          previousDate: previous?.collection_date ?? null,
-          variationPercent,
-          reference_min: latest.reference_min,
-          reference_max: latest.reference_max,
-        };
-      });
-
-      summaries.sort((a, b) => {
-        const aAbnormal = a.status === "high" || a.status === "low" ? 0 : 1;
-        const bAbnormal = b.status === "high" || b.status === "low" ? 0 : 1;
-        if (aAbnormal !== bAbnormal) return aAbnormal - bAbnormal;
-        return new Date(b.latestDate).getTime() - new Date(a.latestDate).getTime();
-      });
-
-      setMarkers(summaries);
-
-      // Generate insights
-      const newInsights: Insight[] = [];
-      const abnormal = summaries.filter(m => m.status === "high" || m.status === "low");
-      const worsened = summaries.filter(m => {
-        if (m.variationPercent == null) return false;
-        return (m.status === "high" || m.status === "low") && Math.abs(m.variationPercent) > 10;
-      });
-      const improved = summaries.filter(m => {
-        if (m.variationPercent == null || !m.previousValue) return false;
-        return m.status === "normal" && m.variationPercent !== 0;
-      });
-
-      if (abnormal.length === 0 && summaries.length > 0) {
-        newInsights.push({
-          type: "stable",
-          title: "Todos os marcadores dentro da normalidade",
-          description: "Seus resultados recentes estão dentro das faixas de referência.",
-        });
-      }
-
-      for (const m of worsened.slice(0, 3)) {
-        newInsights.push({
-          type: "warning",
-          title: `${m.marker_name} ${m.status === "high" ? "elevado" : "baixo"}`,
-          description: `Variação de ${m.variationPercent! > 0 ? "+" : ""}${m.variationPercent}% em relação ao exame anterior${m.latestValue != null ? ` (${m.latestValue} ${m.unit || ""})` : ""}.`,
-        });
-      }
-
-      for (const m of improved.slice(0, 2)) {
-        newInsights.push({
-          type: "improvement",
-          title: `${m.marker_name} normalizado`,
-          description: `Valor atual ${m.latestValue} ${m.unit || ""} — voltou à faixa normal.`,
-        });
-      }
-
-      if (abnormal.length > 0 && worsened.length === 0) {
-        newInsights.push({
-          type: "attention",
-          title: `${abnormal.length} marcador${abnormal.length > 1 ? "es" : ""} fora da faixa`,
-          description: abnormal.map(m => m.marker_name).join(", "),
-        });
-      }
-
-      setInsights(newInsights);
+      setAllDocs((allRes.data || []) as unknown as DocRow[]);
       setLoading(false);
     };
 
-    fetchData();
+    fetch();
   }, [user, authLoading]);
-
-  const variationBadge = (m: LabMarkerSummary) => {
-    if (m.variationPercent == null) return null;
-    const isUp = m.variationPercent > 0;
-    const abs = Math.abs(m.variationPercent);
-    if (abs === 0) return null;
-
-    return (
-      <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${
-        m.status === "high" || m.status === "low"
-          ? "text-destructive"
-          : abs > 15
-          ? "text-amber-600"
-          : "text-green-600"
-      }`}>
-        {isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-        {isUp ? "+" : ""}{m.variationPercent}%
-      </span>
-    );
-  };
-
-  const statusBadge = (status: string | null) => {
-    if (status === "high") return <Badge variant="destructive" className="text-xs">Alto</Badge>;
-    if (status === "low") return <Badge className="text-xs bg-amber-500 hover:bg-amber-600">Baixo</Badge>;
-    return null;
-  };
-
-  const insightIcon = (type: Insight["type"]) => {
-    switch (type) {
-      case "warning": return <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />;
-      case "attention": return <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />;
-      case "improvement": return <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />;
-      case "stable": return <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />;
-    }
-  };
-
-  const insightBg = (type: Insight["type"]) => {
-    switch (type) {
-      case "warning": return "border-destructive/30 bg-destructive/5";
-      case "attention": return "border-amber-500/30 bg-amber-50 dark:bg-amber-950/20";
-      case "improvement": return "border-green-500/30 bg-green-50 dark:bg-green-950/20";
-      case "stable": return "border-green-500/30 bg-green-50 dark:bg-green-950/20";
-    }
-  };
 
   return (
     <PatientLayout
       title="Resumo de Saúde"
-      subtitle="Variações nos seus exames e insights"
+      subtitle="Análise clínica dos seus exames"
       showHeader={false}
       breadcrumb={<PatientBreadcrumb currentPage="Resumo de Saúde" />}
     >
-      <div className="p-4 sm:p-6 space-y-6 max-w-2xl mx-auto">
+      <div className="p-4 sm:p-6 space-y-6 max-w-2xl mx-auto pb-24">
         {loading ? (
-          <div className="text-center py-12 text-muted-foreground">Carregando...</div>
+          <LoadingSkeleton />
+        ) : !analise ? (
+          /* ---- Empty state ---- */
+          <Card>
+            <CardContent className="p-8 text-center space-y-3">
+              <FileText className="h-12 w-12 mx-auto text-muted-foreground/50" />
+              <p className="text-muted-foreground font-medium">Nenhum exame analisado ainda</p>
+              <Button onClick={() => navigate("/pac/documentos")} className="gap-1">
+                Ir para Exames <ArrowRight className="h-4 w-4" />
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
           <>
-            {/* Patient info bar */}
-            {(bloodType || (allergies && allergies.length > 0)) && (
-              <div className="flex flex-wrap items-center gap-2">
-                {bloodType && (
-                  <Badge variant="outline" className="gap-1">
-                    <Heart className="h-3 w-3 text-destructive" /> {bloodType}
-                  </Badge>
-                )}
-                {allergies?.map((a, i) => (
-                  <Badge key={i} variant="destructive" className="text-xs">{a}</Badge>
-                ))}
-              </div>
-            )}
+            {/* A) Score Card */}
+            <Card>
+              <CardContent className="p-5 flex items-center gap-5">
+                <ScoreCircle score={analise.score} />
+                <div className="min-w-0">
+                  <p className="text-lg font-semibold text-foreground">{scoreLabel(analise.score)}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{analise.resumo_geral}</p>
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* Nutrition & Training summary cards */}
-            {(nutritionSummary || trainingSummary) && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {nutritionSummary && (
-                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate("/pac/nutricao")}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Apple className="h-4 w-4 text-green-600" />
-                        <span className="text-sm font-medium">Nutrição Ativa</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
-                        {nutritionSummary.total_calories && (
-                          <span>{nutritionSummary.total_calories} kcal/dia</span>
-                        )}
-                        {nutritionSummary.protein_grams && (
-                          <span>Proteína: {nutritionSummary.protein_grams}g</span>
-                        )}
-                        {nutritionSummary.carbs_grams && (
-                          <span>Carbs: {nutritionSummary.carbs_grams}g</span>
-                        )}
-                        {nutritionSummary.fat_grams && (
-                          <span>Gordura: {nutritionSummary.fat_grams}g</span>
-                        )}
-                      </div>
-                      {nutritionSummary.restrictions?.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {nutritionSummary.restrictions.slice(0, 3).map((r: string, i: number) => (
-                            <Badge key={i} variant="outline" className="text-xs">{r}</Badge>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-                {trainingSummary && (
-                  <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate("/pac/treinos")}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Dumbbell className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm font-medium">Treino Ativo</span>
-                      </div>
-                      <div className="text-xs text-muted-foreground space-y-1">
-                        {trainingSummary.sport && (
-                          <span className="block">{SPORT_LABELS[trainingSummary.sport] || trainingSummary.sport}</span>
-                        )}
-                        {trainingSummary.frequency_per_week && (
-                          <span className="block">{trainingSummary.frequency_per_week}x por semana</span>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            )}
-
-            {/* Insights */}
-            {insights.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-primary" />
-                  Insights
-                </h3>
-                {insights.map((insight, i) => (
-                  <div key={i} className={`flex items-start gap-3 p-3 rounded-lg border ${insightBg(insight.type)}`}>
-                    {insightIcon(insight.type)}
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{insight.title}</p>
-                      <p className="text-xs text-muted-foreground">{insight.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Lab markers */}
-            {markers.length > 0 ? (
+            {/* B) Marcadores */}
+            {analise.marcadores?.length > 0 && (
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-primary" />
-                    Marcadores Recentes
-                  </CardTitle>
+                  <CardTitle className="text-base">Marcadores do último exame</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-1">
-                    {markers.map((m, i) => (
-                      <div key={i} className="flex items-center justify-between py-2.5 border-b last:border-0">
+                <CardContent className="space-y-1">
+                  {analise.marcadores.map((m, i) => (
+                    <div key={i} className="py-2.5 border-b last:border-0">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 min-w-0">
-                          <div className={`h-2 w-2 rounded-full shrink-0 ${
-                            m.status === "high" ? "bg-destructive" :
-                            m.status === "low" ? "bg-amber-500" :
-                            "bg-green-500"
-                          }`} />
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-medium truncate">{m.marker_name}</span>
-                              {statusBadge(m.status)}
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              {format(new Date(m.latestDate + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}
-                              {m.previousDate && (
-                                <span> • anterior: {m.previousValue ?? "—"} {m.unit || ""}</span>
-                              )}
-                            </p>
-                          </div>
+                          <div className={`h-2 w-2 rounded-full shrink-0 ${statusDotClass(m.status)}`} />
+                          <span className="text-sm font-medium truncate">{m.nome}</span>
+                          <span className="text-xs text-muted-foreground">{m.valor} {m.unidade}</span>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-sm font-semibold text-foreground">
-                            {m.latestValue ?? "—"} <span className="text-xs font-normal text-muted-foreground">{m.unit || ""}</span>
-                          </span>
-                          {variationBadge(m)}
-                        </div>
+                        <Badge variant={statusBadgeVariant(m.status)} className="text-xs capitalize">
+                          {m.status}
+                        </Badge>
                       </div>
-                    ))}
-                  </div>
-                  <Button variant="ghost" size="sm" className="w-full mt-3 gap-1" onClick={() => navigate("/pac/exames-lab")}>
-                    Ver gráficos detalhados <ArrowRight className="h-3 w-3" />
-                  </Button>
+                      {m.status !== "normal" && m.acao && (
+                        <p className="text-xs text-muted-foreground mt-1 ml-4">
+                          Fale com seu médico: {m.acao}
+                        </p>
+                      )}
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
-            ) : !nutritionSummary && !trainingSummary ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Activity className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-                  <p className="text-muted-foreground">Nenhum dado de saúde encontrado</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Faça upload de exames ou registre informações clínicas
-                  </p>
-                </CardContent>
-              </Card>
-            ) : null}
+            )}
+
+            {/* C) Prioridades */}
+            {analise.prioridades?.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  Suas prioridades
+                </h3>
+                <div className="grid gap-2">
+                  {analise.prioridades.slice(0, 3).map((p, i) => (
+                    <Card key={i}>
+                      <CardContent className="p-4 flex items-start gap-3">
+                        <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs font-bold shrink-0">
+                          {i + 1}
+                        </span>
+                        <p className="text-sm text-foreground">{p}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* D) Próximos passos */}
+            {analise.proximos_passos && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  Próximos passos
+                </h3>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground">{analise.proximos_passos}</p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* E) Histórico */}
+            {allDocs.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-foreground">Histórico de exames</h3>
+                <div className="grid gap-2">
+                  {allDocs.map((doc) => (
+                    <Card key={doc.id}>
+                      <CardContent className="p-3 flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{doc.file_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(doc.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                          </p>
+                        </div>
+                        {doc.analise_completa && (
+                          <Badge variant="outline" className="text-xs gap-1 shrink-0">
+                            <CheckCircle2 className="h-3 w-3 text-green-600" />
+                            Analisado
+                          </Badge>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* F) CTA */}
+            <Button
+              onClick={() => navigate("/pac/documentos")}
+              className="w-full gap-1"
+            >
+              Analisar novo exame <ArrowRight className="h-4 w-4" />
+            </Button>
           </>
         )}
+
+        {/* Disclaimer */}
+        <div className="flex items-start gap-2 p-3 rounded-lg border border-muted bg-muted/30">
+          <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+          <p className="text-xs text-muted-foreground">
+            As informações apresentadas são educativas e não substituem avaliação, diagnóstico ou prescrição médica.
+          </p>
+        </div>
       </div>
     </PatientLayout>
   );
