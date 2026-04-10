@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   Info,
+  FlaskConical,
+  RefreshCw,
+  Loader2,
 } from "lucide-react";
 import PatientLayout from "@/components/patient/PatientLayout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "@/hooks/use-toast";
 
 interface Marcador {
   nome: string;
@@ -81,42 +85,20 @@ function ScoreCircle({ score }: { score: number }) {
 
   return (
     <svg width={size} height={size} className="shrink-0">
+      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth={stroke} />
       <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        fill="none"
-        stroke="hsl(var(--muted))"
-        strokeWidth={stroke}
-      />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        fill="none"
-        stroke={color}
-        strokeWidth={stroke}
-        strokeLinecap="round"
-        strokeDasharray={circumference}
-        strokeDashoffset={offset}
+        cx={size / 2} cy={size / 2} r={radius} fill="none"
+        stroke={color} strokeWidth={stroke} strokeLinecap="round"
+        strokeDasharray={circumference} strokeDashoffset={offset}
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
         className="transition-all duration-700"
       />
-      <text
-        x="50%"
-        y="50%"
-        dominantBaseline="central"
-        textAnchor="middle"
-        className="text-2xl font-bold"
-        fill={color}
-      >
+      <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle" className="text-2xl font-bold" fill={color}>
         {score}
       </text>
     </svg>
   );
 }
-
-// --- Loading skeleton ---
 
 function LoadingSkeleton() {
   return (
@@ -134,56 +116,110 @@ export default function PatientHealthSummary() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [analise, setAnalise] = useState<AnaliseCompleta | null>(null);
+  const [latestDocId, setLatestDocId] = useState<string | null>(null);
   const [allDocs, setAllDocs] = useState<DocRow[]>([]);
+  const [pendingDocs, setPendingDocs] = useState<DocRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeProgress, setAnalyzeProgress] = useState({ current: 0, total: 0 });
+  const [reanalyzing, setReanalyzing] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    if (!user) return;
+
+    const { data: patient } = await supabase
+      .from("patients")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const patientId = patient?.id;
+    if (!patientId) {
+      setLoading(false);
+      return;
+    }
+
+    const [latestRes, allRes, pendingRes] = await Promise.all([
+      supabase
+        .from("documents")
+        .select("id, file_name, created_at, analise_completa")
+        .eq("patient_id", patientId)
+        .eq("category", "exame_laboratorial")
+        .not("analise_completa", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("documents")
+        .select("id, file_name, created_at, analise_completa")
+        .eq("patient_id", patientId)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("documents")
+        .select("id, file_name, created_at, analise_completa")
+        .eq("patient_id", patientId)
+        .eq("category", "exame_laboratorial")
+        .is("analise_completa", null)
+        .order("created_at", { ascending: false }),
+    ]);
+
+    if (latestRes.data?.analise_completa) {
+      setAnalise(latestRes.data.analise_completa as unknown as AnaliseCompleta);
+      setLatestDocId(latestRes.data.id);
+    } else {
+      setAnalise(null);
+      setLatestDocId(null);
+    }
+
+    setAllDocs((allRes.data || []) as unknown as DocRow[]);
+    setPendingDocs((pendingRes.data || []) as unknown as DocRow[]);
+    setLoading(false);
+  }, [user]);
 
   useEffect(() => {
     if (authLoading || !user) {
       if (!authLoading) setLoading(false);
       return;
     }
+    fetchData();
+  }, [user, authLoading, fetchData]);
 
-    const fetch = async () => {
-      // Get patient id
-      const { data: patient } = await supabase
-        .from("patients")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
+  const handleAnalyzeAll = async () => {
+    if (!user || pendingDocs.length === 0) return;
+    setAnalyzing(true);
+    setAnalyzeProgress({ current: 0, total: pendingDocs.length });
 
-      const patientId = patient?.id;
-      if (!patientId) {
-        setLoading(false);
-        return;
+    for (let i = 0; i < pendingDocs.length; i++) {
+      setAnalyzeProgress({ current: i + 1, total: pendingDocs.length });
+      const { error } = await supabase.functions.invoke("analyze-lab", {
+        body: { exam_id: pendingDocs[i].id, user_id: user.id },
+      });
+      if (error) {
+        toast({ title: `Erro ao analisar ${pendingDocs[i].file_name}`, variant: "destructive" });
       }
+    }
 
-      // Fetch latest doc with analise_completa + all docs for history
-      const [latestRes, allRes] = await Promise.all([
-        supabase
-          .from("documents")
-          .select("id, file_name, created_at, analise_completa")
-          .eq("patient_id", patientId)
-          .not("analise_completa", "is", null)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        supabase
-          .from("documents")
-          .select("id, file_name, created_at, analise_completa")
-          .eq("patient_id", patientId)
-          .order("created_at", { ascending: false }),
-      ]);
+    setAnalyzing(false);
+    setLoading(true);
+    await fetchData();
+    toast({ title: "Análise concluída!" });
+  };
 
-      if (latestRes.data?.analise_completa) {
-        setAnalise(latestRes.data.analise_completa as unknown as AnaliseCompleta);
-      }
-
-      setAllDocs((allRes.data || []) as unknown as DocRow[]);
-      setLoading(false);
-    };
-
-    fetch();
-  }, [user, authLoading]);
+  const handleReanalyze = async () => {
+    if (!user || !latestDocId) return;
+    setReanalyzing(true);
+    const { error } = await supabase.functions.invoke("analyze-lab", {
+      body: { exam_id: latestDocId, user_id: user.id },
+    });
+    if (error) {
+      toast({ title: "Erro ao reanalisar exame", variant: "destructive" });
+    } else {
+      toast({ title: "Reanálise concluída!" });
+    }
+    setReanalyzing(false);
+    setLoading(true);
+    await fetchData();
+  };
 
   return (
     <PatientLayout
@@ -193,10 +229,50 @@ export default function PatientHealthSummary() {
       breadcrumb={<PatientBreadcrumb currentPage="Resumo de Saúde" />}
     >
       <div className="p-4 sm:p-6 space-y-6 max-w-2xl mx-auto pb-24">
+        {/* Banner de exames pendentes */}
+        {!loading && pendingDocs.length > 0 && (
+          <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <FlaskConical className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                    Você tem {pendingDocs.length} exame{pendingDocs.length > 1 ? "s" : ""} novo{pendingDocs.length > 1 ? "s" : ""} aguardando análise
+                  </p>
+                  <ul className="mt-1 space-y-0.5">
+                    {pendingDocs.map((doc) => (
+                      <li key={doc.id} className="text-xs text-amber-700 dark:text-amber-400 truncate">
+                        • {doc.file_name}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              <Button
+                onClick={handleAnalyzeAll}
+                disabled={analyzing}
+                className="w-full gap-2"
+                size="sm"
+              >
+                {analyzing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Analisando {analyzeProgress.current} de {analyzeProgress.total} exames...
+                  </>
+                ) : (
+                  <>
+                    <FlaskConical className="h-4 w-4" />
+                    Analisar agora
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {loading ? (
           <LoadingSkeleton />
         ) : !analise ? (
-          /* ---- Empty state ---- */
           <Card>
             <CardContent className="p-8 text-center space-y-3">
               <FileText className="h-12 w-12 mx-auto text-muted-foreground/50" />
@@ -218,6 +294,22 @@ export default function PatientHealthSummary() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Botão Reanalisar */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReanalyze}
+              disabled={reanalyzing}
+              className="gap-2"
+            >
+              {reanalyzing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Reanalisar exame mais recente
+            </Button>
 
             {/* B) Marcadores */}
             {analise.marcadores?.length > 0 && (
@@ -315,10 +407,7 @@ export default function PatientHealthSummary() {
             )}
 
             {/* F) CTA */}
-            <Button
-              onClick={() => navigate("/pac/documentos")}
-              className="w-full gap-1"
-            >
+            <Button onClick={() => navigate("/pac/documentos")} className="w-full gap-1">
               Analisar novo exame <ArrowRight className="h-4 w-4" />
             </Button>
           </>
