@@ -47,12 +47,16 @@ import {
   Loader2,
   ExternalLink,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { format, parseISO, subDays, subMonths, subYears, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
+import PatientLayout from "@/components/patient/PatientLayout";
+import { useNavigate } from "react-router-dom";
+import { analyzeLabExam } from "@/lib/analyzeLab";
 import PatientLayout from "@/components/patient/PatientLayout";
 
 interface Document {
