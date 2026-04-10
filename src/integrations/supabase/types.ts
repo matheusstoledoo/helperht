@@ -430,6 +430,7 @@ export type Database = {
       }
       documents: {
         Row: {
+          analise_completa: Json | null
           category: string
           consultation_id: string | null
           created_at: string
@@ -451,6 +452,7 @@ export type Database = {
           uploaded_by_role: string
         }
         Insert: {
+          analise_completa?: Json | null
           category: string
           consultation_id?: string | null
           created_at?: string
@@ -472,6 +474,7 @@ export type Database = {
           uploaded_by_role: string
         }
         Update: {
+          analise_completa?: Json | null
           category?: string
           consultation_id?: string | null
           created_at?: string
