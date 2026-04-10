@@ -527,18 +527,11 @@ const PatientDocumentsView = () => {
     }
   };
 
-  const handleOpenInNewTab = async (doc: Document) => {
-    try {
-      const { data, error } = await supabase.storage
-        .from("patient-documents")
-        .createSignedUrl(doc.file_path, 3600);
-
-      if (error) throw error;
-      window.open(data.signedUrl, "_blank");
-    } catch (error) {
-      console.error("Open error:", error);
-      toast.error("Erro ao abrir documento");
-    }
+  const handleOpenInNewTab = (doc: Document) => {
+    const { data } = supabase.storage
+      .from("patient-documents")
+      .getPublicUrl(doc.file_path);
+    window.open(data.publicUrl, "_blank");
   };
 
   const handleToggleVisibility = async (doc: Document) => {

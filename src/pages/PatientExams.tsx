@@ -477,12 +477,15 @@ const PatientExams = () => {
                 {/* File link */}
                 {exam.result_file_path && (
                   <div className="flex items-center gap-2 pt-2">
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={exam.result_file_path} target="_blank" rel="noopener noreferrer">
-                        <FileDown className="w-4 h-4 mr-2" />
-                        Ver documento
-                        <ExternalLink className="w-3 h-3 ml-1" />
-                      </a>
+                    <Button variant="outline" size="sm" onClick={() => {
+                      const { data } = supabase.storage
+                        .from("patient-documents")
+                        .getPublicUrl(exam.result_file_path!);
+                      window.open(data.publicUrl, "_blank");
+                    }}>
+                      <FileDown className="w-4 h-4 mr-2" />
+                      Ver documento
+                      <ExternalLink className="w-3 h-3 ml-1" />
                     </Button>
                   </div>
                 )}
