@@ -88,9 +88,6 @@ const PatientDocumentsView = () => {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [patientId, setPatientId] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>("");
-  const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [loadingPreview, setLoadingPreview] = useState(false);
 
   // File input ref - placed outside dialog to avoid mobile reload issues
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -541,14 +538,17 @@ const PatientDocumentsView = () => {
     try {
       const { data, error } = await supabase.storage
         .from("patient-documents")
-        .createSignedUrl(doc.file_path, 60);
+        .createSignedUrl(doc.file_path, 300);
 
       if (error || !data?.signedUrl) {
         toast.error("Erro ao abrir documento");
         return;
       }
 
-      window.open(data.signedUrl, "_blank");
+      const response = await fetch(data.signedUrl);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, "_blank");
     } catch (error) {
       console.error("Open error:", error);
       toast.error("Erro ao abrir documento");
@@ -577,25 +577,6 @@ const PatientDocumentsView = () => {
     }
   };
 
-  const handleView = async (doc: Document) => {
-    setViewingDoc(doc);
-    setLoadingPreview(true);
-    setPreviewUrl(null);
-
-    try {
-      const { data, error } = await supabase.storage
-        .from("patient-documents")
-        .createSignedUrl(doc.file_path, 3600);
-
-      if (error) throw error;
-      setPreviewUrl(data.signedUrl);
-    } catch (error) {
-      console.error("View error:", error);
-      toast.error("Erro ao visualizar documento");
-    } finally {
-      setLoadingPreview(false);
-    }
-  };
 
   const getCategoryIcon = (category: string) => {
     const key = getCategoryKey(category);
@@ -963,39 +944,6 @@ const PatientDocumentsView = () => {
         )}
       </div>
 
-      {/* Preview Dialog */}
-      <Dialog open={!!viewingDoc} onOpenChange={(open) => !open && setViewingDoc(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle className="truncate pr-8">{viewingDoc?.file_name}</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-auto">
-            {loadingPreview ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : previewUrl ? (
-              viewingDoc?.file_type.startsWith("image/") ? (
-                <img
-                  src={previewUrl}
-                  alt={viewingDoc?.file_name}
-                  className="w-full h-auto rounded-lg"
-                />
-              ) : (
-                <iframe
-                  src={previewUrl}
-                  title={viewingDoc?.file_name}
-                  className="w-full h-[70vh] rounded-lg"
-                />
-              )
-            ) : (
-              <p className="text-center text-muted-foreground py-12">
-                Não foi possível carregar a visualização.
-              </p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
