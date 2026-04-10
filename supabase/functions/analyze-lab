@@ -1,1 +1,216 @@
+// supabase/functions/analyze-lab/index.ts
 
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const SYSTEM_PROMPT = `Você é um assistente de saúde educacional do aplicativo HelperHT. 
+Sua função é ajudar o usuário a ENTENDER seus resultados de exames, não tratá-los.
+
+IDENTIDADE E LIMITES:
+- Você é um sistema de informação em saúde, não um médico
+- Você interpreta dados laboratoriais em linguagem acessível
+- Você NUNCA substitui consulta, diagnóstico ou prescrição médica
+
+═══════════════════════════════════
+RESTRIÇÕES ABSOLUTAS — NUNCA VIOLE
+═══════════════════════════════════
+1. NUNCA sugira medicamentos, suplementos, vitaminas, minerais ou qualquer substância
+2. NUNCA mencione doses, posologias, concentrações ou marcas ("4000 UI", "500mg", "Centrum")
+3. NUNCA use verbos de conduta: "tome", "use", "suplementar", "aplicar", "injetar", "consumir"
+4. NUNCA sugira duração de tratamento ou protocolo ("por 30 dias", "durante 3 meses")
+5. NUNCA sugira quando repetir exames ou retornar ao médico com prazo específico
+6. NUNCA faça diagnósticos, mesmo que os dados sejam claros
+7. NUNCA use linguagem que implique certeza clínica ("você tem", "seu problema é", "isso indica")
+8. NUNCA sugira dietas específicas, planos alimentares ou restrições alimentares detalhadas
+9. NUNCA interprete sintomas — apenas valores laboratoriais objetivos
+10. Se não tiver certeza sobre um marcador, prefira "converse com seu médico" a qualquer inferência
+
+LINGUAGEM PARA O CAMPO "acao" — USE APENAS ESTES PADRÕES:
+- "Converse com seu médico sobre este resultado"
+- "Este valor merece avaliação médica especializada"
+- "Seu médico pode avaliar se há necessidade de acompanhamento"
+- "Vale mencionar este resultado na sua próxima consulta"
+- "Acompanhamento médico é recomendado para este marcador"
+
+═══════════════════════════════════
+FORMATO DE SAÍDA — JSON ESTRITO
+═══════════════════════════════════
+Retorne APENAS JSON válido, sem texto antes ou depois, sem markdown, sem blocos de código.
+
+{
+  "score": <número 0-100>,
+  "resumo_geral": "<2 frases sem diagnóstico e sem conduta>",
+  "marcadores": [
+    {
+      "nome": "<nome>",
+      "valor": <número>,
+      "unidade": "<unidade>",
+      "referencia": "<intervalo de referência>",
+      "status": "<normal | atenção | alterado>",
+      "interpretacao": "<1 frase explicando o marcador>",
+      "acao": "<orientação de acompanhamento profissional>"
+    }
+  ],
+  "prioridades": ["<máximo 3 itens, nunca conduta direta>"],
+  "proximos_passos": "<1 frase encorajando consulta médica>"
+}`
+
+// ─── Palavras proibidas — filtro de segurança ───────────────────────────────
+const FORBIDDEN_WORDS = ['tome', 'tomar', 'mg', ' ui ', 'suplementar',
+  'suplementação', 'injetar', 'aplicar', 'por 30', 'por 60', 'por 90',
+  'dias', 'semanas', 'meses', 'dose', 'posologia']
+
+function sanitizeAction(text: string): string {
+  const lower = text.toLowerCase()
+  const hasForbidden = FORBIDDEN_WORDS.some(w => lower.includes(w))
+  return hasForbidden
+    ? 'Converse com seu médico sobre este resultado'
+    : text
+}
+
+function sanitizeAnalysis(analysis: any): any {
+  if (!analysis?.marcadores) return analysis
+  return {
+    ...analysis,
+    marcadores: analysis.marcadores.map((m: any) => ({
+      ...m,
+      acao: m.acao ? sanitizeAction(m.acao) : m.acao,
+    })),
+    prioridades: analysis.prioridades?.map((p: string) =>
+      sanitizeAction(p)
+    ),
+  }
+}
+
+// ─── Handler principal ───────────────────────────────────────────────────────
+Deno.serve(async (req) => {
+  // CORS para o Lovable conseguir chamar
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'authorization, content-type',
+      },
+    })
+  }
+
+  try {
+    const { exam_id, user_id } = await req.json()
+
+    if (!exam_id || !user_id) {
+      return new Response(
+        JSON.stringify({ error: 'exam_id e user_id são obrigatórios' }),
+        { status: 400 }
+      )
+    }
+
+    // Cria client com a service role para leitura segura
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    )
+
+    // 1. Busca marcadores do exame
+    const { data: markers, error: markersError } = await supabase
+      .from('lab_results')
+      .select('*')
+      .eq('exam_id', exam_id)
+      .eq('user_id', user_id)
+
+    if (markersError) throw markersError
+
+    // 2. Busca objetivos do paciente
+    const { data: goals } = await supabase
+      .from('patient_goals')
+      .select('*')
+      .eq('user_id', user_id)
+
+    // 3. Busca exames anteriores para comparação
+    const { data: previousExams } = await supabase
+      .from('lab_results')
+      .select('nome_marcador, valor, collection_date')
+      .eq('user_id', user_id)
+      .neq('exam_id', exam_id)
+      .order('collection_date', { ascending: false })
+      .limit(20)
+
+    // 4. Chama o Claude
+    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': Deno.env.get('ANTHROPIC_API_KEY')!,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-6',
+        max_tokens: 2000,
+        system: SYSTEM_PROMPT,
+        messages: [{
+          role: 'user',
+          content: `
+Marcadores do exame atual:
+${JSON.stringify(markers, null, 2)}
+
+Objetivos declarados pelo paciente:
+${JSON.stringify(goals, null, 2)}
+
+Histórico de exames anteriores para comparação:
+${JSON.stringify(previousExams, null, 2)}
+
+Analise e retorne o JSON estruturado conforme as instruções.
+          `,
+        }],
+      }),
+    })
+
+    if (!claudeResponse.ok) {
+      const err = await claudeResponse.text()
+      throw new Error(`Claude API error: ${err}`)
+    }
+
+    const claudeData = await claudeResponse.json()
+    const rawText = claudeData.content[0].text
+
+    // 5. Parse do JSON retornado pelo Claude
+    let analysis
+    try {
+      analysis = JSON.parse(rawText)
+    } catch {
+      // Claude às vezes retorna com backticks mesmo pedindo sem — limpa e tenta de novo
+      const cleaned = rawText.replace(/```json|```/g, '').trim()
+      analysis = JSON.parse(cleaned)
+    }
+
+    // 6. Sanitização de segurança (filtro de palavras proibidas)
+    const safeAnalysis = sanitizeAnalysis(analysis)
+
+    // 7. Salva o resultado no exame
+    const { error: updateError } = await supabase
+      .from('exams')
+      .update({ analise_completa: safeAnalysis })
+      .eq('id', exam_id)
+      .eq('user_id', user_id)
+
+    if (updateError) throw updateError
+
+    return new Response(JSON.stringify(safeAnalysis), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+    })
+
+  } catch (error) {
+    console.error('analyze-lab error:', error)
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      }
+    )
+  }
+})
