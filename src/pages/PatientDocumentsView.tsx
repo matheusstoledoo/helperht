@@ -511,6 +511,21 @@ const PatientDocumentsView = () => {
     return "normal";
   };
 
+  const handleAnalyzeWithAI = async (doc: Document) => {
+    if (!user) return;
+    setAnalyzingDocId(doc.id);
+    try {
+      await analyzeLabExam(doc.id, user.id);
+      toast.success("Exame analisado com sucesso!");
+      navigate("/pac/resumo");
+    } catch (error: any) {
+      console.error("Analyze error:", error);
+      toast.error("Erro ao analisar exame. Tente novamente.");
+    } finally {
+      setAnalyzingDocId(null);
+    }
+  };
+
   const handleDownload = async (doc: Document) => {
     try {
       const { data, error } = await supabase.storage
