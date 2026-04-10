@@ -569,6 +569,7 @@ const PatientDocumentsView = () => {
         .eq("id", doc.id);
 
       if (error) throw error;
+      setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
       toast.success("Documento excluído");
       setDeleteTarget(null);
     } catch (error) {
