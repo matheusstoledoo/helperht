@@ -55,7 +55,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import PatientLayout from "@/components/patient/PatientLayout";
-import { useNavigate } from "react-router-dom";
 import { analyzeLabExam } from "@/lib/analyzeLab";
 
 interface Document {
