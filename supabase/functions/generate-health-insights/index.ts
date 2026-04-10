@@ -297,7 +297,7 @@ Gere entre 4 e 10 insights relevantes. Use a categoria "conexao" para insights q
 Nome: ${patientName}
 Idade: ${age !== null ? `${age} anos` : "não informada"}
 Tipo sanguíneo: ${patientRes.data?.blood_type || "não informado"}
-Alergias: ${(patientRes.data?.allergies || []).length > 0 ? patientRes.data.allergies.join(", ") : "nenhuma registrada"}
+Alergias: ${(patientRes.data?.allergies || []).length > 0 ? (patientRes.data?.allergies || []).join(", ") : "nenhuma registrada"}
 
 DIAGNÓSTICOS ATIVOS:
 ${diagSection}
