@@ -394,7 +394,7 @@ const PatientDocumentsView = () => {
           {
             body: {
               document_id: documentId,
-              file_url: fileUrl,
+              file_path: filePath,
               file_type: uploadFile.type,
               category_hint: uploadCategory,
             },
