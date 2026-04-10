@@ -86,7 +86,9 @@ export const LAB_PANELS = [
   },
 ] as const;
 
-export function classifyMarker(markerName: string): string {
+// FIX: usa marker_category do banco se disponível, só classifica por keyword como fallback
+export function classifyMarker(markerName: string, categoryFromDB?: string | null): string {
+  if (categoryFromDB && categoryFromDB !== "other") return categoryFromDB;
   const lower = markerName.toLowerCase();
   for (const panel of LAB_PANELS) {
     if (panel.keywords.some((kw) => lower.includes(kw))) {
