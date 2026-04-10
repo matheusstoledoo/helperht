@@ -1,14 +1,7 @@
 import { useMemo } from "react";
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ReferenceArea,
-  ResponsiveContainer,
-  Dot,
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ReferenceArea, ResponsiveContainer, Dot,
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
@@ -26,6 +19,7 @@ export interface LabDataPoint {
   reference_text: string | null;
   lab_name: string | null;
   status: string | null;
+  marker_category?: string | null;
 }
 
 interface LabMarkerChartProps {
@@ -33,20 +27,28 @@ interface LabMarkerChartProps {
   dataPoints: LabDataPoint[];
 }
 
+// Marcadores onde SUBIR é bom (verde) e DESCER é ruim (vermelho)
+const HIGHER_IS_BETTER = ["hdl", "vitamina d", "hemoglobina", "hematócrito",
+  "vitamina b12", "ácido fólico", "ferritina", "albumina"]
+
+function isTrendGood(markerName: string, variation: number): boolean {
+  const lower = markerName.toLowerCase()
+  const higherIsBetter = HIGHER_IS_BETTER.some(m => lower.includes(m))
+  return higherIsBetter ? variation > 0 : variation < 0
+}
+
 const CustomDot = (props: any) => {
   const { cx, cy, payload } = props;
   if (!cx || !cy) return null;
-  const isOutOfRange =
-    payload.reference_min != null && payload.reference_max != null &&
+  const out =
+    payload.reference_min != null &&
+    payload.reference_max != null &&
     payload.value != null &&
     (payload.value < payload.reference_min || payload.value > payload.reference_max);
-
   return (
     <Dot
-      cx={cx}
-      cy={cy}
-      r={5}
-      fill={isOutOfRange ? "hsl(0 84% 60%)" : "hsl(177 94% 38%)"}
+      cx={cx} cy={cy} r={5}
+      fill={out ? "hsl(0 84% 60%)" : "hsl(177 94% 38%)"}
       stroke="hsl(var(--background))"
       strokeWidth={2}
     />
@@ -56,6 +58,9 @@ const CustomDot = (props: any) => {
 const CustomTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.[0]) return null;
   const data = payload[0].payload;
+  const isOut =
+    data.value != null && data.reference_min != null && data.reference_max != null &&
+    (data.value < data.reference_min || data.value > data.reference_max);
   return (
     <div className="rounded-lg border bg-card p-3 shadow-md text-sm space-y-1">
       <p className="font-semibold text-foreground">
@@ -73,21 +78,12 @@ const CustomTooltip = ({ active, payload }: any) => {
       {data.lab_name && (
         <p className="text-xs text-muted-foreground">Lab: {data.lab_name}</p>
       )}
-      <Badge
-        variant="secondary"
-        className={`text-xs mt-1 ${
-          data.value != null && data.reference_min != null && data.reference_max != null
-            ? data.value < data.reference_min || data.value > data.reference_max
-              ? "bg-destructive/10 text-destructive"
-              : "bg-green-500/10 text-green-700 dark:text-green-400"
-            : "bg-muted text-muted-foreground"
-        }`}
-      >
-        {data.value != null && data.reference_min != null && data.reference_max != null
-          ? data.value < data.reference_min || data.value > data.reference_max
-            ? "Fora do intervalo"
-            : "Normal"
-          : "Sem referência"}
+      <Badge className={`text-xs mt-1 ${
+        data.reference_min == null ? "bg-muted text-muted-foreground"
+        : isOut ? "bg-destructive/10 text-destructive"
+        : "bg-green-500/10 text-green-700 dark:text-green-400"
+      }`}>
+        {data.reference_min == null ? "Sem referência" : isOut ? "Fora do intervalo" : "Normal"}
       </Badge>
     </div>
   );
@@ -95,22 +91,26 @@ const CustomTooltip = ({ active, payload }: any) => {
 
 export const LabMarkerChart = ({ markerName, dataPoints }: LabMarkerChartProps) => {
   const sortedData = useMemo(
-    () =>
-      [...dataPoints]
-        .filter((d) => d.value != null)
-        .sort((a, b) => new Date(a.collection_date).getTime() - new Date(b.collection_date).getTime()),
+    () => [...dataPoints]
+      .filter((d) => d.value != null)
+      .sort((a, b) => new Date(a.collection_date).getTime() - new Date(b.collection_date).getTime()),
     [dataPoints]
   );
 
   if (sortedData.length === 0) return null;
 
-  const unit = sortedData[0]?.unit || "";
-  const refMin = sortedData[0]?.reference_min;
-  const refMax = sortedData[0]?.reference_max;
+  const unit = sortedData[sortedData.length - 1]?.unit || "";
 
-  // Variation calculations
+  // FIX 1: pega referência do exame mais recente que tiver referência definida
+  const withRef = [...sortedData].reverse().find(
+    d => d.reference_min != null && d.reference_max != null
+  );
+  const refMin = withRef?.reference_min ?? null;
+  const refMax = withRef?.reference_max ?? null;
+
   const latestValue = sortedData[sortedData.length - 1]?.value;
-  const previousValue = sortedData.length > 1 ? sortedData[sortedData.length - 2]?.value : null;
+  const previousValue = sortedData.length > 1
+    ? sortedData[sortedData.length - 2]?.value : null;
   const variation =
     latestValue != null && previousValue != null && previousValue !== 0
       ? ((latestValue - previousValue) / Math.abs(previousValue)) * 100
@@ -120,15 +120,20 @@ export const LabMarkerChart = ({ markerName, dataPoints }: LabMarkerChartProps) 
     latestValue != null && refMin != null && refMax != null &&
     (latestValue < refMin || latestValue > refMax);
 
-  // Y axis domain
   const allValues = sortedData.map((d) => d.value!);
-  const minVal = Math.min(...allValues, refMin ?? Infinity);
-  const maxVal = Math.max(...allValues, refMax ?? -Infinity);
-  const padding = (maxVal - minVal) * 0.15 || 5;
+  const dataMin = Math.min(...allValues);
+  const dataMax = Math.max(...allValues);
+  const rangeMin = refMin != null ? Math.min(dataMin, refMin) : dataMin;
+  const rangeMax = refMax != null ? Math.max(dataMax, refMax) : dataMax;
+
+  // FIX 2: padding mínimo de 10% do valor para evitar domínio negativo em marcadores sempre positivos
+  const range = rangeMax - rangeMin;
+  const padding = range > 0 ? range * 0.2 : rangeMax * 0.15 || 5;
+  const yMin = Math.max(0, rangeMin - padding) // nunca negativo
+  const yMax = rangeMax + padding
 
   return (
     <div className="helper-card p-4 space-y-3">
-      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h4 className="font-semibold text-foreground text-sm">{markerName}</h4>
@@ -138,41 +143,42 @@ export const LabMarkerChart = ({ markerName, dataPoints }: LabMarkerChartProps) 
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Latest value badge */}
-          <Badge
-            className={`text-xs ${
-              isLatestOutOfRange
-                ? "bg-destructive/10 text-destructive border-destructive/30"
-                : "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30"
-            }`}
-          >
+          <Badge className={`text-xs ${
+            isLatestOutOfRange
+              ? "bg-destructive/10 text-destructive border-destructive/30"
+              : "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30"
+          }`}>
             {latestValue} {unit}
           </Badge>
-          {/* Variation badge */}
+
+          {/* FIX 3: cor da tendência baseada no marcador, não só na direção */}
           {variation != null && (
             <Badge variant="outline" className="text-xs gap-1">
-              {variation > 0 ? (
-                <TrendingUp className="w-3 h-3 text-destructive" />
-              ) : variation < 0 ? (
-                <TrendingDown className="w-3 h-3 text-green-600" />
-              ) : (
+              {variation === 0 ? (
                 <Minus className="w-3 h-3" />
+              ) : variation > 0 ? (
+                <TrendingUp className={`w-3 h-3 ${
+                  isTrendGood(markerName, variation)
+                    ? "text-green-600" : "text-destructive"
+                }`} />
+              ) : (
+                <TrendingDown className={`w-3 h-3 ${
+                  isTrendGood(markerName, variation)
+                    ? "text-green-600" : "text-destructive"
+                }`} />
               )}
-              {variation > 0 ? "+" : ""}
-              {variation.toFixed(1)}%
+              {variation > 0 ? "+" : ""}{variation.toFixed(1)}%
             </Badge>
           )}
         </div>
       </div>
 
-      {/* Chart */}
       <ResponsiveContainer width="100%" height={180}>
         <LineChart data={sortedData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
           {refMin != null && refMax != null && (
             <ReferenceArea
-              y1={refMin}
-              y2={refMax}
+              y1={refMin} y2={refMax}
               fill="hsl(142 76% 36% / 0.08)"
               stroke="none"
             />
@@ -184,7 +190,7 @@ export const LabMarkerChart = ({ markerName, dataPoints }: LabMarkerChartProps) 
             stroke="hsl(var(--border))"
           />
           <YAxis
-            domain={[minVal - padding, maxVal + padding]}
+            domain={[yMin, yMax]}
             tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
             stroke="hsl(var(--border))"
             width={45}
@@ -201,7 +207,6 @@ export const LabMarkerChart = ({ markerName, dataPoints }: LabMarkerChartProps) 
         </LineChart>
       </ResponsiveContainer>
 
-      {/* Reference info */}
       {refMin != null && refMax != null && (
         <p className="text-xs text-muted-foreground text-center">
           Faixa de referência: {refMin} – {refMax} {unit}
