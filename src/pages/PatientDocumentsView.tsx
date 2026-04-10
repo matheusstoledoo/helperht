@@ -75,6 +75,7 @@ interface Document {
 const PatientDocumentsView = () => {
   const { user, loading: authLoading } = useAuth();
   const { professionalId } = useParams<{ professionalId?: string }>();
+  const navigate = useNavigate();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -84,6 +85,7 @@ const PatientDocumentsView = () => {
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [analyzingDocId, setAnalyzingDocId] = useState<string | null>(null);
 
   // File input ref - placed outside dialog to avoid mobile reload issues
   const fileInputRef = useRef<HTMLInputElement>(null);
