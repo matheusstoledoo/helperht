@@ -86,22 +86,11 @@ export const DocumentCard = ({ document, userRole, userName, onDelete, style }: 
     showToasts: false,
   });
 
-  const getFileUrl = async () => {
-    const { data, error } = await supabase.storage
+  const handleOpen = () => {
+    const { data } = supabase.storage
       .from("patient-documents")
-      .createSignedUrl(document.file_path, 3600);
-    if (error) throw error;
-    return data.signedUrl;
-  };
-
-  const handleOpen = async () => {
-    try {
-      const url = await getFileUrl();
-      window.open(url, "_blank");
-    } catch (error) {
-      console.error("Open error:", error);
-      toast.error("Falha ao abrir documento");
-    }
+      .getPublicUrl(document.file_path);
+    window.open(data.publicUrl, "_blank");
   };
 
   const handleDownload = async () => {
