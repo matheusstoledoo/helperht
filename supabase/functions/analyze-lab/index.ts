@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
       .from('lab_results')
       .select('marker_name, value, collection_date')
       .eq('user_id', user_id)
-      .neq('exam_id', exam_id)
+      .neq('document_id', exam_id)
       .order('collection_date', { ascending: false })
       .limit(20)
 
