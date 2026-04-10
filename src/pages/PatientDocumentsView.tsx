@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
@@ -47,6 +47,7 @@ import {
   Loader2,
   ExternalLink,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { format, parseISO, subDays, subMonths, subYears, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -54,6 +55,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import PatientLayout from "@/components/patient/PatientLayout";
+import { analyzeLabExam } from "@/lib/analyzeLab";
 
 interface Document {
   id: string;
@@ -73,6 +75,7 @@ interface Document {
 const PatientDocumentsView = () => {
   const { user, loading: authLoading } = useAuth();
   const { professionalId } = useParams<{ professionalId?: string }>();
+  const navigate = useNavigate();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -82,6 +85,7 @@ const PatientDocumentsView = () => {
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [analyzingDocId, setAnalyzingDocId] = useState<string | null>(null);
 
   // File input ref - placed outside dialog to avoid mobile reload issues
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -507,6 +511,21 @@ const PatientDocumentsView = () => {
     return "normal";
   };
 
+  const handleAnalyzeWithAI = async (doc: Document) => {
+    if (!user) return;
+    setAnalyzingDocId(doc.id);
+    try {
+      await analyzeLabExam(doc.id, user.id);
+      toast.success("Exame analisado com sucesso!");
+      navigate("/pac/resumo");
+    } catch (error: any) {
+      console.error("Analyze error:", error);
+      toast.error("Erro ao analisar exame. Tente novamente.");
+    } finally {
+      setAnalyzingDocId(null);
+    }
+  };
+
   const handleDownload = async (doc: Document) => {
     try {
       const { data, error } = await supabase.storage
@@ -608,6 +627,8 @@ const PatientDocumentsView = () => {
 
   const renderDocumentCard = (doc: Document, index: number) => {
     const canToggleVisibility = doc.uploaded_by_role === "patient";
+    const isLabCategory = getCategoryKey(doc.category) === "laboratorial";
+    const isAnalyzing = analyzingDocId === doc.id;
 
     return (
       <Card
@@ -669,6 +690,23 @@ const PatientDocumentsView = () => {
               >
                 <Download className="h-4 w-4" />
               </Button>
+              {/* Analyze with AI - only for lab documents */}
+              {isLabCategory && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handleAnalyzeWithAI(doc)}
+                  disabled={isAnalyzing}
+                  title="Analisar com IA"
+                >
+                  {isAnalyzing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 text-primary" />
+                  )}
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>

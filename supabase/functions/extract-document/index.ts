@@ -53,7 +53,7 @@ serve(async (req) => {
     // Convert file to base64 for the AI
     const arrayBuffer = await fileData.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
-    const base64Data = base64Encode(uint8Array);
+    const base64Data = base64Encode(uint8Array.buffer);
 
     console.log("File downloaded, size:", uint8Array.length, "bytes, type:", file_type);
 

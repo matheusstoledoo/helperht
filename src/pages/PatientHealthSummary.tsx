@@ -13,6 +13,7 @@ import {
   ArrowRight,
   Apple,
   Dumbbell,
+  FileText,
 } from "lucide-react";
 import PatientLayout from "@/components/patient/PatientLayout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -40,6 +41,22 @@ interface Insight {
   description: string;
 }
 
+interface AnaliseCompleta {
+  score: number;
+  resumo_geral: string;
+  marcadores: {
+    nome: string;
+    valor: number;
+    unidade: string;
+    referencia: string;
+    status: "normal" | "atenção" | "alterado";
+    interpretacao: string;
+    acao: string;
+  }[];
+  prioridades: string[];
+  proximos_passos?: string;
+}
+
 const SPORT_LABELS: Record<string, string> = {
   musculacao: "Musculação",
   corrida: "Corrida",
@@ -48,6 +65,43 @@ const SPORT_LABELS: Record<string, string> = {
   triatlo: "Triátlo",
   funcional: "Funcional",
   outro: "Outro",
+};
+
+const ScoreCircle = ({ score }: { score: number }) => {
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+  const color =
+    score >= 80 ? "text-green-500" : score >= 50 ? "text-amber-500" : "text-destructive";
+
+  return (
+    <div className="flex flex-col items-center">
+      <svg width="100" height="100" className="transform -rotate-90">
+        <circle
+          cx="50"
+          cy="50"
+          r={radius}
+          stroke="currentColor"
+          strokeWidth="8"
+          fill="none"
+          className="text-muted/30"
+        />
+        <circle
+          cx="50"
+          cy="50"
+          r={radius}
+          stroke="currentColor"
+          strokeWidth="8"
+          fill="none"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          className={color}
+        />
+      </svg>
+      <span className={`absolute text-2xl font-bold ${color}`}>{score}</span>
+    </div>
+  );
 };
 
 export default function PatientHealthSummary() {
@@ -59,6 +113,7 @@ export default function PatientHealthSummary() {
   const [bloodType, setBloodType] = useState<string | null>(null);
   const [nutritionSummary, setNutritionSummary] = useState<any>(null);
   const [trainingSummary, setTrainingSummary] = useState<any>(null);
+  const [analiseCompleta, setAnaliseCompleta] = useState<AnaliseCompleta | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -69,7 +124,16 @@ export default function PatientHealthSummary() {
     }
 
     const fetchData = async () => {
-      const [patientRes, labRes, nutritionRes, trainingRes] = await Promise.all([
+      // Get patient id first
+      const { data: patientRow } = await supabase
+        .from("patients")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      const patientId = patientRow?.id;
+
+      const [patientRes, labRes, nutritionRes, trainingRes, analiseRes] = await Promise.all([
         supabase.from("patients").select("id, allergies, blood_type").eq("user_id", user.id).maybeSingle(),
         supabase
           .from("lab_results")
@@ -91,6 +155,16 @@ export default function PatientHealthSummary() {
           .eq("status", "active")
           .order("created_at", { ascending: false })
           .limit(1),
+        // Fetch most recent document with analise_completa
+        patientId
+          ? supabase
+              .from("documents")
+              .select("analise_completa")
+              .eq("patient_id", patientId)
+              .not("analise_completa", "is", null)
+              .order("created_at", { ascending: false })
+              .limit(1)
+          : Promise.resolve({ data: null }),
       ]);
 
       if (patientRes.data) {
@@ -100,6 +174,11 @@ export default function PatientHealthSummary() {
 
       if (nutritionRes.data?.[0]) setNutritionSummary(nutritionRes.data[0]);
       if (trainingRes.data?.[0]) setTrainingSummary(trainingRes.data[0]);
+
+      // Set AI analysis
+      if (analiseRes.data && Array.isArray(analiseRes.data) && analiseRes.data.length > 0) {
+        setAnaliseCompleta(analiseRes.data[0].analise_completa as unknown as AnaliseCompleta);
+      }
 
       const labs = (labRes.data || []) as {
         marker_name: string;
@@ -242,6 +321,24 @@ export default function PatientHealthSummary() {
     }
   };
 
+  const analiseStatusColor = (status: string) => {
+    switch (status) {
+      case "normal": return "bg-green-500";
+      case "atenção": return "bg-amber-500";
+      case "alterado": return "bg-destructive";
+      default: return "bg-muted-foreground";
+    }
+  };
+
+  const analiseStatusBadge = (status: string) => {
+    switch (status) {
+      case "normal": return <Badge className="text-xs bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30">Normal</Badge>;
+      case "atenção": return <Badge className="text-xs bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30">Atenção</Badge>;
+      case "alterado": return <Badge variant="destructive" className="text-xs">Alterado</Badge>;
+      default: return null;
+    }
+  };
+
   return (
     <PatientLayout
       title="Resumo de Saúde"
@@ -267,6 +364,94 @@ export default function PatientHealthSummary() {
                 ))}
               </div>
             )}
+
+            {/* AI Analysis Section */}
+            {analiseCompleta ? (
+              <div className="space-y-4">
+                {/* Score card */}
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-6">
+                      <div className="relative flex items-center justify-center">
+                        <ScoreCircle score={analiseCompleta.score} />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-base font-semibold text-foreground mb-1">Score de Saúde</h3>
+                        <p className="text-sm text-muted-foreground">{analiseCompleta.resumo_geral}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Marcadores */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Activity className="h-4 w-4 text-primary" />
+                      Análise dos Marcadores
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-1">
+                      {analiseCompleta.marcadores.map((m, i) => (
+                        <div key={i} className="py-3 border-b last:border-0">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${analiseStatusColor(m.status)}`} />
+                              <span className="text-sm font-medium">{m.nome}</span>
+                              {analiseStatusBadge(m.status)}
+                            </div>
+                            <span className="text-sm font-semibold text-foreground shrink-0">
+                              {m.valor} <span className="text-xs font-normal text-muted-foreground">{m.unidade}</span>
+                            </span>
+                          </div>
+                          {m.status !== "normal" && m.acao && (
+                            <p className="text-xs text-muted-foreground mt-1.5 pl-5">
+                              Fale com seu médico: {m.acao}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Prioridades */}
+                {analiseCompleta.prioridades && analiseCompleta.prioridades.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">Prioridades</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ol className="list-decimal list-inside space-y-2">
+                        {analiseCompleta.prioridades.map((p, i) => (
+                          <li key={i} className="text-sm text-foreground">{p}</li>
+                        ))}
+                      </ol>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Disclaimer */}
+                <div className="text-xs text-muted-foreground text-center py-3 px-4 bg-muted/50 rounded-lg">
+                  As informações apresentadas são educativas e não substituem avaliação, diagnóstico ou prescrição médica.
+                </div>
+              </div>
+            ) : markers.length === 0 && !nutritionSummary && !trainingSummary ? (
+              /* Empty state when no analysis and no data */
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                  <p className="text-muted-foreground font-medium">Nenhum exame analisado ainda</p>
+                  <p className="text-sm text-muted-foreground mt-1 mb-4">
+                    Faça upload de exames e use a análise com IA
+                  </p>
+                  <Button onClick={() => navigate("/pac/documentos")} className="gap-2">
+                    Ir para Exames <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : null}
 
             {/* Nutrition & Training summary cards */}
             {(nutritionSummary || trainingSummary) && (
@@ -343,7 +528,7 @@ export default function PatientHealthSummary() {
             )}
 
             {/* Lab markers */}
-            {markers.length > 0 ? (
+            {markers.length > 0 && (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
@@ -388,17 +573,7 @@ export default function PatientHealthSummary() {
                   </Button>
                 </CardContent>
               </Card>
-            ) : !nutritionSummary && !trainingSummary ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Activity className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-                  <p className="text-muted-foreground">Nenhum dado de saúde encontrado</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Faça upload de exames ou registre informações clínicas
-                  </p>
-                </CardContent>
-              </Card>
-            ) : null}
+            )}
           </>
         )}
       </div>
