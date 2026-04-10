@@ -189,20 +189,47 @@ export default function PatientHealthSummary() {
     setAnalyzing(true);
     setAnalyzeProgress({ current: 0, total: pendingDocs.length });
 
+    let successCount = 0;
+    let skippedCount = 0;
+
     for (let i = 0; i < pendingDocs.length; i++) {
       setAnalyzeProgress({ current: i + 1, total: pendingDocs.length });
+
+      // Check if document has extracted lab markers before calling analyze
+      const { count } = await supabase
+        .from("lab_results")
+        .select("id", { count: "exact", head: true })
+        .eq("document_id", pendingDocs[i].id)
+        .eq("user_id", user.id);
+
+      if (!count || count === 0) {
+        skippedCount++;
+        continue;
+      }
+
       const { error } = await supabase.functions.invoke("analyze-lab", {
         body: { document_id: pendingDocs[i].id, user_id: user.id },
       });
       if (error) {
         toast({ title: `Erro ao analisar ${pendingDocs[i].file_name}`, variant: "destructive" });
+      } else {
+        successCount++;
       }
     }
 
     setAnalyzing(false);
     setLoading(true);
     await fetchData();
-    toast({ title: "Análise concluída!" });
+
+    if (skippedCount > 0 && successCount === 0) {
+      toast({
+        title: "Extração pendente",
+        description: "Os exames ainda não tiveram seus marcadores extraídos. Vá em Documentos e processe-os primeiro.",
+        variant: "destructive",
+      });
+    } else if (successCount > 0) {
+      toast({ title: `${successCount} exame${successCount > 1 ? "s" : ""} analisado${successCount > 1 ? "s" : ""} com sucesso!` });
+    }
   };
 
   const handleReanalyze = async () => {
