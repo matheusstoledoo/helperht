@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
     const { data: markers, error: markersError } = await supabase
       .from('lab_results')
       .select('*')
-      .eq('exam_id', exam_id)
+      .eq('document_id', exam_id)
       .eq('user_id', user_id)
 
     if (markersError) throw markersError
