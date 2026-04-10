@@ -24,6 +24,25 @@ interface RawLabResult {
   marker_category: string | null;
 }
 
+const NORMALIZE_NAMES: Record<string, string> = {
+  "glicemia": "Glicose", "blood glucose": "Glicose", "fasting glucose": "Glicose",
+  "cholesterol total": "Colesterol Total",
+  "ldl-c": "LDL", "ldl cholesterol": "LDL",
+  "hdl-c": "HDL", "hdl cholesterol": "HDL",
+  "trigliceride": "Triglicerídeos", "triglycerides": "Triglicerídeos", "triglyceride": "Triglicerídeos",
+  "haemoglobin": "Hemoglobina", "hemoglobin": "Hemoglobina",
+  "hba1c": "Hemoglobina Glicada", "hemoglobin a1c": "Hemoglobina Glicada",
+  "25-oh vitamin d": "Vitamina D", "vitamin d": "Vitamina D",
+  "c-reactive protein": "PCR", "crp": "PCR",
+  "free t4": "T4 Livre", "t4 livre": "T4 Livre",
+  "vitamin b12": "Vitamina B12",
+  "folic acid": "Ácido Fólico", "folate": "Ácido Fólico",
+}
+
+function normalizeMarkerKey(name: string): string {
+  return NORMALIZE_NAMES[name.toLowerCase().trim()] || name
+}
+
 export default function PatientLabCharts() {
   const { user, loading: authLoading } = useAuth();
   const [results, setResults] = useState<RawLabResult[]>([]);
@@ -66,13 +85,12 @@ export default function PatientLabCharts() {
     fetchResults();
   }, [user, authLoading]);
 
-  // Group by marker name
   const groupedByMarker = useMemo(() => {
-    const map = new Map<string, LabDataPoint[]>();
+    const map = new Map<string, { points: LabDataPoint[], category: string | null }>()
     results.forEach((r) => {
-      const key = r.marker_name;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push({
+      const key = normalizeMarkerKey(r.marker_name)
+      if (!map.has(key)) map.set(key, { points: [], category: r.marker_category })
+      map.get(key)!.points.push({
         id: r.id,
         collection_date: r.collection_date,
         value: r.value,
@@ -83,26 +101,21 @@ export default function PatientLabCharts() {
         reference_text: r.reference_text,
         lab_name: r.lab_name,
         status: r.status,
-      });
-    });
-    return map;
-  }, [results]);
+      })
+    })
+    return map
+  }, [results])
 
-  // Classify into panels
   const panels = useMemo(() => {
-    const panelMap = new Map<string, { markerName: string; dataPoints: LabDataPoint[] }[]>();
-
-    // Initialize all panels
-    LAB_PANELS.forEach((p) => panelMap.set(p.key, []));
-    panelMap.set("outros", []);
-
-    groupedByMarker.forEach((dataPoints, markerName) => {
-      const panelKey = classifyMarker(markerName);
-      panelMap.get(panelKey)!.push({ markerName, dataPoints });
-    });
-
-    return panelMap;
-  }, [groupedByMarker]);
+    const panelMap = new Map<string, { markerName: string; dataPoints: LabDataPoint[] }[]>()
+    LAB_PANELS.forEach((p) => panelMap.set(p.key, []))
+    panelMap.set("outros", [])
+    groupedByMarker.forEach(({ points, category }, markerName) => {
+      const panelKey = classifyMarker(markerName, category)
+      panelMap.get(panelKey)!.push({ markerName, dataPoints: points })
+    })
+    return panelMap
+  }, [groupedByMarker])
 
   return (
     <PatientLayout title="Meus Exames Laboratoriais" subtitle="Acompanhe a evolução dos seus marcadores ao longo do tempo" showHeader breadcrumb={<PatientBreadcrumb currentPage="Gráficos de Exames" />}>
@@ -166,9 +179,9 @@ export default function PatientLabCharts() {
         )}
       </div>
 
-      {user && patientId && (
+      {user && (
         <FloatingUploadButton
-          patientId={patientId}
+          patientId={patientId || ""}
           userId={user.id}
           userRole="patient"
           userName={userName}
