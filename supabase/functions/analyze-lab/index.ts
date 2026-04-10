@@ -168,11 +168,12 @@ Analise e retorne o JSON estruturado.
 
     const safeAnalysis = sanitizeAnalysis(analysis)
 
-    // Salva no documento
+    // Salva no documento usando uploaded_by (coluna real da tabela documents)
     await supabase
       .from('documents')
       .update({ analise_completa: safeAnalysis })
       .eq('id', docId)
+      .eq('uploaded_by', user_id)
 
     return new Response(JSON.stringify(safeAnalysis), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
