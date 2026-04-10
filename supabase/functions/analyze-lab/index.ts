@@ -1,6 +1,9 @@
-// supabase/functions/analyze-lab/index.ts
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
 const SYSTEM_PROMPT = `Você é um assistente de saúde educacional do aplicativo HelperHT. 
 Sua função é ajudar o usuário a ENTENDER seus resultados de exames, não tratá-los.
@@ -54,15 +57,13 @@ Retorne APENAS JSON válido, sem texto antes ou depois, sem markdown, sem blocos
   "proximos_passos": "<1 frase encorajando consulta médica>"
 }`
 
-// ─── Palavras proibidas — filtro de segurança ───────────────────────────────
 const FORBIDDEN_WORDS = ['tome', 'tomar', 'mg', ' ui ', 'suplementar',
   'suplementação', 'injetar', 'aplicar', 'por 30', 'por 60', 'por 90',
   'dias', 'semanas', 'meses', 'dose', 'posologia']
 
 function sanitizeAction(text: string): string {
   const lower = text.toLowerCase()
-  const hasForbidden = FORBIDDEN_WORDS.some(w => lower.includes(w))
-  return hasForbidden
+  return FORBIDDEN_WORDS.some(w => lower.includes(w))
     ? 'Converse com seu médico sobre este resultado'
     : text
 }
@@ -75,22 +76,13 @@ function sanitizeAnalysis(analysis: any): any {
       ...m,
       acao: m.acao ? sanitizeAction(m.acao) : m.acao,
     })),
-    prioridades: analysis.prioridades?.map((p: string) =>
-      sanitizeAction(p)
-    ),
+    prioridades: analysis.prioridades?.map((p: string) => sanitizeAction(p)),
   }
 }
 
-// ─── Handler principal ───────────────────────────────────────────────────────
 Deno.serve(async (req) => {
-  // CORS para o Lovable conseguir chamar
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, content-type',
-      },
-    })
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
@@ -99,118 +91,96 @@ Deno.serve(async (req) => {
     if (!exam_id || !user_id) {
       return new Response(
         JSON.stringify({ error: 'exam_id e user_id são obrigatórios' }),
-        { status: 400 }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Cria client com a service role para leitura segura
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    // 1. Busca marcadores do exame
+    // Busca marcadores do exame
     const { data: markers, error: markersError } = await supabase
       .from('lab_results')
       .select('*')
-      .eq('exam_id', exam_id)
+      .eq('document_id', exam_id)
       .eq('user_id', user_id)
 
     if (markersError) throw markersError
 
-    // 2. Busca objetivos do paciente
+    // Busca objetivos do paciente
     const { data: goals } = await supabase
       .from('patient_goals')
       .select('*')
       .eq('user_id', user_id)
 
-    // 3. Busca exames anteriores para comparação
+    // Busca exames anteriores
     const { data: previousExams } = await supabase
       .from('lab_results')
-      .select('nome_marcador, valor, collection_date')
+      .select('marker_name, value, collection_date')
       .eq('user_id', user_id)
-      .neq('exam_id', exam_id)
+      .neq('document_id', exam_id)
       .order('collection_date', { ascending: false })
       .limit(20)
 
-    // 4. Chama o Claude
-    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
+    // Chama Lovable AI Gateway
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
+    if (!LOVABLE_API_KEY) throw new Error('LOVABLE_API_KEY not configured')
+
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'x-api-key': Deno.env.get('ANTHROPIC_API_KEY')!,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-6',
-        max_tokens: 2000,
-        system: SYSTEM_PROMPT,
-        messages: [{
-          role: 'user',
-          content: `
-Marcadores do exame atual:
-${JSON.stringify(markers, null, 2)}
-
-Objetivos declarados pelo paciente:
-${JSON.stringify(goals, null, 2)}
-
-Histórico de exames anteriores para comparação:
-${JSON.stringify(previousExams, null, 2)}
-
-Analise e retorne o JSON estruturado conforme as instruções.
-          `,
-        }],
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          {
+            role: 'user',
+            content: `Marcadores do exame atual:\n${JSON.stringify(markers, null, 2)}\n\nObjetivos do paciente:\n${JSON.stringify(goals, null, 2)}\n\nHistórico:\n${JSON.stringify(previousExams, null, 2)}\n\nAnalise e retorne o JSON estruturado.`,
+          },
+        ],
       }),
     })
 
-    if (!claudeResponse.ok) {
-      const err = await claudeResponse.text()
-      throw new Error(`Claude API error: ${err}`)
+    if (!aiResponse.ok) {
+      const err = await aiResponse.text()
+      throw new Error(`AI API error: ${err}`)
     }
 
-    const claudeData = await claudeResponse.json()
-    const rawText = claudeData.content[0].text
+    const aiData = await aiResponse.json()
+    const rawText = aiData.choices[0].message.content
 
-    // 5. Parse do JSON retornado pelo Claude
     let analysis
     try {
       analysis = JSON.parse(rawText)
     } catch {
-      // Claude às vezes retorna com backticks mesmo pedindo sem — limpa e tenta de novo
       const cleaned = rawText.replace(/```json|```/g, '').trim()
       analysis = JSON.parse(cleaned)
     }
 
-    // 6. Sanitização de segurança (filtro de palavras proibidas)
     const safeAnalysis = sanitizeAnalysis(analysis)
 
-    // 7. Salva o resultado no exame
+    // Salva no documento
     const { error: updateError } = await supabase
-      .from('exams')
+      .from('documents')
       .update({ analise_completa: safeAnalysis })
       .eq('id', exam_id)
-      .eq('user_id', user_id)
 
     if (updateError) throw updateError
 
     return new Response(JSON.stringify(safeAnalysis), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
 
   } catch (error) {
     console.error('analyze-lab error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
