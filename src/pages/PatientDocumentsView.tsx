@@ -520,27 +520,39 @@ const PatientDocumentsView = () => {
     try {
       const { data, error } = await supabase.storage
         .from("patient-documents")
-        .download(doc.file_path);
+        .createSignedUrl(doc.file_path, 60);
 
-      if (error) throw error;
+      if (error || !data?.signedUrl) {
+        toast.error("Erro ao baixar documento");
+        return;
+      }
 
-      const url = URL.createObjectURL(data);
       const a = window.document.createElement("a");
-      a.href = url;
+      a.href = data.signedUrl;
       a.download = doc.file_name;
       a.click();
-      URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Download error:", error);
       toast.error("Erro ao baixar documento");
     }
   };
 
-  const handleOpenInNewTab = (doc: Document) => {
-    const { data } = supabase.storage
-      .from("patient-documents")
-      .getPublicUrl(doc.file_path);
-    window.open(data.publicUrl, "_blank");
+  const handleOpenInNewTab = async (doc: Document) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from("patient-documents")
+        .createSignedUrl(doc.file_path, 60);
+
+      if (error || !data?.signedUrl) {
+        toast.error("Erro ao abrir documento");
+        return;
+      }
+
+      window.open(data.signedUrl, "_blank");
+    } catch (error) {
+      console.error("Open error:", error);
+      toast.error("Erro ao abrir documento");
+    }
   };
 
   const [deleteTarget, setDeleteTarget] = useState<Document | null>(null);
