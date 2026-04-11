@@ -8,9 +8,9 @@ import {
   ChevronRight,
   Apple,
   Dumbbell,
-  
   Heart,
   Target,
+  Activity,
 } from "lucide-react";
 import PatientLayout from "@/components/patient/PatientLayout";
 
@@ -90,6 +90,14 @@ export default function PatientDashboardMain() {
       icon: <Target className="h-8 w-8 sm:h-10 sm:w-10" />,
       route: `/pac/objetivos`,
       color: "bg-violet-500/10 text-violet-600 dark:text-violet-400"
+    },
+    {
+      id: "vitals",
+      title: "Sinais Vitais",
+      description: "Registre pressão, glicemia, peso e sintomas",
+      icon: <Activity className="h-8 w-8 sm:h-10 sm:w-10" />,
+      route: `/pac/sinais-vitais`,
+      color: "bg-rose-500/10 text-rose-600 dark:text-rose-400"
     },
   ];
 
