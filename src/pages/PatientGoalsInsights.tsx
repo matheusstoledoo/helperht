@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,7 +26,7 @@ import {
   Target, Plus, Calendar as CalendarIcon, Heart, Zap, Dumbbell,
   TrendingDown, TrendingUp, Activity, Shield, Smile, Edit, Archive,
   Sparkles, AlertTriangle, CheckCircle2, Info, Apple, Link2,
-  RefreshCw, MessageCircle,
+  RefreshCw, MessageCircle, FileText, ArrowRight, FlaskConical, Loader2,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -122,6 +122,71 @@ interface InsightsData {
   insights: Insight[];
 }
 
+interface Marcador {
+  nome: string;
+  valor: string;
+  unidade: string;
+  status: "normal" | "atenção" | "alterado";
+  acao?: string;
+}
+
+interface AnaliseCompleta {
+  score: number;
+  resumo_geral: string;
+  marcadores: Marcador[];
+  prioridades: string[];
+  proximos_passos: string;
+}
+
+interface DocRow {
+  id: string;
+  file_name: string;
+  created_at: string;
+  analise_completa: AnaliseCompleta | null;
+}
+
+function scoreColor(score: number) {
+  if (score <= 40) return "hsl(0 84% 60%)";
+  if (score <= 70) return "hsl(45 93% 47%)";
+  if (score <= 89) return "hsl(142 71% 45%)";
+  return "hsl(142 76% 36%)";
+}
+
+function scoreLabel(score: number) {
+  if (score <= 40) return "Precisa de atenção";
+  if (score <= 70) return "Regular";
+  if (score <= 89) return "Bom — com pontos de atenção";
+  return "Ótimo";
+}
+
+function statusDotClass(status: string) {
+  if (status === "normal") return "bg-green-500";
+  if (status === "atenção") return "bg-amber-500";
+  return "bg-destructive";
+}
+
+function statusBadgeVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
+  if (status === "alterado") return "destructive";
+  if (status === "atenção") return "secondary";
+  return "outline";
+}
+
+function ScoreCircle({ score }: { score: number }) {
+  const size = 80;
+  const stroke = 6;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+  const color = scoreColor(score);
+  return (
+    <svg width={size} height={size} className="shrink-0">
+      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth={stroke} />
+      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset} transform={`rotate(-90 ${size / 2} ${size / 2})`} className="transition-all duration-700" />
+      <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle" className="text-xl font-bold" fill={color}>{score}</text>
+    </svg>
+  );
+}
+
 const categoryIcon = (cat: string) => {
   switch (cat) {
     case "exames": return <Activity className="h-4 w-4" />;
@@ -196,6 +261,15 @@ export default function PatientGoalsInsights() {
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [insightsGenerated, setInsightsGenerated] = useState(false);
 
+  // ── Health Summary state ──
+  const [analise, setAnalise] = useState<AnaliseCompleta | null>(null);
+  const [pendingDocs, setPendingDocs] = useState<DocRow[]>([]);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeProgress, setAnalyzeProgress] = useState({ current: 0, total: 0 });
+  const [reanalyzing, setReanalyzing] = useState(false);
+  const [latestDocId, setLatestDocId] = useState<string | null>(null);
+
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
   }, [user, authLoading, navigate]);
@@ -216,7 +290,63 @@ export default function PatientGoalsInsights() {
     setGoalsLoading(false);
   };
 
-  useEffect(() => { if (user) fetchGoals(); }, [user]);
+  // ── Health Summary fetch ──
+  const fetchSummaryData = useCallback(async () => {
+    if (!user) return;
+    setSummaryLoading(true);
+    const { data: patient } = await supabase.from("patients").select("id").eq("user_id", user.id).maybeSingle();
+    if (!patient?.id) { setSummaryLoading(false); return; }
+
+    const [latestRes, pendingRes] = await Promise.all([
+      supabase.from("documents").select("id, file_name, created_at, analise_completa")
+        .eq("patient_id", patient.id).eq("category", "exame_laboratorial")
+        .not("analise_completa", "is", null).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("documents").select("id, file_name, created_at, analise_completa")
+        .eq("patient_id", patient.id).eq("category", "exame_laboratorial")
+        .is("analise_completa", null).order("created_at", { ascending: false }),
+    ]);
+
+    if (latestRes.data?.analise_completa) {
+      setAnalise(latestRes.data.analise_completa as unknown as AnaliseCompleta);
+      setLatestDocId(latestRes.data.id);
+    } else { setAnalise(null); setLatestDocId(null); }
+    setPendingDocs((pendingRes.data || []) as unknown as DocRow[]);
+    setSummaryLoading(false);
+  }, [user]);
+
+  const handleAnalyzeAll = async () => {
+    if (!user || pendingDocs.length === 0) return;
+    setAnalyzing(true);
+    setAnalyzeProgress({ current: 0, total: pendingDocs.length });
+    let successCount = 0;
+    let skippedCount = 0;
+    for (let i = 0; i < pendingDocs.length; i++) {
+      setAnalyzeProgress({ current: i + 1, total: pendingDocs.length });
+      const { count } = await supabase.from("lab_results").select("id", { count: "exact", head: true }).eq("document_id", pendingDocs[i].id).eq("user_id", user.id);
+      if (!count || count === 0) { skippedCount++; continue; }
+      const { error } = await supabase.functions.invoke("analyze-lab", { body: { document_id: pendingDocs[i].id, user_id: user.id } });
+      if (!error) successCount++;
+    }
+    setAnalyzing(false);
+    await fetchSummaryData();
+    if (skippedCount > 0 && successCount === 0) {
+      toast({ title: "Extração pendente", description: "Processe os documentos primeiro em Exames e Documentos.", variant: "destructive" });
+    } else if (successCount > 0) {
+      toast({ title: `${successCount} exame${successCount > 1 ? "s" : ""} analisado${successCount > 1 ? "s" : ""} com sucesso!` });
+    }
+  };
+
+  const handleReanalyze = async () => {
+    if (!user || !latestDocId) return;
+    setReanalyzing(true);
+    const { error } = await supabase.functions.invoke("analyze-lab", { body: { document_id: latestDocId, user_id: user.id } });
+    if (error) toast({ title: "Erro ao reanalisar", variant: "destructive" });
+    else toast({ title: "Reanálise concluída!" });
+    setReanalyzing(false);
+    await fetchSummaryData();
+  };
+
+  useEffect(() => { if (user) { fetchGoals(); fetchSummaryData(); } }, [user]);
 
   const buildBaselineSnapshot = async (): Promise<Record<string, any>> => {
     if (!user || !patientId) return {};
@@ -318,6 +448,101 @@ export default function PatientGoalsInsights() {
         {authLoading ? (
           <Card><CardContent className="p-8 text-center"><RefreshCw className="h-8 w-8 mx-auto animate-spin text-muted-foreground" /><p className="text-sm text-muted-foreground mt-2">Carregando...</p></CardContent></Card>
         ) : (
+          <>
+            {/* ═══ RESUMO DE SAÚDE (topo) ═══ */}
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                <Heart className="h-5 w-5 text-red-500" /> Resumo de Saúde
+              </h2>
+
+              {/* Pending docs banner */}
+              {!summaryLoading && pendingDocs.length > 0 && (
+                <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <FlaskConical className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                          {pendingDocs.length} exame{pendingDocs.length > 1 ? "s" : ""} aguardando análise
+                        </p>
+                        <ul className="mt-1 space-y-0.5">
+                          {pendingDocs.slice(0, 3).map((doc) => (
+                            <li key={doc.id} className="text-xs text-amber-700 dark:text-amber-400 truncate">• {doc.file_name}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                    <Button onClick={handleAnalyzeAll} disabled={analyzing} className="w-full gap-2" size="sm">
+                      {analyzing ? (<><Loader2 className="h-4 w-4 animate-spin" />Analisando {analyzeProgress.current}/{analyzeProgress.total}...</>) : (<><FlaskConical className="h-4 w-4" />Analisar agora</>)}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              {summaryLoading ? (
+                <Card><CardContent className="p-6"><Skeleton className="h-20 w-full" /></CardContent></Card>
+              ) : analise ? (
+                <Card>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center gap-4">
+                      <ScoreCircle score={analise.score} />
+                      <div className="min-w-0">
+                        <p className="text-base font-semibold text-foreground">{scoreLabel(analise.score)}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{analise.resumo_geral}</p>
+                      </div>
+                    </div>
+                    {analise.marcadores?.length > 0 && (
+                      <div className="border-t pt-3 space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Marcadores principais</p>
+                        {analise.marcadores.filter(m => m.status !== "normal").slice(0, 4).map((m, i) => (
+                          <div key={i} className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <div className={`h-2 w-2 rounded-full ${statusDotClass(m.status)}`} />
+                              <span className="font-medium">{m.nome}</span>
+                              <span className="text-xs text-muted-foreground">{m.valor} {m.unidade}</span>
+                            </div>
+                            <Badge variant={statusBadgeVariant(m.status)} className="text-xs capitalize">{m.status}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {analise.prioridades?.length > 0 && (
+                      <div className="border-t pt-3">
+                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-amber-500" /> Prioridades</p>
+                        <ul className="space-y-1">
+                          {analise.prioridades.slice(0, 3).map((p, i) => (
+                            <li key={i} className="text-sm text-foreground flex items-start gap-2">
+                              <span className="flex items-center justify-center h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs font-bold shrink-0">{i + 1}</span>
+                              {p}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    <div className="flex gap-2 pt-1">
+                      <Button variant="outline" size="sm" onClick={handleReanalyze} disabled={reanalyzing} className="gap-1.5">
+                        {reanalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                        Reanalisar
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => navigate("/pac/resumo")} className="gap-1.5">
+                        Ver completo <ArrowRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="p-6 text-center space-y-2">
+                    <FileText className="h-8 w-8 mx-auto text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground">Nenhum exame analisado ainda</p>
+                    <Button variant="outline" size="sm" onClick={() => navigate("/pac/documentos")} className="gap-1">
+                      Ir para Exames <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="w-full">
               <TabsTrigger value="objetivos" className="flex-1 gap-1.5">
@@ -468,6 +693,7 @@ export default function PatientGoalsInsights() {
               ) : null}
             </TabsContent>
           </Tabs>
+          </>
         )}
       </div>
 

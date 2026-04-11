@@ -8,7 +8,6 @@ import {
   ChevronRight,
   Apple,
   Dumbbell,
-  Heart,
   Target,
   Activity,
 } from "lucide-react";
@@ -74,14 +73,6 @@ export default function PatientDashboardMain() {
       icon: <Dumbbell className="h-8 w-8 sm:h-10 sm:w-10" />,
       route: `/pac/treinos`,
       color: "bg-sky-500/10 text-sky-600 dark:text-sky-400"
-    },
-    {
-      id: "summary",
-      title: "Resumo de Saúde",
-      description: "Visão geral do seu estado clínico",
-      icon: <Heart className="h-8 w-8 sm:h-10 sm:w-10" />,
-      route: `/pac/resumo`,
-      color: "bg-red-500/10 text-red-600 dark:text-red-400"
     },
     {
       id: "goals-insights",
