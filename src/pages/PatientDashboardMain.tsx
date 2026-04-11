@@ -8,7 +8,6 @@ import {
   ChevronRight,
   Apple,
   Dumbbell,
-  Heart,
   Target,
   Activity,
 } from "lucide-react";
