@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,7 +26,7 @@ import {
   Target, Plus, Calendar as CalendarIcon, Heart, Zap, Dumbbell,
   TrendingDown, TrendingUp, Activity, Shield, Smile, Edit, Archive,
   Sparkles, AlertTriangle, CheckCircle2, Info, Apple, Link2,
-  RefreshCw, MessageCircle,
+  RefreshCw, MessageCircle, FileText, ArrowRight, FlaskConical, Loader2,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
