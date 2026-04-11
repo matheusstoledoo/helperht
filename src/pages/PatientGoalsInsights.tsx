@@ -448,6 +448,101 @@ export default function PatientGoalsInsights() {
         {authLoading ? (
           <Card><CardContent className="p-8 text-center"><RefreshCw className="h-8 w-8 mx-auto animate-spin text-muted-foreground" /><p className="text-sm text-muted-foreground mt-2">Carregando...</p></CardContent></Card>
         ) : (
+          <>
+            {/* ═══ RESUMO DE SAÚDE (topo) ═══ */}
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                <Heart className="h-5 w-5 text-red-500" /> Resumo de Saúde
+              </h2>
+
+              {/* Pending docs banner */}
+              {!summaryLoading && pendingDocs.length > 0 && (
+                <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <FlaskConical className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                          {pendingDocs.length} exame{pendingDocs.length > 1 ? "s" : ""} aguardando análise
+                        </p>
+                        <ul className="mt-1 space-y-0.5">
+                          {pendingDocs.slice(0, 3).map((doc) => (
+                            <li key={doc.id} className="text-xs text-amber-700 dark:text-amber-400 truncate">• {doc.file_name}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                    <Button onClick={handleAnalyzeAll} disabled={analyzing} className="w-full gap-2" size="sm">
+                      {analyzing ? (<><Loader2 className="h-4 w-4 animate-spin" />Analisando {analyzeProgress.current}/{analyzeProgress.total}...</>) : (<><FlaskConical className="h-4 w-4" />Analisar agora</>)}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              {summaryLoading ? (
+                <Card><CardContent className="p-6"><Skeleton className="h-20 w-full" /></CardContent></Card>
+              ) : analise ? (
+                <Card>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center gap-4">
+                      <ScoreCircle score={analise.score} />
+                      <div className="min-w-0">
+                        <p className="text-base font-semibold text-foreground">{scoreLabel(analise.score)}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{analise.resumo_geral}</p>
+                      </div>
+                    </div>
+                    {analise.marcadores?.length > 0 && (
+                      <div className="border-t pt-3 space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Marcadores principais</p>
+                        {analise.marcadores.filter(m => m.status !== "normal").slice(0, 4).map((m, i) => (
+                          <div key={i} className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <div className={`h-2 w-2 rounded-full ${statusDotClass(m.status)}`} />
+                              <span className="font-medium">{m.nome}</span>
+                              <span className="text-xs text-muted-foreground">{m.valor} {m.unidade}</span>
+                            </div>
+                            <Badge variant={statusBadgeVariant(m.status)} className="text-xs capitalize">{m.status}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {analise.prioridades?.length > 0 && (
+                      <div className="border-t pt-3">
+                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-amber-500" /> Prioridades</p>
+                        <ul className="space-y-1">
+                          {analise.prioridades.slice(0, 3).map((p, i) => (
+                            <li key={i} className="text-sm text-foreground flex items-start gap-2">
+                              <span className="flex items-center justify-center h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs font-bold shrink-0">{i + 1}</span>
+                              {p}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    <div className="flex gap-2 pt-1">
+                      <Button variant="outline" size="sm" onClick={handleReanalyze} disabled={reanalyzing} className="gap-1.5">
+                        {reanalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                        Reanalisar
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => navigate("/pac/resumo")} className="gap-1.5">
+                        Ver completo <ArrowRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="p-6 text-center space-y-2">
+                    <FileText className="h-8 w-8 mx-auto text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground">Nenhum exame analisado ainda</p>
+                    <Button variant="outline" size="sm" onClick={() => navigate("/pac/documentos")} className="gap-1">
+                      Ir para Exames <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="w-full">
               <TabsTrigger value="objetivos" className="flex-1 gap-1.5">
