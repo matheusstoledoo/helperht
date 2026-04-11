@@ -693,6 +693,7 @@ export default function PatientGoalsInsights() {
               ) : null}
             </TabsContent>
           </Tabs>
+          </>
         )}
       </div>
 
