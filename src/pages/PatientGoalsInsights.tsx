@@ -122,6 +122,71 @@ interface InsightsData {
   insights: Insight[];
 }
 
+interface Marcador {
+  nome: string;
+  valor: string;
+  unidade: string;
+  status: "normal" | "atenção" | "alterado";
+  acao?: string;
+}
+
+interface AnaliseCompleta {
+  score: number;
+  resumo_geral: string;
+  marcadores: Marcador[];
+  prioridades: string[];
+  proximos_passos: string;
+}
+
+interface DocRow {
+  id: string;
+  file_name: string;
+  created_at: string;
+  analise_completa: AnaliseCompleta | null;
+}
+
+function scoreColor(score: number) {
+  if (score <= 40) return "hsl(0 84% 60%)";
+  if (score <= 70) return "hsl(45 93% 47%)";
+  if (score <= 89) return "hsl(142 71% 45%)";
+  return "hsl(142 76% 36%)";
+}
+
+function scoreLabel(score: number) {
+  if (score <= 40) return "Precisa de atenção";
+  if (score <= 70) return "Regular";
+  if (score <= 89) return "Bom — com pontos de atenção";
+  return "Ótimo";
+}
+
+function statusDotClass(status: string) {
+  if (status === "normal") return "bg-green-500";
+  if (status === "atenção") return "bg-amber-500";
+  return "bg-destructive";
+}
+
+function statusBadgeVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
+  if (status === "alterado") return "destructive";
+  if (status === "atenção") return "secondary";
+  return "outline";
+}
+
+function ScoreCircle({ score }: { score: number }) {
+  const size = 80;
+  const stroke = 6;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (score / 100) * circumference;
+  const color = scoreColor(score);
+  return (
+    <svg width={size} height={size} className="shrink-0">
+      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth={stroke} />
+      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset} transform={`rotate(-90 ${size / 2} ${size / 2})`} className="transition-all duration-700" />
+      <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle" className="text-xl font-bold" fill={color}>{score}</text>
+    </svg>
+  );
+}
+
 const categoryIcon = (cat: string) => {
   switch (cat) {
     case "exames": return <Activity className="h-4 w-4" />;
