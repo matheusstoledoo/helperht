@@ -96,6 +96,7 @@ const App = () => (
               <Route path="/pac/insights" element={<Navigate to="/pac/objetivos?tab=insights" replace />} />
               <Route path="/pac/objetivos" element={<PatientGoalsInsights />} />
               <Route path="/pac/config" element={<PatientSettings />} />
+              <Route path="/pac/sinais-vitais" element={<PatientVitals />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/profissionais" element={<AdminProfessionals />} />
               <Route path="/admin/pacientes" element={<AdminPatients />} />
