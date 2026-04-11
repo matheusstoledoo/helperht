@@ -261,6 +261,15 @@ export default function PatientGoalsInsights() {
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [insightsGenerated, setInsightsGenerated] = useState(false);
 
+  // ── Health Summary state ──
+  const [analise, setAnalise] = useState<AnaliseCompleta | null>(null);
+  const [pendingDocs, setPendingDocs] = useState<DocRow[]>([]);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeProgress, setAnalyzeProgress] = useState({ current: 0, total: 0 });
+  const [reanalyzing, setReanalyzing] = useState(false);
+  const [latestDocId, setLatestDocId] = useState<string | null>(null);
+
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
   }, [user, authLoading, navigate]);
