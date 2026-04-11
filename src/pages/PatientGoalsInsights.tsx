@@ -290,7 +290,63 @@ export default function PatientGoalsInsights() {
     setGoalsLoading(false);
   };
 
-  useEffect(() => { if (user) fetchGoals(); }, [user]);
+  // ── Health Summary fetch ──
+  const fetchSummaryData = useCallback(async () => {
+    if (!user) return;
+    setSummaryLoading(true);
+    const { data: patient } = await supabase.from("patients").select("id").eq("user_id", user.id).maybeSingle();
+    if (!patient?.id) { setSummaryLoading(false); return; }
+
+    const [latestRes, pendingRes] = await Promise.all([
+      supabase.from("documents").select("id, file_name, created_at, analise_completa")
+        .eq("patient_id", patient.id).eq("category", "exame_laboratorial")
+        .not("analise_completa", "is", null).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("documents").select("id, file_name, created_at, analise_completa")
+        .eq("patient_id", patient.id).eq("category", "exame_laboratorial")
+        .is("analise_completa", null).order("created_at", { ascending: false }),
+    ]);
+
+    if (latestRes.data?.analise_completa) {
+      setAnalise(latestRes.data.analise_completa as unknown as AnaliseCompleta);
+      setLatestDocId(latestRes.data.id);
+    } else { setAnalise(null); setLatestDocId(null); }
+    setPendingDocs((pendingRes.data || []) as unknown as DocRow[]);
+    setSummaryLoading(false);
+  }, [user]);
+
+  const handleAnalyzeAll = async () => {
+    if (!user || pendingDocs.length === 0) return;
+    setAnalyzing(true);
+    setAnalyzeProgress({ current: 0, total: pendingDocs.length });
+    let successCount = 0;
+    let skippedCount = 0;
+    for (let i = 0; i < pendingDocs.length; i++) {
+      setAnalyzeProgress({ current: i + 1, total: pendingDocs.length });
+      const { count } = await supabase.from("lab_results").select("id", { count: "exact", head: true }).eq("document_id", pendingDocs[i].id).eq("user_id", user.id);
+      if (!count || count === 0) { skippedCount++; continue; }
+      const { error } = await supabase.functions.invoke("analyze-lab", { body: { document_id: pendingDocs[i].id, user_id: user.id } });
+      if (!error) successCount++;
+    }
+    setAnalyzing(false);
+    await fetchSummaryData();
+    if (skippedCount > 0 && successCount === 0) {
+      toast({ title: "Extração pendente", description: "Processe os documentos primeiro em Exames e Documentos.", variant: "destructive" });
+    } else if (successCount > 0) {
+      toast({ title: `${successCount} exame${successCount > 1 ? "s" : ""} analisado${successCount > 1 ? "s" : ""} com sucesso!` });
+    }
+  };
+
+  const handleReanalyze = async () => {
+    if (!user || !latestDocId) return;
+    setReanalyzing(true);
+    const { error } = await supabase.functions.invoke("analyze-lab", { body: { document_id: latestDocId, user_id: user.id } });
+    if (error) toast({ title: "Erro ao reanalisar", variant: "destructive" });
+    else toast({ title: "Reanálise concluída!" });
+    setReanalyzing(false);
+    await fetchSummaryData();
+  };
+
+  useEffect(() => { if (user) { fetchGoals(); fetchSummaryData(); } }, [user]);
 
   const buildBaselineSnapshot = async (): Promise<Record<string, any>> => {
     if (!user || !patientId) return {};
