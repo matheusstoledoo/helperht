@@ -3133,6 +3133,133 @@ export type Database = {
         }
         Relationships: []
       }
+      vitals_alerts: {
+        Row: {
+          acknowledged: boolean
+          acknowledged_at: string | null
+          alert_type: string
+          created_at: string
+          id: string
+          message: string
+          patient_id: string
+          severity: string
+          vital_log_id: string | null
+        }
+        Insert: {
+          acknowledged?: boolean
+          acknowledged_at?: string | null
+          alert_type: string
+          created_at?: string
+          id?: string
+          message: string
+          patient_id: string
+          severity: string
+          vital_log_id?: string | null
+        }
+        Update: {
+          acknowledged?: boolean
+          acknowledged_at?: string | null
+          alert_type?: string
+          created_at?: string
+          id?: string
+          message?: string
+          patient_id?: string
+          severity?: string
+          vital_log_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vitals_alerts_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "vitals_alerts_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vitals_alerts_vital_log_id_fkey"
+            columns: ["vital_log_id"]
+            isOneToOne: false
+            referencedRelation: "vitals_log"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vitals_log: {
+        Row: {
+          alert_generated: boolean
+          alert_severity: string | null
+          created_at: string
+          diastolic: number | null
+          glucose_moment: string | null
+          glucose_value: number | null
+          heart_rate: number | null
+          id: string
+          notes: string | null
+          patient_id: string
+          symptoms: string[] | null
+          systolic: number | null
+          vital_type: string
+          weight_value: number | null
+          wellbeing_score: number | null
+        }
+        Insert: {
+          alert_generated?: boolean
+          alert_severity?: string | null
+          created_at?: string
+          diastolic?: number | null
+          glucose_moment?: string | null
+          glucose_value?: number | null
+          heart_rate?: number | null
+          id?: string
+          notes?: string | null
+          patient_id: string
+          symptoms?: string[] | null
+          systolic?: number | null
+          vital_type: string
+          weight_value?: number | null
+          wellbeing_score?: number | null
+        }
+        Update: {
+          alert_generated?: boolean
+          alert_severity?: string | null
+          created_at?: string
+          diastolic?: number | null
+          glucose_moment?: string | null
+          glucose_value?: number | null
+          heart_rate?: number | null
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          symptoms?: string[] | null
+          systolic?: number | null
+          vital_type?: string
+          weight_value?: number | null
+          wellbeing_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vitals_log_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "vitals_log_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       patient_ai_context: {
