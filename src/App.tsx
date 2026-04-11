@@ -45,6 +45,7 @@ const PatientTraining = lazy(() => import("./pages/PatientTraining"));
 const PatientAlerts = lazy(() => import("./pages/PatientAlerts"));
 const PatientHealthSummary = lazy(() => import("./pages/PatientHealthSummary"));
 const PatientGoalsInsights = lazy(() => import("./pages/PatientGoalsInsights"));
+const PatientVitals = lazy(() => import("./pages/PatientVitals"));
 // PatientTrailsView removed - trails are now professional-only
 const NotFound = lazy(() => import("./pages/NotFound"));
 

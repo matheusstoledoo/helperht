@@ -220,7 +220,7 @@ export default function VitalsEntry({ patientId, patientName }: Props) {
 
       const { data: inserted, error } = await supabase
         .from("vitals_log")
-        .insert(record)
+        .insert([record as any])
         .select("id")
         .single();
 
