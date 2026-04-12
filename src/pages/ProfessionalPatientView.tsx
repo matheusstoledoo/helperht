@@ -155,7 +155,7 @@ const ProfessionalPatientView = () => {
 
         setConsultations(consultationData || []);
 
-        const [diagnosesRes, treatmentsRes, examsRes, documentsRes, goalsRes, nutritionRes, trainingRes, labRes] = await Promise.all([
+        const [diagnosesRes, treatmentsRes, examsRes, documentsRes, goalsRes, nutritionRes, trainingRes, labRes, vitalsRes] = await Promise.all([
           supabase.from("diagnoses").select("id", { count: "exact" }).eq("patient_id", id).eq("status", "active"),
           supabase.from("treatments").select("id", { count: "exact" }).eq("patient_id", id).eq("status", "active"),
           supabase.from("exams").select("id", { count: "exact" }).eq("patient_id", id),
@@ -164,6 +164,7 @@ const ProfessionalPatientView = () => {
           supabase.from("nutrition_plans").select("id", { count: "exact" }).eq("patient_id", id),
           supabase.from("training_plans").select("id", { count: "exact" }).eq("patient_id", id),
           supabase.from("lab_results").select("id", { count: "exact" }).eq("patient_id", id),
+          supabase.from("vital_signs").select("*").eq("patient_id", id).eq("type", "pressao").order("recorded_at", { ascending: false }).limit(1).maybeSingle(),
         ]);
 
         setDiagnosisCount(diagnosesRes.count || 0);
@@ -173,6 +174,9 @@ const ProfessionalPatientView = () => {
         setNutritionCount(nutritionRes.count || 0);
         setTrainingCount(trainingRes.count || 0);
         setLabResultCount(labRes.count || 0);
+        if (vitalsRes.data && vitalsRes.data.systolic) {
+          setLastVitals(`Último: ${vitalsRes.data.systolic}/${vitalsRes.data.diastolic} mmHg · ${format(new Date(vitalsRes.data.recorded_at), "dd/MM/yyyy", { locale: ptBR })}`);
+        }
 
         if (consultationData && consultationData.length > 0) {
           const consultationIds = consultationData.map(c => c.id);
