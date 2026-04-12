@@ -1937,11 +1937,15 @@ export type Database = {
           allergies: string[] | null
           birthdate: string
           blood_type: string | null
+          comorbidities: string[] | null
           created_at: string
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
+          fall_risk: boolean | null
+          frailty_score: number | null
           id: string
           medical_record_number: string | null
+          medications: Json | null
           updated_at: string
           user_id: string
         }
@@ -1950,11 +1954,15 @@ export type Database = {
           allergies?: string[] | null
           birthdate: string
           blood_type?: string | null
+          comorbidities?: string[] | null
           created_at?: string
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
+          fall_risk?: boolean | null
+          frailty_score?: number | null
           id?: string
           medical_record_number?: string | null
+          medications?: Json | null
           updated_at?: string
           user_id: string
         }
@@ -1963,11 +1971,15 @@ export type Database = {
           allergies?: string[] | null
           birthdate?: string
           blood_type?: string | null
+          comorbidities?: string[] | null
           created_at?: string
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
+          fall_risk?: boolean | null
+          frailty_score?: number | null
           id?: string
           medical_record_number?: string | null
+          medications?: Json | null
           updated_at?: string
           user_id?: string
         }
@@ -3132,6 +3144,69 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      vital_signs: {
+        Row: {
+          created_at: string
+          diastolic: number | null
+          glucose: number | null
+          glucose_moment: string | null
+          heart_rate: number | null
+          id: string
+          patient_id: string
+          recorded_at: string
+          symptoms: string[] | null
+          systolic: number | null
+          type: string
+          weight: number | null
+          wellbeing: number | null
+        }
+        Insert: {
+          created_at?: string
+          diastolic?: number | null
+          glucose?: number | null
+          glucose_moment?: string | null
+          heart_rate?: number | null
+          id?: string
+          patient_id: string
+          recorded_at?: string
+          symptoms?: string[] | null
+          systolic?: number | null
+          type: string
+          weight?: number | null
+          wellbeing?: number | null
+        }
+        Update: {
+          created_at?: string
+          diastolic?: number | null
+          glucose?: number | null
+          glucose_moment?: string | null
+          heart_rate?: number | null
+          id?: string
+          patient_id?: string
+          recorded_at?: string
+          symptoms?: string[] | null
+          systolic?: number | null
+          type?: string
+          weight?: number | null
+          wellbeing?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vital_signs_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "vital_signs_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vitals_alerts: {
         Row: {
