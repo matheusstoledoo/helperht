@@ -37,6 +37,7 @@ import {
   Dumbbell,
   Heart,
   FlaskConical,
+  Activity,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -103,7 +104,7 @@ const ProfessionalPatientView = () => {
   const [nutritionCount, setNutritionCount] = useState(0);
   const [trainingCount, setTrainingCount] = useState(0);
   const [labResultCount, setLabResultCount] = useState(0);
-
+  const [lastVitals, setLastVitals] = useState<string>("Nenhum registro");
   const [microExpanded, setMicroExpanded] = useState<Set<string>>(new Set());
   const [macroExpanded, setMacroExpanded] = useState<Set<string>>(new Set());
 
@@ -154,7 +155,7 @@ const ProfessionalPatientView = () => {
 
         setConsultations(consultationData || []);
 
-        const [diagnosesRes, treatmentsRes, examsRes, documentsRes, goalsRes, nutritionRes, trainingRes, labRes] = await Promise.all([
+        const [diagnosesRes, treatmentsRes, examsRes, documentsRes, goalsRes, nutritionRes, trainingRes, labRes, vitalsRes] = await Promise.all([
           supabase.from("diagnoses").select("id", { count: "exact" }).eq("patient_id", id).eq("status", "active"),
           supabase.from("treatments").select("id", { count: "exact" }).eq("patient_id", id).eq("status", "active"),
           supabase.from("exams").select("id", { count: "exact" }).eq("patient_id", id),
@@ -163,6 +164,7 @@ const ProfessionalPatientView = () => {
           supabase.from("nutrition_plans").select("id", { count: "exact" }).eq("patient_id", id),
           supabase.from("training_plans").select("id", { count: "exact" }).eq("patient_id", id),
           supabase.from("lab_results").select("id", { count: "exact" }).eq("patient_id", id),
+          supabase.from("vital_signs").select("*").eq("patient_id", id).eq("type", "pressao").order("recorded_at", { ascending: false }).limit(1).maybeSingle(),
         ]);
 
         setDiagnosisCount(diagnosesRes.count || 0);
@@ -172,6 +174,9 @@ const ProfessionalPatientView = () => {
         setNutritionCount(nutritionRes.count || 0);
         setTrainingCount(trainingRes.count || 0);
         setLabResultCount(labRes.count || 0);
+        if (vitalsRes.data && vitalsRes.data.systolic) {
+          setLastVitals(`Último: ${vitalsRes.data.systolic}/${vitalsRes.data.diastolic} mmHg · ${format(new Date(vitalsRes.data.recorded_at), "dd/MM/yyyy", { locale: ptBR })}`);
+        }
 
         if (consultationData && consultationData.length > 0) {
           const consultationIds = consultationData.map(c => c.id);
@@ -580,6 +585,22 @@ const ProfessionalPatientView = () => {
                     <div>
                       <p className="font-medium text-sm">Treinos</p>
                       <p className="text-xs text-muted-foreground">{trainingCount} plano{trainingCount !== 1 ? "s" : ""}</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                </CardContent>
+              </Card>
+
+              <Card
+                className="cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() => navigate(`${basePath}/sinais-vitais`)}
+              >
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Activity className="h-5 w-5 text-primary shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">Sinais Vitais</p>
+                      <p className="text-xs text-muted-foreground">{lastVitals}</p>
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />

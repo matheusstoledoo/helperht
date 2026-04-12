@@ -40,6 +40,7 @@ const ProfPatientNutrition = lazy(() => import("./pages/ProfPatientNutrition"));
 const ProfPatientTraining = lazy(() => import("./pages/ProfPatientTraining"));
 const ProfPatientHealthSummary = lazy(() => import("./pages/ProfPatientHealthSummary"));
 const ProfPatientLabCharts = lazy(() => import("./pages/ProfPatientLabCharts"));
+const ProfPatientVitals = lazy(() => import("./pages/ProfPatientVitals"));
 const PatientNutrition = lazy(() => import("./pages/PatientNutrition"));
 const PatientTraining = lazy(() => import("./pages/PatientTraining"));
 const PatientAlerts = lazy(() => import("./pages/PatientAlerts"));
@@ -73,6 +74,7 @@ const App = () => (
               <Route path="/prof/paciente/:id/treinos" element={<ProfPatientTraining />} />
               <Route path="/prof/paciente/:id/resumo" element={<ProfPatientHealthSummary />} />
               <Route path="/prof/paciente/:id/graficos-exames" element={<ProfPatientLabCharts />} />
+              <Route path="/prof/paciente/:id/sinais-vitais" element={<ProfPatientVitals />} />
               {/* /prof/paciente/:id/metas removed */}
               <Route path="/prof/paciente/:id/*" element={<ProfessionalPatientView />} />
               <Route path="/patient/:id" element={<PatientDetail />} />
