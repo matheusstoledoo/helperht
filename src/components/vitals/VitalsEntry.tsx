@@ -27,7 +27,7 @@ const Numpad = ({ onDigit, onDelete }: { onDigit: (d: string) => void; onDelete:
   </div>
 );
 
-const getPaBadge = (sys: number, dia: number) => {
+const getPaBadge = (sys: number, dia: number): { label: string; bg: string; color: string; bold?: boolean } => {
   if (sys >= 180 || dia >= 120) return { label: "Crise", bg: "#FDECEA", color: "#E74C3C", bold: true };
   if (sys >= 140 || dia >= 90) return { label: "Alterado", bg: "#FDECEA", color: "#E74C3C" };
   if (sys >= 130 || dia >= 80) return { label: "Atenção", bg: "#FEF3C7", color: "#F59E0B" };
