@@ -70,7 +70,7 @@ const RecentRecords = ({ records, type }: { records: any[]; type: string }) => {
               <p className="text-sm font-medium text-foreground">{formatValue(r)}</p>
               <p className="text-xs text-muted-foreground">{format(new Date(r.recorded_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
             </div>
-            {badge && <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full" style={{ backgroundColor: badge.bg, color: badge.color, fontWeight: badge.bold ? 700 : 600 }}>{badge.label}</span>}
+            {badge && <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full" style={{ backgroundColor: badge.bg, color: badge.color, fontWeight: ('bold' in badge && badge.bold) ? 700 : 600 }}>{badge.label}</span>}
           </div>
         );
       })}
