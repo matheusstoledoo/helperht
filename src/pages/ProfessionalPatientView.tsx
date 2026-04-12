@@ -104,7 +104,7 @@ const ProfessionalPatientView = () => {
   const [nutritionCount, setNutritionCount] = useState(0);
   const [trainingCount, setTrainingCount] = useState(0);
   const [labResultCount, setLabResultCount] = useState(0);
-
+  const [lastVitals, setLastVitals] = useState<string>("Nenhum registro");
   const [microExpanded, setMicroExpanded] = useState<Set<string>>(new Set());
   const [macroExpanded, setMacroExpanded] = useState<Set<string>>(new Set());
 
