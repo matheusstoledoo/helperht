@@ -219,25 +219,32 @@ export const useCreateCareTrail = () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
 
+      const payload = {
+        name: trail.name,
+        professional_id: userData.user.id,
+        description: trail.description || null,
+        specialty: trail.specialty || null,
+        clinical_condition: trail.clinical_condition || null,
+        clinical_objective: trail.clinical_objective || null,
+        duration_days: trail.duration_days ?? 30,
+        status: trail.status ?? "draft",
+        is_template: trail.is_template ?? false,
+        template_category: trail.template_category || null,
+        icon: trail.icon || null,
+      };
+      console.log("[CreateCareTrail] Inserindo trilha:", payload);
+
       const { data, error } = await supabase
         .from("care_trails")
-        .insert([{
-          name: trail.name,
-          professional_id: userData.user.id,
-          description: trail.description,
-          specialty: trail.specialty,
-          clinical_condition: trail.clinical_condition,
-          clinical_objective: trail.clinical_objective,
-          duration_days: trail.duration_days ?? 30,
-          status: trail.status ?? "draft",
-          is_template: trail.is_template ?? false,
-          template_category: trail.template_category,
-          icon: trail.icon,
-        }])
+        .insert([payload])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("[CreateCareTrail] Erro ao criar trilha:", error);
+        throw error;
+      }
+      console.log("[CreateCareTrail] Trilha criada:", data);
       return data as CareTrail;
     },
     onSuccess: () => {
@@ -477,17 +484,24 @@ export const useEnrollPatient = () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
 
+      const payload = {
+        trail_id,
+        patient_id,
+        enrolled_by: userData.user.id,
+      };
+      console.log("[EnrollPatient] Inserindo enrollment:", payload);
+
       const { data, error } = await supabase
         .from("trail_enrollments")
-        .insert({
-          trail_id,
-          patient_id,
-          enrolled_by: userData.user.id,
-        })
+        .insert(payload)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("[EnrollPatient] Erro ao inserir enrollment:", error);
+        throw error;
+      }
+      console.log("[EnrollPatient] Enrollment criado:", data);
       return data;
     },
     onSuccess: (_, variables) => {

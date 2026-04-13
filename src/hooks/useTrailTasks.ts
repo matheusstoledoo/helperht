@@ -313,14 +313,19 @@ export const useGenerateTaskInstances = () => {
         }
       }
 
+      console.log(`[GenerateTaskInstances] Gerando ${tasks.length} tarefas para enrollment ${enrollmentId}`);
       if (tasks.length > 0) {
         // Insert in batches of 100
         for (let i = 0; i < tasks.length; i += 100) {
           const batch = tasks.slice(i, i + 100);
+          console.log(`[GenerateTaskInstances] Inserindo batch ${i / 100 + 1} com ${batch.length} tarefas`);
           const { error } = await supabase
             .from("trail_task_instances")
             .insert(batch);
-          if (error) throw error;
+          if (error) {
+            console.error("[GenerateTaskInstances] Erro ao inserir tarefas:", error);
+            throw error;
+          }
         }
       }
 
