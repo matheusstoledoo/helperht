@@ -11,6 +11,8 @@ import { FullPageLoading } from "@/components/ui/loading-spinner";
 // Eager load landing + auth (first interaction)
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 // Lazy load everything else
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -63,6 +65,8 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/prof/pacientes/novo" element={<NewPatient />} />
               <Route path="/prof/paciente/:id/timeline" element={<PatientTimeline />} />
