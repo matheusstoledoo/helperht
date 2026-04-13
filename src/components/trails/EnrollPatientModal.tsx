@@ -92,6 +92,8 @@ export const EnrollPatientModal = ({
   const handleEnroll = async () => {
     if (!selectedTrailId) return;
     
+    console.log("[EnrollModal] Iniciando inscrição:", { selectedTrailId, patientId });
+    
     const result = await enrollPatient.mutateAsync({
       trail_id: selectedTrailId,
       patient_id: patientId,
@@ -99,11 +101,13 @@ export const EnrollPatientModal = ({
 
     // Generate task instances for the professional
     if (result?.id) {
+      console.log("[EnrollModal] Gerando tarefas para enrollment:", result.id);
       await generateTasks.mutateAsync({
         enrollmentId: result.id,
         trailId: selectedTrailId,
         patientId: patientId,
       });
+      console.log("[EnrollModal] Tarefas geradas com sucesso");
     }
     
     setSelectedTrailId(null);
