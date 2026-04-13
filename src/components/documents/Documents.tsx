@@ -64,7 +64,7 @@ export const Documents = ({ patientId, userRole, userName }: DocumentsProps) => 
       setDocuments(data || []);
     } catch (error) {
       console.error("Error fetching documents:", error);
-      toast.error("Failed to load documents");
+      toast.error("Erro ao carregar documentos");
     } finally {
       setLoading(false);
     }
@@ -147,11 +147,11 @@ export const Documents = ({ patientId, userRole, userName }: DocumentsProps) => 
 
       if (dbError) throw dbError;
 
-      toast.success("Document uploaded successfully");
+      toast.success("Documento enviado com sucesso");
       fetchDocuments();
     } catch (error) {
       console.error("Upload error:", error);
-      toast.error("Failed to upload document");
+      toast.error("Erro ao enviar documento");
     } finally {
       setUploading(false);
     }

@@ -62,7 +62,7 @@ export const DocumentCard = ({ document, userRole, userName, onDelete, style }: 
       setComments(data || []);
     } catch (error) {
       console.error("Error loading comments:", error);
-      toast.error("Failed to load comments");
+      toast.error("Erro ao carregar comentários");
     } finally {
       setLoading(false);
     }
@@ -134,11 +134,11 @@ export const DocumentCard = ({ document, userRole, userName, onDelete, style }: 
 
       if (dbError) throw dbError;
 
-      toast.success("Document deleted");
+      toast.success("Documento excluído");
       onDelete();
     } catch (error) {
       console.error("Delete error:", error);
-      toast.error("Failed to delete document");
+      toast.error("Erro ao excluir documento");
     }
   };
 
@@ -156,12 +156,12 @@ export const DocumentCard = ({ document, userRole, userName, onDelete, style }: 
 
       if (error) throw error;
 
-      toast.success("Comment added");
+      toast.success("Comentário adicionado");
       setNewComment("");
       loadComments();
     } catch (error) {
       console.error("Comment error:", error);
-      toast.error("Failed to add comment");
+      toast.error("Erro ao adicionar comentário");
     }
   };
 
