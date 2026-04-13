@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { email, password, name, role, cpf } = await req.json();
+    const { email, password, name, role, cpf, requesting_professional_id } = await req.json();
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -24,11 +24,34 @@ serve(async (req) => {
       },
     });
 
+    // Check if email already exists
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find((u) => u.email === email);
+
+    if (existingUser) {
+      // Check if patient record exists
+      const { data: existingPatient } = await supabaseAdmin
+        .from("patients")
+        .select("id")
+        .eq("user_id", existingUser.id)
+        .maybeSingle();
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "email_exists",
+          message: "Um usuário com este e-mail já existe.",
+          existingPatientId: existingPatient?.id || null,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+
     // Create user using admin API
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: true, // Auto-confirm email
+      email_confirm: true,
       user_metadata: {
         name,
         role,
@@ -73,22 +96,45 @@ serve(async (req) => {
       console.error("Role error:", roleError);
     }
 
+    let patientId: string | null = null;
+
     // If patient, create patient record
     if (role === "patient") {
-      const { error: patientError } = await supabaseAdmin
+      const { data: patientData, error: patientError } = await supabaseAdmin
         .from("patients")
         .upsert({
           user_id: userId,
-          birthdate: "1999-01-10", // Default birthdate
-        });
+          birthdate: "1999-01-10",
+        })
+        .select("id")
+        .single();
 
       if (patientError) {
         console.error("Patient error:", patientError);
+      } else {
+        patientId = patientData?.id;
+      }
+
+      // Auto-link professional to patient if requesting_professional_id is provided
+      if (requesting_professional_id && patientId) {
+        const { error: linkError } = await supabaseAdmin
+          .from("professional_patient_links")
+          .insert({
+            professional_id: requesting_professional_id,
+            patient_id: patientId,
+            status: "active",
+          });
+
+        if (linkError) {
+          console.error("Link error:", linkError);
+        } else {
+          console.log(`Professional ${requesting_professional_id} linked to patient ${patientId}`);
+        }
       }
     }
 
     return new Response(
-      JSON.stringify({ success: true, userId }),
+      JSON.stringify({ success: true, userId, patientId }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
