@@ -68,12 +68,20 @@ const Auth = () => {
       passwordSchema.parse(loginPassword);
 
       const { error } = await signIn(loginEmail, loginPassword);
+      console.log('[Login] Result:', { error });
 
       if (error) {
-        if (error.message.includes("Invalid login credentials")) {
+        console.error('[Login] Error:', error.message);
+        if (error.message.includes("Email not confirmed")) {
+          toast({
+            title: "Email não confirmado",
+            description: "Confirme seu email antes de fazer login. Verifique sua caixa de entrada.",
+            variant: "destructive",
+          });
+        } else if (error.message.includes("Invalid login credentials")) {
           toast({
             title: "Erro ao entrar",
-            description: "Email ou senha incorretos.",
+            description: "Email ou senha incorretos. Verifique suas credenciais.",
             variant: "destructive",
           });
         } else {
