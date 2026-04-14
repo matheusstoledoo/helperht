@@ -65,8 +65,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     });
 
+    console.log('[SignUp] Auth result:', { userId: data?.user?.id, error });
+
     // Se o cadastro foi bem-sucedido, usar função segura para criar perfil e role
     if (!error && data.user) {
+      // Aguardar sessão estar pronta antes de chamar RPC
+      // O auto-confirm garante que a sessão já está disponível
       const { error: bootstrapError } = await supabase.rpc('bootstrap_user_profile', {
         _name: name,
         _cpf: cpf,
@@ -75,6 +79,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (bootstrapError) {
         console.error('[SignUp] Error bootstrapping profile:', bootstrapError);
+        // Fallback: tentar insert direto na tabela users
+        const { error: directInsertError } = await supabase
+          .from('users')
+          .upsert({
+            id: data.user.id,
+            name,
+            email,
+            role: role as any,
+            cpf,
+          });
+        if (directInsertError) {
+          console.error('[SignUp] Fallback insert also failed:', directInsertError);
+        } else {
+          console.log('[SignUp] Fallback insert succeeded');
+        }
+      } else {
+        console.log('[SignUp] Bootstrap succeeded for user:', data.user.id);
       }
     }
 
