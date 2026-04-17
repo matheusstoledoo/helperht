@@ -40,11 +40,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    return { error };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      return { error };
+    } catch (err: any) {
+      console.error('[SignIn] Network/unexpected error:', err);
+      return { error: { message: err?.message || 'Falha de conexão. Verifique sua internet.' } };
+    }
   };
 
   const signUp = async (email: string, password: string, name: string, role: 'patient' | 'professional', cpf: string) => {
