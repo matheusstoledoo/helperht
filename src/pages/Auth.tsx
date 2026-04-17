@@ -74,13 +74,13 @@ const Auth = () => {
 
       if (error) {
         console.error('[Login] Error:', error.message);
-        if (error.message.includes("Email not confirmed")) {
+        if (error.message?.includes("Email not confirmed")) {
           toast({
             title: "Email não confirmado",
             description: "Confirme seu email antes de fazer login. Verifique sua caixa de entrada.",
             variant: "destructive",
           });
-        } else if (error.message.includes("Invalid login credentials")) {
+        } else if (error.message?.includes("Invalid login credentials")) {
           toast({
             title: "Erro ao entrar",
             description: "Email ou senha incorretos. Verifique suas credenciais.",
@@ -89,7 +89,7 @@ const Auth = () => {
         } else {
           toast({
             title: "Erro ao entrar",
-            description: error.message,
+            description: error.message || "Não foi possível conectar. Tente novamente.",
             variant: "destructive",
           });
         }
