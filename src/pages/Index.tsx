@@ -48,27 +48,30 @@ const Index = () => {
         </div>
         {/* Navigation */}
         <div className="bg-background/80 backdrop-blur-lg border-b border-border/50">
-          <div className="container mx-auto max-w-7xl px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <img src={logo} alt="Helper Logo" className="w-10 h-10 object-contain" />
-                <span className="text-xl font-bold text-foreground">Helper</span>
+          <div className="container mx-auto max-w-7xl px-3 sm:px-6 py-3 sm:py-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <img src={logo} alt="Helper Logo" className="w-8 h-8 sm:w-10 sm:h-10 object-contain shrink-0" />
+                <span className="text-lg sm:text-xl font-bold text-foreground truncate">Helper</span>
               </div>
               
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 shrink-0">
                 <Button 
                   variant="outline"
+                  size="sm"
                   onClick={() => navigate("/auth")}
-                  className="border-accent text-accent hover:bg-accent/10"
+                  className="border-accent text-accent hover:bg-accent/10 px-2 sm:px-4"
                 >
-                  <LogIn className="w-4 h-4 mr-2" />
-                  Entrar
+                  <LogIn className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Entrar</span>
                 </Button>
                 <Button
+                  size="sm"
                   onClick={() => setSignUpOpen(true)}
+                  className="px-2 sm:px-4"
                 >
-                  <Users className="w-4 h-4 mr-2" />
-                  Criar conta
+                  <Users className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Criar conta</span>
                 </Button>
               </div>
             </div>
