@@ -63,11 +63,13 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      // Normalize email: trim + lowercase (mobile keyboards often capitalize first letter)
+      const normalizedEmail = loginEmail.trim().toLowerCase();
       // Validate inputs
-      emailSchema.parse(loginEmail);
+      emailSchema.parse(normalizedEmail);
       passwordSchema.parse(loginPassword);
 
-      const { error } = await signIn(loginEmail, loginPassword);
+      const { error } = await signIn(normalizedEmail, loginPassword);
       console.log('[Login] Result:', { error });
 
       if (error) {
@@ -281,6 +283,11 @@ const Auth = () => {
                 <Input
                   id="login-email"
                   type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   placeholder="seu@email.com"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
