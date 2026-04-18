@@ -240,7 +240,11 @@ export default function PatientGoalsInsights() {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
-  const initialTab = searchParams.get("tab") === "insights" ? "insights" : "objetivos";
+  const tabParam = searchParams.get("tab");
+  const initialTab =
+    tabParam === "insights" ? "insights" :
+    tabParam === "objetivos" ? "objetivos" :
+    "resumo";
   const [activeTab, setActiveTab] = useState(initialTab);
 
   // ── Goals state ──
