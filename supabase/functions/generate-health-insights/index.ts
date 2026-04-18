@@ -45,6 +45,11 @@ Responda EXCLUSIVAMENTE com um JSON válido (sem markdown, sem backticks) no for
   ]
 }
 
+USO DE EVIDÊNCIAS CIENTÍFICAS:
+- Quando disponíveis, CITE as evidências científicas fornecidas para embasar seus insights. Mencione o estudo, o achado numérico e a fonte. Exemplo: "Segundo o estudo PREDIMED (NEJM, 2013), a dieta mediterrânea reduz eventos cardiovasculares em 30%."
+- Priorize evidências de nível A (ensaios clínicos e meta-análises) sobre nível B
+- Conecte os dados clínicos do paciente com as evidências: se o LDL está alto E há evidência sobre meta de LDL, cite o valor-alvo da diretriz
+
 Para "score": número de 0 a 100 representando saúde geral. Para "main_markers": até 6 marcadores mais relevantes. Para "priorities": até 3 prioridades principais.
 Gere entre 4 e 10 insights relevantes. Use "conexao" para insights que cruzam dados de diferentes áreas. Use "atencao" para alertas. Use "positivo" para pontos favoráveis.`;
 
@@ -109,6 +114,11 @@ Responda EXCLUSIVAMENTE com um JSON válido (sem markdown, sem backticks) no for
     }
   ]
 }
+
+USO DE EVIDÊNCIAS CIENTÍFICAS:
+- Quando disponíveis, CITE as evidências científicas fornecidas para embasar seus insights. Mencione o estudo, o achado numérico e a fonte. Exemplo: "Segundo o estudo PREDIMED (NEJM, 2013), a dieta mediterrânea reduz eventos cardiovasculares em 30%."
+- Priorize evidências de nível A (ensaios clínicos e meta-análises) sobre nível B
+- Conecte os dados clínicos do paciente com as evidências: se o LDL está alto E há evidência sobre meta de LDL, cite o valor-alvo da diretriz
 
 Para "score": número de 0 a 100 representando saúde geral. Para "main_markers": até 6 marcadores mais relevantes (PA, glicemia, peso, exames laboratoriais alterados, etc). Para "priorities": até 3 prioridades principais para próxima consulta.
 Gere entre 4 e 10 insights relevantes. Use "conexao" para insights que cruzam dados. Use "atencao" para alertas clínicos. Use "positivo" para pontos favoráveis.`;
@@ -217,6 +227,28 @@ serve(async (req) => {
     const allTreatments = treatRes.data || [];
     const activeTreatments = allTreatments.filter((t: any) => t.status === "active");
     const pastTreatments = allTreatments.filter((t: any) => t.status !== "active").slice(0, 10);
+
+    // Knowledge base query based on active patient goals
+    const activePatientGoalsForKb = (patientGoalsRes.data || []).filter((g: any) => g.status === "ativo");
+    const activeGoalTypes: string[] = activePatientGoalsForKb.length > 0
+      ? Array.from(new Set(activePatientGoalsForKb.map((g: any) => g.goal)))
+      : ["bem_estar_geral", "longevidade"];
+
+    const kbRes = await supabase
+      .from("knowledge_base")
+      .select("title, source_name, published_year, category, summary, key_findings, evidence_level")
+      .eq("is_active", true)
+      .overlaps("goal_relevance", activeGoalTypes)
+      .order("evidence_level", { ascending: true })
+      .limit(12);
+
+    const evidenceSection = (kbRes.data && kbRes.data.length > 0)
+      ? kbRes.data.map((k: any) =>
+          `[${k.evidence_level}] ${k.title} (${k.source_name}, ${k.published_year})\n` +
+          `Resumo: ${k.summary}\n` +
+          `Achados-chave: ${(k.key_findings || []).slice(0, 3).join(" | ")}`
+        ).join("\n\n")
+      : "Sem evidências específicas carregadas";
 
     // Nutrition
     const activeNutrition = (nutritionRes.data || []).find((n: any) => n.status === "active") || null;
@@ -492,7 +524,10 @@ METAS DE SAÚDE ATIVAS:
 ${goalsSection}
 
 OBJETIVOS ATIVOS DO PACIENTE (com métricas e linha de base):
-${patientGoalsSection}`;
+${patientGoalsSection}
+
+EVIDÊNCIAS CIENTÍFICAS RELEVANTES PARA OS OBJETIVOS DO PACIENTE:
+${evidenceSection}`;
 
     console.log("Sending context to AI with sections:", {
       profile: isGeriatricProfile ? "geriatric (≥50)" : "performance (<50)",
