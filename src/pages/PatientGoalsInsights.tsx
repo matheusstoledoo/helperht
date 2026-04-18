@@ -513,7 +513,15 @@ export default function PatientGoalsInsights() {
                   <Card>
                     <CardContent className="p-6">
                       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-                        <ScoreCircle score={healthData.score ?? 0} />
+                        <button
+                          type="button"
+                          onClick={() => setShowScoreDialog(true)}
+                          className="rounded-full transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-pointer"
+                          aria-label="Ver como o score de saúde é calculado"
+                          title="Clique para ver como o score é calculado"
+                        >
+                          <ScoreCircle score={healthData.score ?? 0} />
+                        </button>
                         <div className="min-w-0 flex-1 text-center sm:text-left">
                           <p className="text-xs uppercase tracking-wider text-muted-foreground">Score de saúde</p>
                           <p className="text-xl font-semibold text-foreground mt-1" style={{ color: scoreColor(healthData.score ?? 0) }}>
@@ -522,6 +530,13 @@ export default function PatientGoalsInsights() {
                           {healthData.summary && (
                             <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{healthData.summary}</p>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => setShowScoreDialog(true)}
+                            className="mt-3 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                          >
+                            <Info className="h-3 w-3" /> Como este score é calculado?
+                          </button>
                         </div>
                       </div>
                     </CardContent>
