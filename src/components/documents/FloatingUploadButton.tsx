@@ -5,7 +5,7 @@ import { SmartUploadModal } from "./SmartUploadModal";
 import { cn } from "@/lib/utils";
 
 interface FloatingUploadButtonProps {
-  patientId: string;
+  patientId?: string;
   userId: string;
   userRole: string;
   userName: string;
