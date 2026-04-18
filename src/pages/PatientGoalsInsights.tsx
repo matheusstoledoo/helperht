@@ -325,6 +325,7 @@ export default function PatientGoalsInsights() {
   const [healthData, setHealthData] = useState<HealthData | null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
   const [healthError, setHealthError] = useState<string | null>(null);
+  const [showScoreDialog, setShowScoreDialog] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
