@@ -181,7 +181,7 @@ export default function PatientLabCharts() {
 
       {user && (
         <FloatingUploadButton
-          patientId={patientId || ""}
+          patientId={patientId ?? undefined}
           userId={user.id}
           userRole="patient"
           userName={userName}

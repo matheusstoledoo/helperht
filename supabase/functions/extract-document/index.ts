@@ -108,7 +108,7 @@ O documento pode estar em português ou inglês.
 
 ESTRUTURA DE SAÍDA OBRIGATÓRIA:
 {
-  "suggested_category": "exame_laboratorial | exame_imagem | laudo | receita | resumo_internacao | prescricao_nutricional | prescricao_treino | prescricao_suplementacao | outros",
+  "suggested_category": "Use 'exame_laboratorial' para qualquer documento que contenha resultados numéricos de marcadores sanguíneos, urinários ou bioquímicos (hemograma, glicose, colesterol, TSH, creatinina, etc.) — mesmo que o documento também tenha laudo textual junto. Use 'exame_imagem' apenas para radiografia, tomografia, ressonância, ultrassom ou similares sem valores numéricos de marcadores. Use 'laudo' apenas para documentos sem nenhum valor numérico de marcador laboratorial.",
   "confidence_score": 0.95,
   "document_date": "2024-03-15",
   "professional_name": "Dr. João Silva",
