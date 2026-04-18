@@ -524,7 +524,10 @@ METAS DE SAÚDE ATIVAS:
 ${goalsSection}
 
 OBJETIVOS ATIVOS DO PACIENTE (com métricas e linha de base):
-${patientGoalsSection}`;
+${patientGoalsSection}
+
+EVIDÊNCIAS CIENTÍFICAS RELEVANTES PARA OS OBJETIVOS DO PACIENTE:
+${evidenceSection}`;
 
     console.log("Sending context to AI with sections:", {
       profile: isGeriatricProfile ? "geriatric (≥50)" : "performance (<50)",
