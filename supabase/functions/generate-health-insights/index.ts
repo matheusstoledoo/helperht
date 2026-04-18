@@ -172,9 +172,9 @@ serve(async (req) => {
         .eq("patient_id", patientId)
         .in("status", ["ativo", "pausado"])
         .limit(10),
-      // Vitals log - last 30 days
-      supabase.from("vitals_log")
-        .select("vital_type, systolic, diastolic, heart_rate, glucose_value, glucose_moment, weight_value, symptoms, wellbeing_score, alert_generated, alert_severity, created_at")
+      // Vital signs - last 30 days
+      supabase.from("vital_signs")
+        .select("type, systolic, diastolic, heart_rate, glucose, glucose_moment, weight, symptoms, wellbeing, recorded_at, created_at")
         .eq("patient_id", patientId)
         .gte("created_at", thirtyDaysAgo)
         .order("created_at", { ascending: false })
