@@ -6,6 +6,179 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function calculateHealthScore(data: {
+  labResults: any[],
+  vitals: any[],
+  activeTraining: any,
+  activeNutrition: any,
+  activeDiagnoses: any[],
+  stravaActivities: any[],
+  age: number | null,
+}): { score: number, score_label: string, domain_scores: Record<string, number>, domain_details: Record<string, string> } {
+  const domains: Record<string, number> = {};
+  const details: Record<string, string> = {};
+
+  // ── 1. PRESSÃO ARTERIAL ──
+  const paReadings = data.vitals.filter((v: any) => v.type === "pressao" && v.systolic);
+  if (paReadings.length > 0) {
+    const avgSys = paReadings.reduce((s: number, v: any) => s + v.systolic, 0) / paReadings.length;
+    const avgDia = paReadings.reduce((s: number, v: any) => s + v.diastolic, 0) / paReadings.length;
+    if (avgSys < 120 && avgDia < 80) { domains.pressao = 100; details.pressao = `${Math.round(avgSys)}/${Math.round(avgDia)} mmHg — Ótimo`; }
+    else if (avgSys < 130 && avgDia < 80) { domains.pressao = 80; details.pressao = `${Math.round(avgSys)}/${Math.round(avgDia)} mmHg — Normal-alto`; }
+    else if (avgSys < 140 && avgDia < 90) { domains.pressao = 60; details.pressao = `${Math.round(avgSys)}/${Math.round(avgDia)} mmHg — Grau 1`; }
+    else if (avgSys < 160 && avgDia < 100) { domains.pressao = 40; details.pressao = `${Math.round(avgSys)}/${Math.round(avgDia)} mmHg — Grau 2`; }
+    else { domains.pressao = 20; details.pressao = `${Math.round(avgSys)}/${Math.round(avgDia)} mmHg — Grau 3`; }
+  } else { domains.pressao = 50; details.pressao = "Sem dados — score neutro aplicado"; }
+
+  // ── 2. GLICEMIA ──
+  const glucoseMarkers = data.labResults.filter((l: any) =>
+    ['glicose', 'glicemia', 'glucose', 'glicose em jejum', 'glicemia de jejum'].includes((l.marker_name || '').toLowerCase())
+  );
+  const hba1cMarkers = data.labResults.filter((l: any) =>
+    ['hba1c', 'hemoglobina glicada', 'hemoglobina a1c', 'a1c'].includes((l.marker_name || '').toLowerCase())
+  );
+  const glucoseVitals = data.vitals.filter((v: any) => v.type === "glicemia" && v.glucose);
+  let glucoseScore = 50;
+  if (hba1cMarkers.length > 0) {
+    const hba1c = parseFloat(hba1cMarkers[0].value);
+    if (hba1c < 5.7) { glucoseScore = 100; details.glicemia = `HbA1c ${hba1c}% — Ótimo`; }
+    else if (hba1c < 6.0) { glucoseScore = 75; details.glicemia = `HbA1c ${hba1c}% — Limítrofe`; }
+    else if (hba1c < 6.5) { glucoseScore = 50; details.glicemia = `HbA1c ${hba1c}% — Pré-diabetes`; }
+    else if (hba1c < 7.0) { glucoseScore = 30; details.glicemia = `HbA1c ${hba1c}% — Diabetes controlado`; }
+    else { glucoseScore = 10; details.glicemia = `HbA1c ${hba1c}% — Diabetes descontrolado`; }
+  } else if (glucoseMarkers.length > 0) {
+    const g = parseFloat(glucoseMarkers[0].value);
+    if (g < 100) { glucoseScore = 100; details.glicemia = `Glicose ${g} mg/dL — Ótimo`; }
+    else if (g < 110) { glucoseScore = 75; details.glicemia = `Glicose ${g} mg/dL — Limítrofe`; }
+    else if (g < 126) { glucoseScore = 50; details.glicemia = `Glicose ${g} mg/dL — Pré-diabetes`; }
+    else { glucoseScore = 20; details.glicemia = `Glicose ${g} mg/dL — Critério de diabetes`; }
+  } else if (glucoseVitals.length > 0) {
+    const avg = glucoseVitals.reduce((s: number, v: any) => s + v.glucose, 0) / glucoseVitals.length;
+    if (avg < 100) { glucoseScore = 100; details.glicemia = `Glicemia média ${Math.round(avg)} mg/dL — Ótimo`; }
+    else if (avg < 126) { glucoseScore = 55; details.glicemia = `Glicemia média ${Math.round(avg)} mg/dL — Atenção`; }
+    else { glucoseScore = 20; details.glicemia = `Glicemia média ${Math.round(avg)} mg/dL — Elevada`; }
+  } else { details.glicemia = "Sem dados — score neutro aplicado"; }
+  domains.glicemia = glucoseScore;
+
+  // ── 3. COLESTEROL ──
+  const ldlMarker = data.labResults.find((l: any) =>
+    ['ldl', 'ldl-c', 'ldl colesterol', 'colesterol ldl'].includes((l.marker_name || '').toLowerCase())
+  );
+  const totalChol = data.labResults.find((l: any) =>
+    ['colesterol total', 'cholesterol total', 'colesterol'].includes((l.marker_name || '').toLowerCase())
+  );
+  if (ldlMarker) {
+    const ldl = parseFloat(ldlMarker.value);
+    if (ldl < 100) { domains.colesterol = 100; details.colesterol = `LDL ${ldl} mg/dL — Ótimo`; }
+    else if (ldl < 116) { domains.colesterol = 80; details.colesterol = `LDL ${ldl} mg/dL — Bom`; }
+    else if (ldl < 130) { domains.colesterol = 60; details.colesterol = `LDL ${ldl} mg/dL — Limítrofe`; }
+    else if (ldl < 160) { domains.colesterol = 40; details.colesterol = `LDL ${ldl} mg/dL — Elevado`; }
+    else { domains.colesterol = 15; details.colesterol = `LDL ${ldl} mg/dL — Muito elevado`; }
+  } else if (totalChol) {
+    const tc = parseFloat(totalChol.value);
+    if (tc < 170) { domains.colesterol = 100; details.colesterol = `Col. total ${tc} mg/dL — Ótimo`; }
+    else if (tc < 200) { domains.colesterol = 75; details.colesterol = `Col. total ${tc} mg/dL — Bom`; }
+    else if (tc < 240) { domains.colesterol = 50; details.colesterol = `Col. total ${tc} mg/dL — Limítrofe`; }
+    else { domains.colesterol = 20; details.colesterol = `Col. total ${tc} mg/dL — Elevado`; }
+  } else { domains.colesterol = 50; details.colesterol = "Sem dados — score neutro aplicado"; }
+
+  // ── 4. IMC ──
+  const weightReadings = data.vitals.filter((v: any) => v.type === "peso" && v.weight);
+  const heightMarker = data.labResults.find((l: any) =>
+    ['altura', 'height'].includes((l.marker_name || '').toLowerCase())
+  );
+  if (weightReadings.length > 0 && heightMarker) {
+    const weight = weightReadings[0].weight;
+    const height = parseFloat(heightMarker.value) / 100;
+    const bmi = weight / (height * height);
+    if (bmi < 25) { domains.imc = 100; details.imc = `IMC ${bmi.toFixed(1)} — Eutrófico`; }
+    else if (bmi < 27.5) { domains.imc = 75; details.imc = `IMC ${bmi.toFixed(1)} — Sobrepeso leve`; }
+    else if (bmi < 30) { domains.imc = 55; details.imc = `IMC ${bmi.toFixed(1)} — Sobrepeso`; }
+    else if (bmi < 35) { domains.imc = 35; details.imc = `IMC ${bmi.toFixed(1)} — Obesidade grau 1`; }
+    else { domains.imc = 15; details.imc = `IMC ${bmi.toFixed(1)} — Obesidade grau 2+`; }
+  } else if (weightReadings.length > 0) {
+    domains.imc = 50; details.imc = "Peso registrado mas altura não disponível — score neutro";
+  } else { domains.imc = 50; details.imc = "Sem dados de peso — score neutro aplicado"; }
+
+  // ── 5. ATIVIDADE FÍSICA ──
+  let activityScore = 0;
+  if (data.stravaActivities.length > 0) {
+    const totalMinutes = data.stravaActivities.reduce((s: number, a: any) => s + (a.moving_time || 0), 0) / 60;
+    const weeklyMin = totalMinutes / 4;
+    if (weeklyMin >= 150) { activityScore = 100; details.atividade = `${Math.round(weeklyMin)} min/semana (Strava) — Ótimo`; }
+    else if (weeklyMin >= 90) { activityScore = 75; details.atividade = `${Math.round(weeklyMin)} min/semana — Bom`; }
+    else if (weeklyMin >= 60) { activityScore = 55; details.atividade = `${Math.round(weeklyMin)} min/semana — Regular`; }
+    else if (weeklyMin >= 30) { activityScore = 35; details.atividade = `${Math.round(weeklyMin)} min/semana — Insuficiente`; }
+    else { activityScore = 15; details.atividade = `${Math.round(weeklyMin)} min/semana — Muito baixo`; }
+  } else if (data.activeTraining) {
+    const freq = data.activeTraining.frequency_per_week || 0;
+    if (freq >= 5) { activityScore = 100; details.atividade = `${freq}x/semana (plano) — Ótimo`; }
+    else if (freq >= 4) { activityScore = 80; details.atividade = `${freq}x/semana — Bom`; }
+    else if (freq >= 3) { activityScore = 60; details.atividade = `${freq}x/semana — Regular`; }
+    else if (freq >= 2) { activityScore = 40; details.atividade = `${freq}x/semana — Insuficiente`; }
+    else { activityScore = 20; details.atividade = `${freq}x/semana — Muito baixo`; }
+  } else { activityScore = 10; details.atividade = "Sem dados de atividade física registrados"; }
+  domains.atividade = activityScore;
+
+  // ── 6. SONO/BEM-ESTAR ──
+  const wellbeingReadings = data.vitals.filter((v: any) => v.wellbeing != null);
+  if (wellbeingReadings.length > 0) {
+    const avg = wellbeingReadings.reduce((s: number, v: any) => s + v.wellbeing, 0) / wellbeingReadings.length;
+    if (avg >= 8) { domains.sono = 100; details.sono = `Bem-estar médio ${avg.toFixed(1)}/10 — Ótimo`; }
+    else if (avg >= 6) { domains.sono = 70; details.sono = `Bem-estar médio ${avg.toFixed(1)}/10 — Bom`; }
+    else if (avg >= 4) { domains.sono = 45; details.sono = `Bem-estar médio ${avg.toFixed(1)}/10 — Regular`; }
+    else { domains.sono = 20; details.sono = `Bem-estar médio ${avg.toFixed(1)}/10 — Ruim`; }
+  } else { domains.sono = 50; details.sono = "Sem dados de sono/bem-estar — score neutro aplicado"; }
+
+  // ── 7. NUTRIÇÃO ──
+  if (data.activeNutrition) {
+    const cal = data.activeNutrition.total_calories;
+    const protein = data.activeNutrition.protein_grams;
+    let nutritionScore = 70;
+    if (cal && protein) {
+      const proteinPct = (protein * 4 / cal) * 100;
+      if (proteinPct >= 20 && cal >= 1500 && cal <= 2800) nutritionScore = 90;
+      else if (proteinPct >= 15) nutritionScore = 70;
+      else nutritionScore = 50;
+    }
+    domains.nutricao = nutritionScore;
+    details.nutricao = `Plano ativo: ${cal || 'N/A'} kcal, ${protein || 'N/A'}g proteína`;
+  } else { domains.nutricao = 40; details.nutricao = "Sem plano nutricional ativo"; }
+
+  // ── 8. TABAGISMO ──
+  const smokingDx = data.activeDiagnoses.find((d: any) =>
+    ['tabagismo', 'fumante', 'dependência nicotina', 'uso de tabaco'].some(t =>
+      (d.name || '').toLowerCase().includes(t)
+    )
+  );
+  if (smokingDx) {
+    domains.tabagismo = 0;
+    details.tabagismo = "Tabagismo ativo registrado";
+  } else {
+    domains.tabagismo = 100;
+    details.tabagismo = "Sem tabagismo registrado";
+  }
+
+  // ── PENALIZAÇÕES ──
+  const severeConditions = data.activeDiagnoses.filter((d: any) =>
+    d.severity === 'severe' || d.severity === 'grave'
+  );
+  const totalPenalty = Math.min(severeConditions.length * 5, 20);
+
+  const domainValues = Object.values(domains);
+  const rawScore = domainValues.reduce((s, v) => s + v, 0) / domainValues.length;
+  const finalScore = Math.max(0, Math.min(100, Math.round(rawScore - totalPenalty)));
+
+  let score_label: string;
+  if (finalScore >= 85) score_label = "Ótimo";
+  else if (finalScore >= 70) score_label = "Bom";
+  else if (finalScore >= 55) score_label = "Regular";
+  else if (finalScore >= 40) score_label = "Atenção";
+  else score_label = "Crítico";
+
+  return { score: finalScore, score_label, domain_scores: domains, domain_details: details };
+}
+
 const PERFORMANCE_SYSTEM_PROMPT = `Você é um especialista em medicina esportiva e longevidade para adultos ativos.
 Analise os dados de saúde com foco em:
 - Performance física: VO2max estimado, zonas de treino, recuperação, HRV
