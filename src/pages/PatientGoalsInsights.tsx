@@ -26,11 +26,10 @@ import {
   Target, Plus, Calendar as CalendarIcon, Heart, Zap, Dumbbell,
   TrendingDown, TrendingUp, Activity, Shield, Smile, Edit, Archive,
   Sparkles, AlertTriangle, CheckCircle2, Info, Apple, Link2,
-  RefreshCw, MessageCircle, FileText, ArrowRight, FlaskConical, Loader2,
+  RefreshCw, FlaskConical, Pill, GitMerge, Loader2,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { DifyChatTab } from "@/components/chat/DifyChatTab";
 
 // ── Goal types & config ──
 
@@ -108,7 +107,13 @@ const STATUS_CONFIG: Record<GoalStatus, { label: string; className: string }> = 
   cancelado: { label: "Cancelado", className: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800" },
 };
 
-// ── Insight types & helpers ──
+// ── Health insights (unified data from edge function) ──
+
+interface MainMarker {
+  name: string;
+  value: string;
+  status: "normal" | "attention" | "altered";
+}
 
 interface Insight {
   category: string;
@@ -117,86 +122,79 @@ interface Insight {
   priority: "info" | "attention" | "positive";
 }
 
-interface InsightsData {
+interface HealthData {
+  score: number;
+  score_label: string;
   summary: string;
+  main_markers: MainMarker[];
+  priorities: string[];
   insights: Insight[];
 }
 
-interface Marcador {
-  nome: string;
-  valor: string;
-  unidade: string;
-  status: "normal" | "atenção" | "alterado";
-  acao?: string;
-}
-
-interface AnaliseCompleta {
-  score: number;
-  resumo_geral: string;
-  marcadores: Marcador[];
-  prioridades: string[];
-  proximos_passos: string;
-}
-
-interface DocRow {
-  id: string;
-  file_name: string;
-  created_at: string;
-  analise_completa: AnaliseCompleta | null;
-}
-
 function scoreColor(score: number) {
-  if (score <= 40) return "hsl(0 84% 60%)";
-  if (score <= 70) return "hsl(45 93% 47%)";
-  if (score <= 89) return "hsl(142 71% 45%)";
-  return "hsl(142 76% 36%)";
-}
-
-function scoreLabel(score: number) {
-  if (score <= 40) return "Precisa de atenção";
-  if (score <= 70) return "Regular";
-  if (score <= 89) return "Bom — com pontos de atenção";
-  return "Ótimo";
-}
-
-function statusDotClass(status: string) {
-  if (status === "normal") return "bg-green-500";
-  if (status === "atenção") return "bg-amber-500";
-  return "bg-destructive";
-}
-
-function statusBadgeVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
-  if (status === "alterado") return "destructive";
-  if (status === "atenção") return "secondary";
-  return "outline";
+  if (score >= 80) return "hsl(142 71% 45%)"; // verde
+  if (score >= 60) return "hsl(45 93% 47%)";  // amarelo
+  if (score >= 40) return "hsl(25 95% 53%)";  // laranja
+  return "hsl(0 84% 60%)";                     // vermelho
 }
 
 function ScoreCircle({ score }: { score: number }) {
-  const size = 80;
-  const stroke = 6;
+  const size = 120;
+  const stroke = 10;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (score / 100) * circumference;
+  const offset = circumference - (Math.max(0, Math.min(100, score)) / 100) * circumference;
   const color = scoreColor(score);
   return (
     <svg width={size} height={size} className="shrink-0">
       <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth={stroke} />
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset} transform={`rotate(-90 ${size / 2} ${size / 2})`} className="transition-all duration-700" />
-      <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle" className="text-xl font-bold" fill={color}>{score}</text>
+      <circle
+        cx={size / 2} cy={size / 2} r={radius} fill="none"
+        stroke={color} strokeWidth={stroke} strokeLinecap="round"
+        strokeDasharray={circumference} strokeDashoffset={offset}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        className="transition-all duration-700"
+      />
+      <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle" className="text-3xl font-bold" fill={color}>
+        {score}
+      </text>
     </svg>
   );
 }
 
+function markerStatusClasses(status: string) {
+  switch (status) {
+    case "normal":
+      return "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30";
+    case "attention":
+      return "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30";
+    case "altered":
+      return "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
+}
+
+function markerStatusLabel(status: string) {
+  switch (status) {
+    case "normal": return "Normal";
+    case "attention": return "Atenção";
+    case "altered": return "Alterado";
+    default: return status;
+  }
+}
+
 const categoryIcon = (cat: string) => {
   switch (cat) {
-    case "exames": return <Activity className="h-4 w-4" />;
+    case "exames": return <FlaskConical className="h-4 w-4" />;
     case "nutricao": return <Apple className="h-4 w-4" />;
-    case "treino": return <Dumbbell className="h-4 w-4" />;
-    case "conexao": return <Link2 className="h-4 w-4" />;
+    case "treino": return <Activity className="h-4 w-4" />;
+    case "medicacao": return <Pill className="h-4 w-4" />;
     case "atencao": return <AlertTriangle className="h-4 w-4" />;
     case "positivo": return <CheckCircle2 className="h-4 w-4" />;
-    case "medicacao": return <Heart className="h-4 w-4" />;
+    case "conexao": return <GitMerge className="h-4 w-4" />;
     case "meta": return <Target className="h-4 w-4" />;
+    case "estilo_de_vida": return <Heart className="h-4 w-4" />;
     default: return <Info className="h-4 w-4" />;
   }
 };
@@ -218,17 +216,20 @@ const categoryLabel = (cat: string) => {
 
 const priorityStyles = (priority: string) => {
   switch (priority) {
-    case "attention": return "border-amber-500/30 bg-amber-50 dark:bg-amber-950/20";
-    case "positive": return "border-green-500/30 bg-green-50 dark:bg-green-950/20";
+    case "attention": return "border-amber-500/40 bg-amber-50 dark:bg-amber-950/20";
+    case "positive": return "border-green-500/40 bg-green-50 dark:bg-green-950/20";
     default: return "border-border bg-card";
   }
 };
 
-const priorityIcon = (priority: string) => {
+const priorityBadge = (priority: string) => {
   switch (priority) {
-    case "attention": return <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />;
-    case "positive": return <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />;
-    default: return <Info className="h-4 w-4 text-primary shrink-0" />;
+    case "attention":
+      return <Badge variant="outline" className="text-xs gap-1 border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10"><AlertTriangle className="h-3 w-3" />Atenção</Badge>;
+    case "positive":
+      return <Badge variant="outline" className="text-xs gap-1 border-green-500/40 text-green-700 dark:text-green-400 bg-green-500/10"><CheckCircle2 className="h-3 w-3" />Positivo</Badge>;
+    default:
+      return <Badge variant="outline" className="text-xs gap-1"><Info className="h-3 w-3" />Info</Badge>;
   }
 };
 
@@ -260,23 +261,33 @@ export default function PatientGoalsInsights() {
   const [formMetrics, setFormMetrics] = useState<Record<string, string>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // ── Insights state ──
-  const [insightsData, setInsightsData] = useState<InsightsData | null>(null);
-  const [insightsLoading, setInsightsLoading] = useState(false);
-  const [insightsGenerated, setInsightsGenerated] = useState(false);
-
-  // ── Health Summary state ──
-  const [analise, setAnalise] = useState<AnaliseCompleta | null>(null);
-  const [pendingDocs, setPendingDocs] = useState<DocRow[]>([]);
-  const [summaryLoading, setSummaryLoading] = useState(true);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [analyzeProgress, setAnalyzeProgress] = useState({ current: 0, total: 0 });
-  const [reanalyzing, setReanalyzing] = useState(false);
-  const [latestDocId, setLatestDocId] = useState<string | null>(null);
+  // ── Unified health data state (single source for Resumo + Insights) ──
+  const [healthData, setHealthData] = useState<HealthData | null>(null);
+  const [healthLoading, setHealthLoading] = useState(true);
+  const [healthError, setHealthError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
   }, [user, authLoading, navigate]);
+
+  // ── Single edge function call powering Resumo + Insights ──
+  const fetchHealthData = useCallback(async () => {
+    if (!user) return;
+    setHealthLoading(true);
+    setHealthError(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-health-insights");
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      setHealthData(data as HealthData);
+    } catch (e: any) {
+      const msg = e?.message || "Erro ao gerar análise de saúde.";
+      setHealthError(typeof msg === "string" ? msg : "Erro ao gerar análise.");
+      sonnerToast.error(typeof msg === "string" ? msg : "Erro ao gerar análise.");
+    } finally {
+      setHealthLoading(false);
+    }
+  }, [user]);
 
   // ── Goals logic ──
   const fetchGoals = async () => {
@@ -294,63 +305,12 @@ export default function PatientGoalsInsights() {
     setGoalsLoading(false);
   };
 
-  // ── Health Summary fetch ──
-  const fetchSummaryData = useCallback(async () => {
-    if (!user) return;
-    setSummaryLoading(true);
-    const { data: patient } = await supabase.from("patients").select("id").eq("user_id", user.id).maybeSingle();
-    if (!patient?.id) { setSummaryLoading(false); return; }
-
-    const [latestRes, pendingRes] = await Promise.all([
-      supabase.from("documents").select("id, file_name, created_at, analise_completa")
-        .eq("patient_id", patient.id).eq("category", "exame_laboratorial")
-        .not("analise_completa", "is", null).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("documents").select("id, file_name, created_at, analise_completa")
-        .eq("patient_id", patient.id).eq("category", "exame_laboratorial")
-        .is("analise_completa", null).order("created_at", { ascending: false }),
-    ]);
-
-    if (latestRes.data?.analise_completa) {
-      setAnalise(latestRes.data.analise_completa as unknown as AnaliseCompleta);
-      setLatestDocId(latestRes.data.id);
-    } else { setAnalise(null); setLatestDocId(null); }
-    setPendingDocs((pendingRes.data || []) as unknown as DocRow[]);
-    setSummaryLoading(false);
-  }, [user]);
-
-  const handleAnalyzeAll = async () => {
-    if (!user || pendingDocs.length === 0) return;
-    setAnalyzing(true);
-    setAnalyzeProgress({ current: 0, total: pendingDocs.length });
-    let successCount = 0;
-    let skippedCount = 0;
-    for (let i = 0; i < pendingDocs.length; i++) {
-      setAnalyzeProgress({ current: i + 1, total: pendingDocs.length });
-      const { count } = await supabase.from("lab_results").select("id", { count: "exact", head: true }).eq("document_id", pendingDocs[i].id).eq("user_id", user.id);
-      if (!count || count === 0) { skippedCount++; continue; }
-      const { error } = await supabase.functions.invoke("analyze-lab", { body: { document_id: pendingDocs[i].id, user_id: user.id } });
-      if (!error) successCount++;
+  useEffect(() => {
+    if (user) {
+      fetchGoals();
+      fetchHealthData();
     }
-    setAnalyzing(false);
-    await fetchSummaryData();
-    if (skippedCount > 0 && successCount === 0) {
-      toast({ title: "Extração pendente", description: "Processe os documentos primeiro em Exames e Documentos.", variant: "destructive" });
-    } else if (successCount > 0) {
-      toast({ title: `${successCount} exame${successCount > 1 ? "s" : ""} analisado${successCount > 1 ? "s" : ""} com sucesso!` });
-    }
-  };
-
-  const handleReanalyze = async () => {
-    if (!user || !latestDocId) return;
-    setReanalyzing(true);
-    const { error } = await supabase.functions.invoke("analyze-lab", { body: { document_id: latestDocId, user_id: user.id } });
-    if (error) toast({ title: "Erro ao reanalisar", variant: "destructive" });
-    else toast({ title: "Reanálise concluída!" });
-    setReanalyzing(false);
-    await fetchSummaryData();
-  };
-
-  useEffect(() => { if (user) { fetchGoals(); fetchSummaryData(); } }, [user]);
+  }, [user, fetchHealthData]);
 
   const buildBaselineSnapshot = async (): Promise<Record<string, any>> => {
     if (!user || !patientId) return {};
@@ -391,15 +351,22 @@ export default function PatientGoalsInsights() {
       if (editingId) { ({ error } = await supabase.from("patient_goals").update(payload).eq("id", editingId)); }
       else { ({ error } = await supabase.from("patient_goals").insert(payload)); }
       if (error) throw error;
-      toast({ title: editingId ? "Objetivo atualizado!" : "Objetivo criado!", description: "Seu objetivo de saúde foi salvo com sucesso." });
-      resetForm(); setShowModal(false); fetchGoals();
+      toast({ title: editingId ? "Objetivo atualizado!" : "Objetivo criado!", description: "Reanalisando seus dados..." });
+      resetForm(); setShowModal(false);
+      await fetchGoals();
+      // Re-run unified analysis since the goal changed
+      fetchHealthData();
     } catch (e: any) { console.error(e); toast({ title: "Erro ao salvar", description: e.message, variant: "destructive" }); }
     finally { setSaving(false); }
   };
 
   const handleArchive = async (id: string) => {
     const { error } = await supabase.from("patient_goals").update({ status: "cancelado" }).eq("id", id);
-    if (!error) { toast({ title: "Objetivo arquivado" }); fetchGoals(); }
+    if (!error) {
+      toast({ title: "Objetivo arquivado" });
+      await fetchGoals();
+      fetchHealthData();
+    }
   };
 
   const openEdit = (goal: PatientGoal) => {
@@ -424,21 +391,22 @@ export default function PatientGoalsInsights() {
 
   const currentMetrics = useMemo(() => !formGoal ? [] : GOAL_METRICS[formGoal] || [], [formGoal]);
 
-  // ── Insights logic ──
-  const generateInsights = async () => {
-    if (!user) { sonnerToast.error("Você precisa estar logado para gerar insights."); return; }
-    setInsightsLoading(true);
-    try {
-      const { data: result, error } = await supabase.functions.invoke("generate-health-insights");
-      if (error) throw error;
-      if (result?.error) { sonnerToast.error(result.error); return; }
-      setInsightsData(result as InsightsData);
-      setInsightsGenerated(true);
-    } catch (e: any) {
-      const message = e?.message || "Erro ao gerar insights. Tente novamente.";
-      sonnerToast.error(typeof message === "string" ? message : "Erro ao gerar insights.");
-    } finally { setInsightsLoading(false); }
-  };
+  // ── Loading skeleton shared by Resumo + Insights ──
+  const HealthLoadingSkeleton = () => (
+    <Card>
+      <CardContent className="p-6 space-y-3">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-28 w-28 rounded-full" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-3/4" />
+          </div>
+        </div>
+        <Skeleton className="h-20 w-full" />
+      </CardContent>
+    </Card>
+  );
 
   // ── Render ──
   return (
@@ -452,7 +420,6 @@ export default function PatientGoalsInsights() {
         {authLoading ? (
           <Card><CardContent className="p-8 text-center"><RefreshCw className="h-8 w-8 mx-auto animate-spin text-muted-foreground" /><p className="text-sm text-muted-foreground mt-2">Carregando...</p></CardContent></Card>
         ) : (
-          <>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="w-full">
               <TabsTrigger value="resumo" className="flex-1 gap-1.5">
@@ -468,88 +435,92 @@ export default function PatientGoalsInsights() {
 
             {/* ═══ TAB: RESUMO DE SAÚDE ═══ */}
             <TabsContent value="resumo" className="space-y-4 mt-4">
-              {/* Pending docs banner */}
-              {!summaryLoading && pendingDocs.length > 0 && (
-                <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-start gap-3">
-                      <FlaskConical className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
-                          {pendingDocs.length} exame{pendingDocs.length > 1 ? "s" : ""} aguardando análise
-                        </p>
-                        <ul className="mt-1 space-y-0.5">
-                          {pendingDocs.slice(0, 3).map((doc) => (
-                            <li key={doc.id} className="text-xs text-amber-700 dark:text-amber-400 truncate">• {doc.file_name}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                    <Button onClick={handleAnalyzeAll} disabled={analyzing} className="w-full gap-2" size="sm">
-                      {analyzing ? (<><Loader2 className="h-4 w-4 animate-spin" />Analisando {analyzeProgress.current}/{analyzeProgress.total}...</>) : (<><FlaskConical className="h-4 w-4" />Analisar agora</>)}
+              {healthLoading ? (
+                <HealthLoadingSkeleton />
+              ) : healthError && !healthData ? (
+                <Card>
+                  <CardContent className="p-8 text-center space-y-3">
+                    <AlertTriangle className="h-10 w-10 mx-auto text-amber-500" />
+                    <p className="text-sm text-muted-foreground">{healthError}</p>
+                    <Button onClick={fetchHealthData} variant="outline" className="gap-2">
+                      <RefreshCw className="h-4 w-4" /> Tentar novamente
                     </Button>
                   </CardContent>
                 </Card>
-              )}
-
-              {summaryLoading ? (
-                <Card><CardContent className="p-6"><Skeleton className="h-20 w-full" /></CardContent></Card>
-              ) : analise ? (
-                <Card>
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-center gap-4">
-                      <ScoreCircle score={analise.score} />
-                      <div className="min-w-0">
-                        <p className="text-base font-semibold text-foreground">{scoreLabel(analise.score)}</p>
-                        <p className="text-sm text-muted-foreground mt-1">{analise.resumo_geral}</p>
+              ) : healthData ? (
+                <>
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+                        <ScoreCircle score={healthData.score ?? 0} />
+                        <div className="min-w-0 flex-1 text-center sm:text-left">
+                          <p className="text-xs uppercase tracking-wider text-muted-foreground">Score de saúde</p>
+                          <p className="text-xl font-semibold text-foreground mt-1" style={{ color: scoreColor(healthData.score ?? 0) }}>
+                            {healthData.score_label || "—"}
+                          </p>
+                          {healthData.summary && (
+                            <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{healthData.summary}</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    {analise.marcadores?.length > 0 && (
-                      <div className="border-t pt-3 space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground mb-2">Marcadores principais</p>
-                        {analise.marcadores.filter(m => m.status !== "normal").slice(0, 4).map((m, i) => (
-                          <div key={i} className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-2">
-                              <div className={`h-2 w-2 rounded-full ${statusDotClass(m.status)}`} />
-                              <span className="font-medium">{m.nome}</span>
-                              <span className="text-xs text-muted-foreground">{m.valor} {m.unidade}</span>
+                    </CardContent>
+                  </Card>
+
+                  {healthData.main_markers?.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <FlaskConical className="h-4 w-4 text-primary" /> Marcadores principais
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {healthData.main_markers.map((m, i) => (
+                          <div key={i} className="flex items-center justify-between gap-2 py-1.5 border-b last:border-0">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-foreground truncate">{m.name}</p>
+                              <p className="text-xs text-muted-foreground">{m.value}</p>
                             </div>
-                            <Badge variant={statusBadgeVariant(m.status)} className="text-xs capitalize">{m.status}</Badge>
+                            <Badge variant="outline" className={`text-xs shrink-0 ${markerStatusClasses(m.status)}`}>
+                              {markerStatusLabel(m.status)}
+                            </Badge>
                           </div>
                         ))}
-                      </div>
-                    )}
-                    {analise.prioridades?.length > 0 && (
-                      <div className="border-t pt-3">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-amber-500" /> Prioridades</p>
-                        <ul className="space-y-1">
-                          {analise.prioridades.slice(0, 3).map((p, i) => (
-                            <li key={i} className="text-sm text-foreground flex items-start gap-2">
-                              <span className="flex items-center justify-center h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs font-bold shrink-0">{i + 1}</span>
-                              {p}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {healthData.priorities?.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 text-amber-500" /> Prioridades
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ol className="space-y-2">
+                          {healthData.priorities.slice(0, 3).map((p, i) => (
+                            <li key={i} className="flex items-start gap-3">
+                              <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary text-primary-foreground text-xs font-bold shrink-0">{i + 1}</span>
+                              <span className="text-sm text-foreground leading-relaxed">{p}</span>
                             </li>
                           ))}
-                        </ul>
-                      </div>
-                    )}
-                    <div className="flex gap-2 pt-1">
-                      <Button variant="outline" size="sm" onClick={handleReanalyze} disabled={reanalyzing} className="gap-1.5">
-                        {reanalyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                        Reanalisar
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => navigate("/pac/resumo")} className="gap-1.5">
-                        Ver completo <ArrowRight className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                        </ol>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  <Button variant="outline" onClick={fetchHealthData} disabled={healthLoading} className="w-full gap-2">
+                    {healthLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                    Reanalisar
+                  </Button>
+                </>
               ) : (
                 <Card>
-                  <CardContent className="p-6 text-center space-y-2">
-                    <FileText className="h-8 w-8 mx-auto text-muted-foreground/50" />
-                    <p className="text-sm text-muted-foreground">Nenhum exame analisado ainda</p>
-                    <Button variant="outline" size="sm" onClick={() => navigate("/pac/documentos")} className="gap-1">
-                      Ir para Exames <ArrowRight className="h-4 w-4" />
+                  <CardContent className="p-8 text-center space-y-3">
+                    <Sparkles className="h-10 w-10 mx-auto text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground">Sem dados disponíveis ainda.</p>
+                    <Button onClick={fetchHealthData} variant="outline" className="gap-2">
+                      <Sparkles className="h-4 w-4" /> Gerar análise
                     </Button>
                   </CardContent>
                 </Card>
@@ -642,61 +613,64 @@ export default function PatientGoalsInsights() {
 
             {/* ═══ TAB: INSIGHTS ═══ */}
             <TabsContent value="insights" className="space-y-4 mt-4">
-              {!insightsGenerated ? (
+              {healthLoading ? (
+                <HealthLoadingSkeleton />
+              ) : healthError && !healthData ? (
                 <Card>
-                  <CardContent className="p-8 text-center space-y-4">
-                    <Sparkles className="h-12 w-12 mx-auto text-primary/60" />
-                    <div>
-                      <h3 className="text-lg font-semibold text-foreground">Insights personalizados</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Nossa IA analisa seus exames, diagnósticos, tratamentos, nutrição e treinos para gerar
-                        observações conectadas e relevantes para sua saúde.
-                      </p>
-                    </div>
-                    <Button onClick={generateInsights} disabled={insightsLoading} size="lg" className="gap-2">
-                      {insightsLoading ? (<><RefreshCw className="h-4 w-4 animate-spin" />Analisando seus dados...</>) : (<><Sparkles className="h-4 w-4" />Gerar insights</>)}
+                  <CardContent className="p-8 text-center space-y-3">
+                    <AlertTriangle className="h-10 w-10 mx-auto text-amber-500" />
+                    <p className="text-sm text-muted-foreground">{healthError}</p>
+                    <Button onClick={fetchHealthData} variant="outline" className="gap-2">
+                      <RefreshCw className="h-4 w-4" /> Tentar novamente
                     </Button>
-                    <p className="text-xs text-muted-foreground">Os insights são educativos e não substituem a orientação médica.</p>
                   </CardContent>
                 </Card>
-              ) : insightsData ? (
+              ) : healthData && healthData.insights?.length > 0 ? (
                 <>
-                  {insightsData.summary && (
-                    <Card><CardContent className="p-4"><div className="flex items-start gap-3"><Sparkles className="h-5 w-5 text-primary shrink-0 mt-0.5" /><p className="text-sm text-foreground leading-relaxed">{insightsData.summary}</p></div></CardContent></Card>
-                  )}
-                  {insightsData.insights.length > 0 ? (
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-medium text-foreground">Seus insights</h3>
-                      {insightsData.insights.map((insight, i) => (
-                        <Card key={i} className={`border ${priorityStyles(insight.priority)}`}>
-                          <CardContent className="p-4">
-                            <div className="flex items-start gap-3">
-                              {priorityIcon(insight.priority)}
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                  <p className="text-sm font-medium text-foreground">{insight.title}</p>
-                                  <Badge variant="outline" className="text-xs gap-1 shrink-0">{categoryIcon(insight.category)}{categoryLabel(insight.category)}</Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">{insight.description}</p>
-                              </div>
+                  <div className="space-y-3">
+                    {healthData.insights.map((insight, i) => (
+                      <Card key={i} className={`border ${priorityStyles(insight.priority)}`}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-3">
+                            <div className="h-8 w-8 rounded-lg bg-background border flex items-center justify-center shrink-0 text-primary">
+                              {categoryIcon(insight.category)}
                             </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  ) : (
-                    <Card><CardContent className="p-6 text-center"><p className="text-muted-foreground">Nenhum insight gerado no momento.</p></CardContent></Card>
-                  )}
-                  <Button variant="outline" onClick={generateInsights} disabled={insightsLoading} className="w-full gap-2">
-                    {insightsLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+                                <p className="text-sm font-semibold text-foreground">{insight.title}</p>
+                                {priorityBadge(insight.priority)}
+                              </div>
+                              <Badge variant="outline" className="text-xs gap-1 mb-2">
+                                {categoryIcon(insight.category)} {categoryLabel(insight.category)}
+                              </Badge>
+                              <p className="text-sm text-muted-foreground leading-relaxed">{insight.description}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                  <Button variant="outline" onClick={fetchHealthData} disabled={healthLoading} className="w-full gap-2">
+                    {healthLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                     Gerar novos insights
                   </Button>
-                  <p className="text-xs text-muted-foreground text-center">⚕️ Estes insights são gerados por inteligência artificial e têm caráter informativo. Sempre consulte seus profissionais de saúde para decisões clínicas.</p>
+                  <p className="text-xs text-muted-foreground text-center">
+                    ⚕️ Estes insights são gerados por inteligência artificial e têm caráter informativo. Sempre consulte seus profissionais de saúde para decisões clínicas.
+                  </p>
                 </>
-              ) : null}
+              ) : (
+                <Card>
+                  <CardContent className="p-8 text-center space-y-3">
+                    <Sparkles className="h-10 w-10 mx-auto text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground">Nenhum insight disponível ainda.</p>
+                    <Button onClick={fetchHealthData} variant="outline" className="gap-2">
+                      <Sparkles className="h-4 w-4" /> Gerar insights
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
           </Tabs>
-          </>
         )}
       </div>
 
