@@ -643,6 +643,17 @@ Fonte: Strava (dados sincronizados)`;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
+    // Compute deterministic health score (Life's Essential 8 — AHA)
+    const healthScore = calculateHealthScore({
+      labResults,
+      vitals,
+      activeTraining,
+      activeNutrition,
+      activeDiagnoses,
+      stravaActivities,
+      age,
+    });
+
     // Select system prompt based on age
     const systemPrompt = isGeriatricProfile ? GERIATRIC_SYSTEM_PROMPT : PERFORMANCE_SYSTEM_PROMPT;
 
