@@ -671,6 +671,13 @@ Comorbidades: ${comorbidities}
 Medicamentos: ${medications}
 Dados do período ${periodStart.toLocaleDateString("pt-BR")} a ${today.toLocaleDateString("pt-BR")}:
 
+SCORE DE SAÚDE CALCULADO (Life's Essential 8 — AHA):
+Score final: ${healthScore.score}/100 — ${healthScore.score_label}
+Sub-scores por domínio:
+${Object.entries(healthScore.domain_scores).map(([k, v]) => `- ${k}: ${v}/100 — ${healthScore.domain_details[k]}`).join('\n')}
+IMPORTANTE: Use este score como dado fixo. Não recalcule nem altere o valor.
+Explique os sub-scores mais baixos como prioridades nos insights.
+
 DIAGNÓSTICOS ATIVOS:
 ${diagSection}
 
