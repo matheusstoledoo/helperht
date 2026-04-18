@@ -254,10 +254,10 @@ serve(async (req) => {
     const vitals = vitalsRes.data || [];
     let vitalsSection = "Sem registros de sinais vitais no período";
     if (vitals.length > 0) {
-      const paReadings = vitals.filter((v: any) => v.vital_type === "pa");
-      const glucoseReadings = vitals.filter((v: any) => v.vital_type === "glicemia");
-      const weightReadings = vitals.filter((v: any) => v.vital_type === "peso");
-      const symptomReadings = vitals.filter((v: any) => v.vital_type === "sintoma");
+      const paReadings = vitals.filter((v: any) => v.type === "pa");
+      const glucoseReadings = vitals.filter((v: any) => v.type === "glicemia");
+      const weightReadings = vitals.filter((v: any) => v.type === "peso");
+      const symptomReadings = vitals.filter((v: any) => v.type === "sintoma");
 
       const parts: string[] = [];
 
@@ -269,26 +269,26 @@ serve(async (req) => {
         parts.push(`PRESSÃO ARTERIAL (${paReadings.length} medições):
   Média: ${avgSys}/${avgDia} mmHg | FC média: ${avgHr} bpm
   Medições elevadas (≥160/100): ${highCount} (${Math.round(highCount / paReadings.length * 100)}%)
-  Registros: ${paReadings.slice(0, 10).map((v: any) => `${v.systolic}/${v.diastolic} FC${v.heart_rate} (${new Date(v.created_at).toLocaleDateString("pt-BR")})`).join(", ")}`);
+  Registros: ${paReadings.slice(0, 10).map((v: any) => `${v.systolic}/${v.diastolic} FC${v.heart_rate} (${new Date(v.recorded_at || v.created_at).toLocaleDateString("pt-BR")})`).join(", ")}`);
       }
 
       if (glucoseReadings.length > 0) {
-        const avgGlc = Math.round(glucoseReadings.reduce((s: number, v: any) => s + (v.glucose_value || 0), 0) / glucoseReadings.length);
-        const hypoCount = glucoseReadings.filter((v: any) => v.glucose_value < 70).length;
-        const hyperCount = glucoseReadings.filter((v: any) => v.glucose_value > 250).length;
+        const avgGlc = Math.round(glucoseReadings.reduce((s: number, v: any) => s + (v.glucose || 0), 0) / glucoseReadings.length);
+        const hypoCount = glucoseReadings.filter((v: any) => v.glucose < 70).length;
+        const hyperCount = glucoseReadings.filter((v: any) => v.glucose > 250).length;
         parts.push(`GLICEMIA (${glucoseReadings.length} medições):
   Média: ${avgGlc} mg/dL
   Hipoglicemias (<70): ${hypoCount} | Hiperglicemias (>250): ${hyperCount}
-  Registros: ${glucoseReadings.slice(0, 10).map((v: any) => `${v.glucose_value} mg/dL ${v.glucose_moment || ""} (${new Date(v.created_at).toLocaleDateString("pt-BR")})`).join(", ")}`);
+  Registros: ${glucoseReadings.slice(0, 10).map((v: any) => `${v.glucose} mg/dL ${v.glucose_moment || ""} (${new Date(v.recorded_at || v.created_at).toLocaleDateString("pt-BR")})`).join(", ")}`);
       }
 
       if (weightReadings.length > 0) {
         const latest = weightReadings[0];
         const oldest = weightReadings[weightReadings.length - 1];
-        const delta = latest.weight_value - oldest.weight_value;
+        const delta = latest.weight - oldest.weight;
         parts.push(`PESO (${weightReadings.length} registros):
-  Atual: ${latest.weight_value} kg | Variação no período: ${delta > 0 ? "+" : ""}${delta.toFixed(1)} kg
-  Registros: ${weightReadings.slice(0, 10).map((v: any) => `${v.weight_value}kg (${new Date(v.created_at).toLocaleDateString("pt-BR")})`).join(", ")}`);
+  Atual: ${latest.weight} kg | Variação no período: ${delta > 0 ? "+" : ""}${delta.toFixed(1)} kg
+  Registros: ${weightReadings.slice(0, 10).map((v: any) => `${v.weight}kg (${new Date(v.recorded_at || v.created_at).toLocaleDateString("pt-BR")})`).join(", ")}`);
       }
 
       if (symptomReadings.length > 0) {
@@ -296,9 +296,9 @@ serve(async (req) => {
         symptomReadings.forEach((v: any) => {
           (v.symptoms || []).forEach((s: string) => { allSymptoms[s] = (allSymptoms[s] || 0) + 1; });
         });
-        const wellbeingScores = symptomReadings.filter((v: any) => v.wellbeing_score != null);
+        const wellbeingScores = symptomReadings.filter((v: any) => v.wellbeing != null);
         const avgWellbeing = wellbeingScores.length > 0
-          ? (wellbeingScores.reduce((s: number, v: any) => s + v.wellbeing_score, 0) / wellbeingScores.length).toFixed(1)
+          ? (wellbeingScores.reduce((s: number, v: any) => s + v.wellbeing, 0) / wellbeingScores.length).toFixed(1)
           : "N/A";
         parts.push(`SINTOMAS (${symptomReadings.length} registros):
   Frequência: ${Object.entries(allSymptoms).sort((a, b) => b[1] - a[1]).map(([s, c]) => `${s} (${c}x)`).join(", ")}
