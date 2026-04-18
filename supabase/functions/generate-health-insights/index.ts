@@ -115,6 +115,11 @@ Responda EXCLUSIVAMENTE com um JSON válido (sem markdown, sem backticks) no for
   ]
 }
 
+USO DE EVIDÊNCIAS CIENTÍFICAS:
+- Quando disponíveis, CITE as evidências científicas fornecidas para embasar seus insights. Mencione o estudo, o achado numérico e a fonte. Exemplo: "Segundo o estudo PREDIMED (NEJM, 2013), a dieta mediterrânea reduz eventos cardiovasculares em 30%."
+- Priorize evidências de nível A (ensaios clínicos e meta-análises) sobre nível B
+- Conecte os dados clínicos do paciente com as evidências: se o LDL está alto E há evidência sobre meta de LDL, cite o valor-alvo da diretriz
+
 Para "score": número de 0 a 100 representando saúde geral. Para "main_markers": até 6 marcadores mais relevantes (PA, glicemia, peso, exames laboratoriais alterados, etc). Para "priorities": até 3 prioridades principais para próxima consulta.
 Gere entre 4 e 10 insights relevantes. Use "conexao" para insights que cruzam dados. Use "atencao" para alertas clínicos. Use "positivo" para pontos favoráveis.`;
 
