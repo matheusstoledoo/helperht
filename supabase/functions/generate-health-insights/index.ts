@@ -781,7 +781,13 @@ ${evidenceSection}`;
       };
     }
 
-    return new Response(JSON.stringify(parsed), {
+    return new Response(JSON.stringify({
+      ...parsed,
+      score: healthScore.score,
+      score_label: healthScore.score_label,
+      domain_scores: healthScore.domain_scores,
+      domain_details: healthScore.domain_details,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
