@@ -163,12 +163,28 @@ function ScoreCircle({ score }: { score: number }) {
 }
 
 function markerStatusClasses(status: string) {
-  switch (status) {
+  switch ((status || "").toLowerCase()) {
     case "normal":
+    case "ok":
+    case "good":
       return "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30";
     case "attention":
+    case "atencao":
+    case "atenção":
+    case "borderline":
+    case "limítrofe":
+    case "limitrofe":
       return "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30";
     case "altered":
+    case "alterado":
+    case "high":
+    case "alto":
+    case "elevado":
+    case "low":
+    case "baixo":
+    case "critical":
+    case "crítico":
+    case "critico":
       return "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30";
     default:
       return "bg-muted text-muted-foreground";
@@ -176,11 +192,35 @@ function markerStatusClasses(status: string) {
 }
 
 function markerStatusLabel(status: string) {
-  switch (status) {
-    case "normal": return "Normal";
-    case "attention": return "Atenção";
-    case "altered": return "Alterado";
-    default: return status;
+  switch ((status || "").toLowerCase()) {
+    case "normal":
+    case "ok":
+    case "good":
+      return "Normal";
+    case "attention":
+    case "atencao":
+    case "atenção":
+    case "borderline":
+      return "Atenção";
+    case "limítrofe":
+    case "limitrofe":
+      return "Limítrofe";
+    case "altered":
+    case "alterado":
+      return "Alterado";
+    case "high":
+    case "alto":
+    case "elevado":
+      return "Elevado";
+    case "low":
+    case "baixo":
+      return "Baixo";
+    case "critical":
+    case "crítico":
+    case "critico":
+      return "Crítico";
+    default:
+      return status;
   }
 }
 
