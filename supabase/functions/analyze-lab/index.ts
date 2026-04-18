@@ -4,7 +4,6 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
-model: 'claude-opus-4-6',
 const SYSTEM_PROMPT = `Você é um assistente de saúde educacional do aplicativo HelperHT.
 Sua função é ajudar o usuário a ENTENDER seus resultados de exames, não tratá-los.
 
