@@ -812,6 +812,136 @@ export default function PatientGoalsInsights() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ═══ SCORE EXPLANATION DIALOG ═══ */}
+      <Dialog open={showScoreDialog} onOpenChange={setShowScoreDialog}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Heart className="h-5 w-5 text-primary" />
+              Como o Score de Saúde é calculado?
+            </DialogTitle>
+            <DialogDescription>
+              Baseado no <strong>Life's Essential 8</strong> da American Heart Association (AHA),
+              um padrão clínico internacional para avaliar saúde cardiovascular e longevidade.
+            </DialogDescription>
+          </DialogHeader>
+
+          {healthData && (
+            <div className="space-y-5 py-2">
+              {/* Resumo do score */}
+              <Card className="border-primary/30 bg-primary/5">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="text-4xl font-bold" style={{ color: scoreColor(healthData.score ?? 0) }}>
+                    {healthData.score}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">{healthData.score_label}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Média ponderada dos 8 domínios, com penalidades por condições graves.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Faixas de referência */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-foreground">Faixas de referência</h3>
+                <div className="grid grid-cols-1 gap-1.5 text-xs">
+                  <div className="flex items-center justify-between p-2 rounded-md bg-green-500/10 border border-green-500/30">
+                    <span className="text-green-700 dark:text-green-400 font-medium">Ótimo</span>
+                    <span className="text-muted-foreground">85 – 100</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-md bg-emerald-500/10 border border-emerald-500/30">
+                    <span className="text-emerald-700 dark:text-emerald-400 font-medium">Bom</span>
+                    <span className="text-muted-foreground">70 – 84</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-md bg-amber-500/10 border border-amber-500/30">
+                    <span className="text-amber-700 dark:text-amber-400 font-medium">Regular</span>
+                    <span className="text-muted-foreground">55 – 69</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-md bg-orange-500/10 border border-orange-500/30">
+                    <span className="text-orange-700 dark:text-orange-400 font-medium">Atenção</span>
+                    <span className="text-muted-foreground">40 – 54</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-md bg-red-500/10 border border-red-500/30">
+                    <span className="text-red-700 dark:text-red-400 font-medium">Crítico</span>
+                    <span className="text-muted-foreground">0 – 39</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Domínios avaliados */}
+              {healthData.domain_scores && Object.keys(healthData.domain_scores).length > 0 ? (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold text-foreground">Sua pontuação por domínio</h3>
+                  <div className="space-y-2">
+                    {Object.entries(healthData.domain_scores).map(([key, value]) => {
+                      const meta = DOMAIN_LABELS[key] || { label: key, icon: Info };
+                      const Icon = meta.icon;
+                      const detail = healthData.domain_details?.[key];
+                      return (
+                        <div key={key} className="p-3 rounded-lg border bg-card">
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <span className="text-sm font-medium text-foreground truncate">{meta.label}</span>
+                            </div>
+                            <span className={`text-sm font-bold tabular-nums ${domainScoreColor(value)}`}>
+                              {value}/100
+                            </span>
+                          </div>
+                          <Progress value={value} className="h-1.5" />
+                          {detail && (
+                            <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{detail}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold text-foreground">Os 8 domínios avaliados</h3>
+                  <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-5">
+                    <li>Pressão arterial</li>
+                    <li>Glicemia (HbA1c ou glicose)</li>
+                    <li>Colesterol (LDL ou colesterol total)</li>
+                    <li>Peso / IMC</li>
+                    <li>Atividade física (min/semana)</li>
+                    <li>Sono e bem-estar</li>
+                    <li>Nutrição (plano ativo e qualidade)</li>
+                    <li>Tabagismo</li>
+                  </ul>
+                </div>
+              )}
+
+              {/* Como funciona */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-foreground">Como o cálculo funciona</h3>
+                <ul className="text-xs text-muted-foreground space-y-1.5 list-disc pl-5 leading-relaxed">
+                  <li>Cada domínio recebe uma nota de <strong>0 a 100</strong> baseada em critérios clínicos validados (AHA, diretrizes brasileiras).</li>
+                  <li>O score final é a <strong>média</strong> dos 8 domínios.</li>
+                  <li>Diagnósticos graves ativos aplicam uma <strong>penalidade</strong> de até 20 pontos.</li>
+                  <li>Quando faltam dados de um domínio, aplicamos um <strong>score neutro</strong> (50) para não penalizar injustamente.</li>
+                </ul>
+              </div>
+
+              {/* Disclaimer */}
+              <div className="flex items-start gap-2 p-3 rounded-lg border border-muted bg-muted/30">
+                <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Este score é educativo e <strong>não substitui</strong> avaliação médica. Use-o como referência para conversar com seus profissionais de saúde.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button onClick={() => setShowScoreDialog(false)}>Entendi</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PatientLayout>
   );
 }
