@@ -129,6 +129,26 @@ interface HealthData {
   main_markers: MainMarker[];
   priorities: string[];
   insights: Insight[];
+  domain_scores?: Record<string, number>;
+  domain_details?: Record<string, string>;
+}
+
+const DOMAIN_LABELS: Record<string, { label: string; icon: any }> = {
+  pressao: { label: "Pressão arterial", icon: Heart },
+  glicemia: { label: "Glicemia", icon: Activity },
+  colesterol: { label: "Colesterol", icon: FlaskConical },
+  imc: { label: "Peso / IMC", icon: TrendingDown },
+  atividade: { label: "Atividade física", icon: Dumbbell },
+  sono: { label: "Sono e bem-estar", icon: Smile },
+  nutricao: { label: "Nutrição", icon: Apple },
+  tabagismo: { label: "Tabagismo", icon: Shield },
+};
+
+function domainScoreColor(score: number) {
+  if (score >= 80) return "text-green-600 dark:text-green-400";
+  if (score >= 60) return "text-amber-600 dark:text-amber-400";
+  if (score >= 40) return "text-orange-600 dark:text-orange-400";
+  return "text-red-600 dark:text-red-400";
 }
 
 function scoreColor(score: number) {
