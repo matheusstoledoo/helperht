@@ -94,6 +94,12 @@ IMPORTANTE:
 Responda EXCLUSIVAMENTE com um JSON válido (sem markdown, sem backticks) no formato:
 {
   "summary": "Resumo geral de 3-5 frases sobre a saúde do paciente",
+  "score": 0-100,
+  "score_label": "Ótimo" | "Bom" | "Regular" | "Atenção" | "Crítico",
+  "main_markers": [
+    { "name": "Nome do marcador", "value": "valor com unidade", "status": "normal" | "attention" | "altered" }
+  ],
+  "priorities": ["Prioridade 1 em linguagem simples", "Prioridade 2", "Prioridade 3"],
   "insights": [
     {
       "category": "exames" | "nutricao" | "treino" | "estilo_de_vida" | "atencao" | "positivo" | "conexao" | "medicacao" | "meta",
@@ -104,6 +110,7 @@ Responda EXCLUSIVAMENTE com um JSON válido (sem markdown, sem backticks) no for
   ]
 }
 
+Para "score": número de 0 a 100 representando saúde geral. Para "main_markers": até 6 marcadores mais relevantes (PA, glicemia, peso, exames laboratoriais alterados, etc). Para "priorities": até 3 prioridades principais para próxima consulta.
 Gere entre 4 e 10 insights relevantes. Use "conexao" para insights que cruzam dados. Use "atencao" para alertas clínicos. Use "positivo" para pontos favoráveis.`;
 
 serve(async (req) => {
