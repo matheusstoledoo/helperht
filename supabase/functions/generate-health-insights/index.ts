@@ -228,6 +228,28 @@ serve(async (req) => {
     const activeTreatments = allTreatments.filter((t: any) => t.status === "active");
     const pastTreatments = allTreatments.filter((t: any) => t.status !== "active").slice(0, 10);
 
+    // Knowledge base query based on active patient goals
+    const activePatientGoalsForKb = (patientGoalsRes.data || []).filter((g: any) => g.status === "ativo");
+    const activeGoalTypes: string[] = activePatientGoalsForKb.length > 0
+      ? Array.from(new Set(activePatientGoalsForKb.map((g: any) => g.goal)))
+      : ["bem_estar_geral", "longevidade"];
+
+    const kbRes = await supabase
+      .from("knowledge_base")
+      .select("title, source_name, published_year, category, summary, key_findings, evidence_level")
+      .eq("is_active", true)
+      .overlaps("goal_relevance", activeGoalTypes)
+      .order("evidence_level", { ascending: true })
+      .limit(12);
+
+    const evidenceSection = (kbRes.data && kbRes.data.length > 0)
+      ? kbRes.data.map((k: any) =>
+          `[${k.evidence_level}] ${k.title} (${k.source_name}, ${k.published_year})\n` +
+          `Resumo: ${k.summary}\n` +
+          `Achados-chave: ${(k.key_findings || []).slice(0, 3).join(" | ")}`
+        ).join("\n\n")
+      : "Sem evidências específicas carregadas";
+
     // Nutrition
     const activeNutrition = (nutritionRes.data || []).find((n: any) => n.status === "active") || null;
 
