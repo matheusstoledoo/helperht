@@ -240,7 +240,11 @@ export default function PatientGoalsInsights() {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
-  const initialTab = searchParams.get("tab") === "insights" ? "insights" : "objetivos";
+  const tabParam = searchParams.get("tab");
+  const initialTab =
+    tabParam === "insights" ? "insights" :
+    tabParam === "objetivos" ? "objetivos" :
+    "resumo";
   const [activeTab, setActiveTab] = useState(initialTab);
 
   // ── Goals state ──
@@ -449,12 +453,21 @@ export default function PatientGoalsInsights() {
           <Card><CardContent className="p-8 text-center"><RefreshCw className="h-8 w-8 mx-auto animate-spin text-muted-foreground" /><p className="text-sm text-muted-foreground mt-2">Carregando...</p></CardContent></Card>
         ) : (
           <>
-            {/* ═══ RESUMO DE SAÚDE (topo) ═══ */}
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-                <Heart className="h-5 w-5 text-red-500" /> Resumo de Saúde
-              </h2>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="w-full">
+              <TabsTrigger value="resumo" className="flex-1 gap-1.5">
+                <Heart className="h-3.5 w-3.5" /> Resumo de saúde
+              </TabsTrigger>
+              <TabsTrigger value="objetivos" className="flex-1 gap-1.5">
+                <Target className="h-3.5 w-3.5" /> Meus objetivos
+              </TabsTrigger>
+              <TabsTrigger value="insights" className="flex-1 gap-1.5">
+                <Sparkles className="h-3.5 w-3.5" /> Insights de IA
+              </TabsTrigger>
+            </TabsList>
 
+            {/* ═══ TAB: RESUMO DE SAÚDE ═══ */}
+            <TabsContent value="resumo" className="space-y-4 mt-4">
               {/* Pending docs banner */}
               {!summaryLoading && pendingDocs.length > 0 && (
                 <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
@@ -541,17 +554,7 @@ export default function PatientGoalsInsights() {
                   </CardContent>
                 </Card>
               )}
-            </div>
-
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full">
-              <TabsTrigger value="objetivos" className="flex-1 gap-1.5">
-                <Target className="h-3.5 w-3.5" /> Meus Objetivos
-              </TabsTrigger>
-              <TabsTrigger value="insights" className="flex-1 gap-1.5">
-                <Sparkles className="h-3.5 w-3.5" /> Insights de IA
-              </TabsTrigger>
-            </TabsList>
+            </TabsContent>
 
             {/* ═══ TAB: OBJETIVOS ═══ */}
             <TabsContent value="objetivos" className="space-y-4 mt-4">
