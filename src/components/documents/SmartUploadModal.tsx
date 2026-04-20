@@ -93,7 +93,21 @@ export const SmartUploadModal = ({
 
   const handleFileSelected = (file: File) => {
     setSelectedFile(file);
-    setStep("category");
+    if (categoryHint) {
+      setSelectedCategory(categoryHint);
+      setStep("processing");
+      uploadAndExtract(file, patientId, userId, userRole, userName, categoryHint)
+        .then(result => {
+          if (result) {
+            setDocumentId(result.documentId);
+            setStep("review");
+          } else {
+            setStep("category");
+          }
+        });
+    } else {
+      setStep("category");
+    }
   };
 
   const handleCameraCapture = () => {
