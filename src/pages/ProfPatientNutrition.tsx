@@ -97,6 +97,50 @@ export default function ProfPatientNutrition() {
   const activePlan = plans.find((p) => p.status === "active");
   const pastPlans = plans.filter((p) => p.status !== "active");
 
+  const handleSaveRec = async () => {
+    if (!recDimension || recText.trim().length < 10) return;
+    setSavingRec(true);
+    const { error } = await supabase.from("professional_recommendations").insert({
+      professional_id: user!.id,
+      patient_id: id,
+      specialty: profSpecialty || "nutricionista",
+      dimension: recDimension,
+      recommendation: recText.trim(),
+      priority: recPriority,
+      visible_to_patient: recVisible,
+    });
+    setSavingRec(false);
+    if (!error) {
+      toast.success("Orientação salva com sucesso");
+      setRecDimension(""); setRecText(""); setRecPriority("normal"); setRecVisible(true);
+      const { data } = await supabase
+        .from("professional_recommendations")
+        .select("*")
+        .eq("patient_id", id)
+        .in("specialty", ["nutricionista", "geral"])
+        .order("created_at", { ascending: false })
+        .limit(20);
+      setRecommendations(data || []);
+    }
+  };
+
+  const adherenceData = (() => {
+    if (!activePlan || !Array.isArray(activePlan.meals) || activePlan.meals.length === 0) return [];
+    const totalMealsPerDay = activePlan.meals.length;
+    const byDate: Record<string, number> = {};
+    mealLogs.forEach((log: any) => {
+      byDate[log.log_date] = (byDate[log.log_date] || 0) + 1;
+    });
+    return Object.entries(byDate).map(([date, count]) => ({
+      date: formatDate(parseISO(date), "dd/MM"),
+      pct: Math.round((count / totalMealsPerDay) * 100),
+    })).slice(-14);
+  })();
+
+  const avgAdherence = adherenceData.length > 0
+    ? Math.round(adherenceData.reduce((sum, d) => sum + d.pct, 0) / adherenceData.length)
+    : null;
+
   if (authLoading || roleLoading || loading) return <FullPageLoading />;
 
   const renderMacros = (plan: NutritionPlan) => {
@@ -224,15 +268,170 @@ export default function ProfPatientNutrition() {
             </CardContent>
           </Card>
         ) : (
-          <>
-            {activePlan && renderPlanCard(activePlan, true)}
-            {pastPlans.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium text-muted-foreground">Planos anteriores</h3>
-                {pastPlans.map((plan) => renderPlanCard(plan, false))}
-              </div>
-            )}
-          </>
+          <Tabs defaultValue="plan">
+            <TabsList className="w-full">
+              <TabsTrigger value="plan" className="flex-1">Plano Alimentar</TabsTrigger>
+              <TabsTrigger value="adherence" className="flex-1">Aderência & Orientações</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="plan" className="space-y-6 mt-4">
+              {activePlan && renderPlanCard(activePlan, true)}
+              {pastPlans.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-muted-foreground">Planos anteriores</h3>
+                  {pastPlans.map((plan) => renderPlanCard(plan, false))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="adherence" className="space-y-6 mt-4">
+              {/* Painel de aderência */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                    Aderência ao plano — últimos 14 dias
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {adherenceData.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">
+                      Nenhum registro de refeições encontrado. O paciente ainda não marcou refeições cumpridas.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="text-center mb-4">
+                        <span className="text-3xl font-bold text-foreground">{avgAdherence}%</span>
+                        <p className="text-xs text-muted-foreground">média de aderência</p>
+                      </div>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart data={adherenceData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="date" />
+                          <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                          <Tooltip formatter={(v: any) => `${v}%`} />
+                          <Bar dataKey="pct" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Histórico de orientações */}
+              {recommendations.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-primary" />
+                      Orientações anteriores
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {recommendations.map((rec, i) => (
+                      <div key={i} className="border-l-2 border-primary/40 pl-3 py-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">{rec.dimension?.replace(/_/g, " ")}</Badge>
+                          {rec.priority === "urgente" && (
+                            <Badge className="text-xs bg-red-50 text-red-800">urgente</Badge>
+                          )}
+                          {rec.priority === "atencao" && (
+                            <Badge className="text-xs bg-amber-50 text-amber-800">atenção</Badge>
+                          )}
+                          {!rec.visible_to_patient && (
+                            <Badge variant="secondary" className="text-xs">interna</Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-foreground">{rec.recommendation}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(parseISO(rec.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                        </p>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Campo de nova orientação */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Nova orientação para {patientName}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label>Dimensão</Label>
+                    <Select value={recDimension} onValueChange={setRecDimension}>
+                      <SelectTrigger><SelectValue placeholder="Selecione uma dimensão" /></SelectTrigger>
+                      <SelectContent>
+                        {([
+                          ["adesao_plano", "Adesão ao plano"],
+                          ["macronutrientes", "Macronutrientes"],
+                          ["horarios_refeicao", "Horários das refeições"],
+                          ["hidratacao", "Hidratação"],
+                          ["suplementacao", "Suplementação"],
+                          ["restricoes", "Restrições alimentares"],
+                          ["pre_treino", "Nutrição pré-treino"],
+                          ["pos_treino", "Nutrição pós-treino"],
+                          ["outro", "Outro"],
+                        ] as [string, string][]).map(([val, label]) => (
+                          <SelectItem key={val} value={val}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Orientação</Label>
+                    <Textarea
+                      value={recText}
+                      onChange={(e) => setRecText(e.target.value)}
+                      placeholder="Descreva sua orientação nutricional..."
+                      rows={3}
+                      maxLength={500}
+                    />
+                    <p className="text-xs text-muted-foreground text-right">{recText.length}/500</p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Prioridade</Label>
+                    <div className="flex gap-2">
+                      {([["normal", "Normal"], ["atencao", "Atenção"], ["urgente", "Urgente"]] as [string, string][]).map(([val, label]) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setRecPriority(val)}
+                          className={`flex-1 py-2 px-3 text-sm rounded-md border transition-colors ${
+                            recPriority === val
+                              ? val === "urgente"
+                                ? "bg-red-50 border-red-400 text-red-800"
+                                : val === "atencao"
+                                ? "bg-amber-50 border-amber-400 text-amber-800"
+                                : "bg-primary/10 border-primary text-primary"
+                              : "border-border text-muted-foreground hover:bg-muted/50"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <Label>Visível ao paciente</Label>
+                    <Switch checked={recVisible} onCheckedChange={setRecVisible} />
+                  </div>
+
+                  <button
+                    onClick={handleSaveRec}
+                    disabled={savingRec || !recDimension || recText.trim().length < 10}
+                    className="w-full py-2.5 px-4 bg-primary text-primary-foreground rounded-md text-sm font-medium disabled:opacity-50 hover:bg-primary/90 transition-colors"
+                  >
+                    {savingRec ? "Salvando..." : "Salvar orientação"}
+                  </button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         )}
       </main>
     </div>
