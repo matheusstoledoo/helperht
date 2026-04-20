@@ -133,7 +133,11 @@ export default function PatientTraining() {
     if (authLoading) return;
     if (!user) { setLoading(false); return; }
     const fetchData = async () => {
-      const [patientRes, userRes, plansRes] = await Promise.all([
+      const today = new Date().toISOString().split('T')[0];
+      const thirtyDaysAgo = subDays(new Date(), 30).toISOString().split('T')[0];
+      const fourteenDaysAgo = subDays(new Date(), 14).toISOString().split('T')[0];
+
+      const [patientRes, userRes, plansRes, racesRes, wLogsRes, rLogsRes, recsRes] = await Promise.all([
         supabase.from("patients").select("id").eq("user_id", user.id).maybeSingle(),
         supabase.from("users").select("name").eq("id", user.id).maybeSingle(),
         supabase
@@ -141,14 +145,127 @@ export default function PatientTraining() {
           .select("*")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }),
+        supabase.from("race_events").select("*")
+          .eq("user_id", user.id).eq("status", "scheduled")
+          .order("event_date", { ascending: true }),
+        supabase.from("workout_logs").select("*")
+          .eq("user_id", user.id)
+          .gte("activity_date", thirtyDaysAgo)
+          .order("activity_date", { ascending: true }),
+        supabase.from("recovery_logs").select("*")
+          .eq("user_id", user.id)
+          .gte("log_date", fourteenDaysAgo)
+          .order("log_date", { ascending: true }),
+        supabase.from("professional_recommendations")
+          .select("*")
+          .eq("visible_to_patient", true)
+          .order("created_at", { ascending: false })
+          .limit(10),
       ]);
       if (patientRes.data) setPatientId(patientRes.data.id);
       if (userRes.data) setUserName(userRes.data.name);
       if (plansRes.data) setPlans(plansRes.data as unknown as TrainingPlan[]);
+      setRaceEvents(racesRes.data || []);
+      setWorkoutLogsCalendar(wLogsRes.data || []);
+      setRecoveryLogs(rLogsRes.data || []);
+      setRecommendations(recsRes.data || []);
+      const todayLog = (rLogsRes.data || []).find((r: any) => r.log_date === today);
+      setTodayRecovery(todayLog || null);
       setLoading(false);
     };
     fetchData();
   }, [user, authLoading]);
+
+  const handleSaveRace = async () => {
+    if (!raceName || !raceSport || !raceDate) return;
+    setSavingRace(true);
+    await supabase.from("race_events").insert({
+      user_id: user!.id,
+      patient_id: patientId ?? null,
+      name: raceName,
+      sport: raceSport,
+      event_date: raceDate,
+      distance_km: raceDistance ? parseFloat(raceDistance) : null,
+      event_type: raceType,
+      location: raceLocation || null,
+      goal: raceGoal || null,
+      planned_tss: racePlannedTss ? parseInt(racePlannedTss) : null,
+    });
+    setSavingRace(false);
+    setShowRaceForm(false);
+    setRaceName(""); setRaceSport(""); setRaceDate("");
+    setRaceDistance(""); setRaceLocation(""); setRaceGoal(""); setRacePlannedTss("");
+    const { data } = await supabase.from("race_events").select("*")
+      .eq("user_id", user!.id).eq("status", "scheduled")
+      .order("event_date", { ascending: true });
+    setRaceEvents(data || []);
+  };
+
+  const handleSaveRecovery = async () => {
+    setSavingRecovery(true);
+    const today = new Date().toISOString().split('T')[0];
+    await supabase.from("recovery_logs").insert({
+      user_id: user!.id,
+      patient_id: patientId ?? null,
+      log_date: today,
+      hrv_rmssd: recHrv ? parseFloat(recHrv) : null,
+      resting_heart_rate: recHr ? parseInt(recHr) : null,
+      sleep_hours: recSleepHours ? parseFloat(recSleepHours) : null,
+      sleep_quality: recSleepQuality || null,
+      disposition_score: recDisposition,
+      energy_score: recEnergy,
+      muscle_score: recMuscle,
+      joint_score: recJoint,
+      stress_score: recStress || null,
+      free_notes: recNotes.trim() || null,
+      source: 'manual',
+    });
+    setSavingRecovery(false);
+    setShowRecoveryForm(false);
+    const { data } = await supabase.from("recovery_logs").select("*")
+      .eq("user_id", user!.id)
+      .gte("log_date", subDays(new Date(), 14).toISOString().split('T')[0])
+      .order("log_date", { ascending: true });
+    setRecoveryLogs(data || []);
+    const todayLog = (data || []).find((r: any) => r.log_date === today);
+    setTodayRecovery(todayLog || null);
+  };
+
+  const sportColor = (sport: string) => {
+    const map: Record<string, { bg: string; text: string }> = {
+      corrida: { bg: "#FAECE7", text: "#712B13" },
+      ciclismo: { bg: "#E6F1FB", text: "#0C447C" },
+      natacao: { bg: "#E1F5EE", text: "#085041" },
+      triatlo: { bg: "#EEEDFE", text: "#3C3489" },
+      trail: { bg: "#EAF3DE", text: "#27500A" },
+    };
+    return map[sport] || { bg: "#F1EFE8", text: "#444441" };
+  };
+
+  const daysLeft = (dateStr: string) => differenceInDays(parseISO(dateStr), new Date());
+
+  const daysLeftBadge = (days: number) => {
+    if (days > 30) return { bg: "#EAF3DE", text: "#27500A", label: `${days} dias` };
+    if (days >= 8) return { bg: "#FAEEDA", text: "#633806", label: `${days} dias` };
+    return { bg: "#FCEBEB", text: "#791F1F", label: `${days} dias` };
+  };
+
+  const scoreColor = (val: number) => {
+    if (val >= 70) return "bg-green-100 text-green-800";
+    if (val >= 40) return "bg-amber-100 text-amber-800";
+    return "bg-red-100 text-red-800";
+  };
+
+  const specialtyColor = (specialty: string) => {
+    const map: Record<string, string> = {
+      "médico": "bg-blue-100 text-blue-800",
+      "fisioterapeuta": "bg-green-100 text-green-800",
+      "educador físico": "bg-orange-100 text-orange-800",
+      "nutricionista": "bg-teal-100 text-teal-800",
+      "psicólogo": "bg-purple-100 text-purple-800",
+    };
+    return map[specialty] || "bg-gray-100 text-gray-700";
+  };
 
   const activePlan = plans.find((p) => p.status === "active");
   const pastPlans = plans.filter((p) => p.status !== "active");
