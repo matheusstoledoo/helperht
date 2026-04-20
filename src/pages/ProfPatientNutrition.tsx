@@ -6,13 +6,21 @@ import { Button } from "@/components/ui/button";
 import {
   Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Apple, Flame, ChevronDown, ChevronUp, Clock, Check, Pill } from "lucide-react";
+import { Apple, Flame, ChevronDown, ChevronUp, Clock, Check, Pill, TrendingUp, MessageSquare } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { FullPageLoading } from "@/components/ui/loading-spinner";
-import { format } from "date-fns";
+import { format, parseISO, format as formatDate, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface NutritionPlan {
   id: string;
@@ -44,6 +52,14 @@ export default function ProfPatientNutrition() {
   const [patientName, setPatientName] = useState("");
   const [loading, setLoading] = useState(true);
   const [expandedMeals, setExpandedMeals] = useState<Record<string, boolean>>({});
+  const [mealLogs, setMealLogs] = useState<any[]>([]);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [profSpecialty, setProfSpecialty] = useState("");
+  const [recDimension, setRecDimension] = useState("");
+  const [recText, setRecText] = useState("");
+  const [recPriority, setRecPriority] = useState("normal");
+  const [recVisible, setRecVisible] = useState(true);
+  const [savingRec, setSavingRec] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
@@ -57,12 +73,22 @@ export default function ProfPatientNutrition() {
     if (!id || !user || (!isProfessional && !isAdmin)) return;
     const fetchData = async () => {
       setLoading(true);
-      const [patientRes, plansRes] = await Promise.all([
+      const [patientRes, plansRes, mealLogsRes, recsRes, profRes] = await Promise.all([
         supabase.from("patients").select("user_id, users(name)").eq("id", id).maybeSingle(),
         supabase.from("nutrition_plans").select("*").eq("patient_id", id).order("created_at", { ascending: false }),
+        supabase.from("meal_logs").select("*").eq("patient_id", id)
+          .gte("log_date", subDays(new Date(), 30).toISOString().split("T")[0])
+          .order("log_date", { ascending: true }),
+        supabase.from("professional_recommendations").select("*").eq("patient_id", id)
+          .in("specialty", ["nutricionista", "geral"])
+          .order("created_at", { ascending: false }).limit(20),
+        supabase.from("users").select("specialty").eq("id", user!.id).maybeSingle(),
       ]);
       if (patientRes.data?.users) setPatientName((patientRes.data.users as any).name || "Paciente");
       if (plansRes.data) setPlans(plansRes.data as unknown as NutritionPlan[]);
+      setMealLogs(mealLogsRes.data || []);
+      setRecommendations(recsRes.data || []);
+      setProfSpecialty((profRes.data as any)?.specialty || "");
       setLoading(false);
     };
     fetchData();
