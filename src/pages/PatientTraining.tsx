@@ -413,6 +413,7 @@ export default function PatientTraining() {
             <TabsList className="w-full">
               <TabsTrigger value="plan" className="flex-1">Plano de Treino</TabsTrigger>
               <TabsTrigger value="log" className="flex-1">Registrar Treino</TabsTrigger>
+              <TabsTrigger value="calendar" className="flex-1">Calendário & Recuperação</TabsTrigger>
             </TabsList>
 
             <TabsContent value="plan" className="space-y-4 mt-4">
