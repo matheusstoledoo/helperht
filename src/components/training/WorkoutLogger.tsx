@@ -79,16 +79,16 @@ export default function WorkoutLogger({ userId, patientId }: WorkoutLoggerProps)
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from("clinical_events").insert({
-      patient_id: patientId,
-      event_type: "workout_log",
-      source: "patient",
-      structured_payload: {
-        workout_type: workoutType,
-        duration_minutes: duration ? parseInt(duration) : null,
-        rpe: rpe[0],
-        notes: notes.trim() || null,
-      },
+    const { error } = await supabase.from("workout_logs").insert({
+      user_id: userId,
+      patient_id: patientId ?? null,
+      activity_date: new Date().toISOString().split('T')[0],
+      sport: workoutType,
+      duration_minutes: duration ? parseInt(duration) : null,
+      perceived_effort: rpe[0],
+      srpe: duration ? parseInt(duration) * rpe[0] : null,
+      notes: notes.trim() || null,
+      source: 'manual',
     });
     setSaving(false);
     if (error) {
