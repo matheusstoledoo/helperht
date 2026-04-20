@@ -19,7 +19,7 @@ import {
 import PatientLayout from "@/components/patient/PatientLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FloatingUploadButton } from "@/components/documents/FloatingUploadButton";
 import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
@@ -64,14 +64,17 @@ export default function PatientNutrition() {
   const [patientId, setPatientId] = useState<string | null>(null);
   const [userName, setUserName] = useState("");
   const [expandedMeals, setExpandedMeals] = useState<Record<string, boolean>>({});
-  const [completedMeals, setCompletedMeals] = useState<Record<string, boolean>>({});
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [mealLogs, setMealLogs] = useState<any[]>([]);
+  const [nutritionRecs, setNutritionRecs] = useState<any[]>([]);
+  const [togglingMeal, setTogglingMeal] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) { setLoading(false); return; }
     const fetchData = async () => {
-      const [patientRes, userRes, plansRes] = await Promise.all([
+      const today = new Date().toISOString().split('T')[0];
+      const [patientRes, userRes, plansRes, mealLogsRes, recsRes] = await Promise.all([
         supabase.from("patients").select("id").eq("user_id", user.id).maybeSingle(),
         supabase.from("users").select("name").eq("id", user.id).maybeSingle(),
         supabase
@@ -79,10 +82,28 @@ export default function PatientNutrition() {
           .select("*")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }),
+        supabase
+          .from("meal_logs")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("log_date", today),
+        supabase
+          .from("professional_recommendations")
+          .select("*")
+          .eq("visible_to_patient", true)
+          .in("specialty", ["nutricionista", "geral"])
+          .order("created_at", { ascending: false })
+          .limit(10),
       ]);
       if (patientRes.data) setPatientId(patientRes.data.id);
       if (userRes.data) setUserName(userRes.data.name);
       if (plansRes.data) setPlans(plansRes.data as unknown as NutritionPlan[]);
+      setMealLogs(mealLogsRes.data || []);
+      const patientIdVal = patientRes.data?.id || null;
+      const recs = (recsRes.data || []).filter((r: any) =>
+        patientIdVal ? r.patient_id === patientIdVal : true
+      );
+      setNutritionRecs(recs);
       setLoading(false);
     };
     fetchData();
@@ -95,8 +116,47 @@ export default function PatientNutrition() {
     setExpandedMeals((prev) => ({ ...prev, [mealKey]: !prev[mealKey] }));
   };
 
-  const toggleMealCompleted = (mealKey: string) => {
-    setCompletedMeals((prev) => ({ ...prev, [mealKey]: !prev[mealKey] }));
+  const toggleMealCompleted = async (
+    mealKey: string,
+    planId: string,
+    mealIndex: number,
+    mealName: string
+  ) => {
+    if (!user) return;
+    setTogglingMeal(mealKey);
+    const today = new Date().toISOString().split('T')[0];
+    const existing = mealLogs.find(
+      (l) => l.nutrition_plan_id === planId && l.meal_index === mealIndex && l.log_date === today
+    );
+
+    if (existing) {
+      await supabase.from("meal_logs").delete().eq("id", existing.id);
+      setMealLogs((prev) => prev.filter((l) => l.id !== existing.id));
+    } else {
+      const { data: newLog } = await supabase
+        .from("meal_logs")
+        .insert({
+          user_id: user.id,
+          patient_id: patientId ?? null,
+          nutrition_plan_id: planId,
+          log_date: today,
+          meal_index: mealIndex,
+          meal_name: mealName,
+          completed: true,
+          source: "manual",
+        })
+        .select()
+        .single();
+      if (newLog) setMealLogs((prev) => [...prev, newLog]);
+    }
+    setTogglingMeal(null);
+  };
+
+  const isMealCompleted = (planId: string, mealIndex: number): boolean => {
+    const today = new Date().toISOString().split('T')[0];
+    return mealLogs.some(
+      (l) => l.nutrition_plan_id === planId && l.meal_index === mealIndex && l.log_date === today
+    );
   };
 
   const renderMacros = (plan: NutritionPlan) => {
@@ -144,38 +204,54 @@ export default function PatientNutrition() {
     const meals: Meal[] = Array.isArray(plan.meals) ? plan.meals : [];
     if (meals.length === 0) return null;
 
+    const completedCount = meals.filter((_, i) => isMealCompleted(plan.id, i)).length;
+    const progressPct = meals.length > 0 ? Math.round((completedCount / meals.length) * 100) : 0;
+
     return (
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Apple className="h-4 w-4 text-green-500" />
-            Refeições
+          <CardTitle className="text-base flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Apple className="h-4 w-4 text-green-500" />
+              Refeições de hoje
+            </span>
+            <span className="text-sm font-normal text-muted-foreground">
+              {completedCount}/{meals.length} cumpridas
+            </span>
           </CardTitle>
+          <div className="w-full bg-muted rounded-full h-1.5 mt-2">
+            <div
+              className="bg-primary rounded-full h-1.5 transition-all"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
         </CardHeader>
         <CardContent className="space-y-2">
           {meals.map((meal, i) => {
-            const key = `${plan.id}-${i}`;
-            const expanded = expandedMeals[key];
-            const completed = completedMeals[key];
+            const mealKey = `${plan.id}-${i}`;
+            const expanded = expandedMeals[mealKey];
+            const completed = isMealCompleted(plan.id, i);
+            const toggling = togglingMeal === mealKey;
 
             return (
               <div
-                key={key}
+                key={mealKey}
                 className={`border rounded-lg transition-colors ${completed ? "bg-muted/50 border-primary/30" : ""}`}
               >
                 <button
                   className="w-full flex items-center justify-between p-3 text-left"
-                  onClick={() => toggleMeal(key)}
+                  onClick={() => toggleMeal(mealKey)}
                 >
                   <div className="flex items-center gap-3">
                     <button
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        toggleMealCompleted(key);
+                        await toggleMealCompleted(mealKey, plan.id, i, meal.name || `Refeição ${i + 1}`);
                       }}
+                      disabled={toggling}
                       className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${
                         completed ? "bg-primary border-primary" : "border-muted-foreground/30"
-                      }`}
+                      } ${toggling ? "opacity-50" : ""}`}
                     >
                       {completed && <Check className="h-3 w-3 text-primary-foreground" />}
                     </button>
@@ -282,6 +358,37 @@ export default function PatientNutrition() {
               ) : activePlan ? (
                 <>
                   {renderPlanCard(activePlan, true)}
+                  {nutritionRecs.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Apple className="h-4 w-4 text-teal-600" />
+                          Orientações da nutricionista
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {nutritionRecs.map((rec, i) => (
+                          <div key={i} className="border-l-2 border-teal-500 pl-3 py-1 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Badge className="text-xs bg-teal-50 text-teal-800 border-teal-200">
+                                {rec.dimension?.replace(/_/g, " ")}
+                              </Badge>
+                              {rec.priority === "urgente" && (
+                                <Badge className="text-xs bg-red-50 text-red-800">urgente</Badge>
+                              )}
+                              {rec.priority === "atencao" && (
+                                <Badge className="text-xs bg-amber-50 text-amber-800">atenção</Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-foreground">{rec.recommendation}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(parseISO(rec.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                            </p>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  )}
                   <Button variant="outline" className="w-full" onClick={() => setShowCreateForm(true)}>
                     <Plus className="h-4 w-4 mr-1" /> Criar novo plano
                   </Button>
