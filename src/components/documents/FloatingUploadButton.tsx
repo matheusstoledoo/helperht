@@ -21,6 +21,7 @@ export const FloatingUploadButton = ({
   userName,
   onSuccess,
   className,
+  categoryHint,
 }: FloatingUploadButtonProps) => {
   const [open, setOpen] = useState(false);
 
