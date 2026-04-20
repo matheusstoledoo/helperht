@@ -19,7 +19,7 @@ import {
 import PatientLayout from "@/components/patient/PatientLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FloatingUploadButton } from "@/components/documents/FloatingUploadButton";
 import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
@@ -64,14 +64,17 @@ export default function PatientNutrition() {
   const [patientId, setPatientId] = useState<string | null>(null);
   const [userName, setUserName] = useState("");
   const [expandedMeals, setExpandedMeals] = useState<Record<string, boolean>>({});
-  const [completedMeals, setCompletedMeals] = useState<Record<string, boolean>>({});
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [mealLogs, setMealLogs] = useState<any[]>([]);
+  const [nutritionRecs, setNutritionRecs] = useState<any[]>([]);
+  const [togglingMeal, setTogglingMeal] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
     if (!user) { setLoading(false); return; }
     const fetchData = async () => {
-      const [patientRes, userRes, plansRes] = await Promise.all([
+      const today = new Date().toISOString().split('T')[0];
+      const [patientRes, userRes, plansRes, mealLogsRes, recsRes] = await Promise.all([
         supabase.from("patients").select("id").eq("user_id", user.id).maybeSingle(),
         supabase.from("users").select("name").eq("id", user.id).maybeSingle(),
         supabase
@@ -79,10 +82,28 @@ export default function PatientNutrition() {
           .select("*")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }),
+        supabase
+          .from("meal_logs")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("log_date", today),
+        supabase
+          .from("professional_recommendations")
+          .select("*")
+          .eq("visible_to_patient", true)
+          .in("specialty", ["nutricionista", "geral"])
+          .order("created_at", { ascending: false })
+          .limit(10),
       ]);
       if (patientRes.data) setPatientId(patientRes.data.id);
       if (userRes.data) setUserName(userRes.data.name);
       if (plansRes.data) setPlans(plansRes.data as unknown as NutritionPlan[]);
+      setMealLogs(mealLogsRes.data || []);
+      const patientIdVal = patientRes.data?.id || null;
+      const recs = (recsRes.data || []).filter((r: any) =>
+        patientIdVal ? r.patient_id === patientIdVal : true
+      );
+      setNutritionRecs(recs);
       setLoading(false);
     };
     fetchData();
@@ -95,8 +116,47 @@ export default function PatientNutrition() {
     setExpandedMeals((prev) => ({ ...prev, [mealKey]: !prev[mealKey] }));
   };
 
-  const toggleMealCompleted = (mealKey: string) => {
-    setCompletedMeals((prev) => ({ ...prev, [mealKey]: !prev[mealKey] }));
+  const toggleMealCompleted = async (
+    mealKey: string,
+    planId: string,
+    mealIndex: number,
+    mealName: string
+  ) => {
+    if (!user) return;
+    setTogglingMeal(mealKey);
+    const today = new Date().toISOString().split('T')[0];
+    const existing = mealLogs.find(
+      (l) => l.nutrition_plan_id === planId && l.meal_index === mealIndex && l.log_date === today
+    );
+
+    if (existing) {
+      await supabase.from("meal_logs").delete().eq("id", existing.id);
+      setMealLogs((prev) => prev.filter((l) => l.id !== existing.id));
+    } else {
+      const { data: newLog } = await supabase
+        .from("meal_logs")
+        .insert({
+          user_id: user.id,
+          patient_id: patientId ?? null,
+          nutrition_plan_id: planId,
+          log_date: today,
+          meal_index: mealIndex,
+          meal_name: mealName,
+          completed: true,
+          source: "manual",
+        })
+        .select()
+        .single();
+      if (newLog) setMealLogs((prev) => [...prev, newLog]);
+    }
+    setTogglingMeal(null);
+  };
+
+  const isMealCompleted = (planId: string, mealIndex: number): boolean => {
+    const today = new Date().toISOString().split('T')[0];
+    return mealLogs.some(
+      (l) => l.nutrition_plan_id === planId && l.meal_index === mealIndex && l.log_date === today
+    );
   };
 
   const renderMacros = (plan: NutritionPlan) => {
