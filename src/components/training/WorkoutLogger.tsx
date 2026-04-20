@@ -50,26 +50,22 @@ export default function WorkoutLogger({ userId, patientId }: WorkoutLoggerProps)
   const [saving, setSaving] = useState(false);
 
   const fetchLogs = async () => {
-    // We'll store workout logs in clinical_events with event_type = 'workout_log'
     const { data } = await supabase
-      .from("clinical_events")
+      .from("workout_logs")
       .select("*")
-      .eq("event_type", "workout_log")
-      .order("recorded_at", { ascending: false })
+      .eq("user_id", userId)
+      .order("activity_date", { ascending: false })
       .limit(30);
-
     if (data) {
-      setLogs(
-        data.map((d) => ({
-          id: d.id,
-          workout_type: (d.structured_payload as any)?.workout_type || "outro",
-          duration_minutes: (d.structured_payload as any)?.duration_minutes || null,
-          rpe: (d.structured_payload as any)?.rpe || null,
-          notes: (d.structured_payload as any)?.notes || null,
-          log_date: d.recorded_at.slice(0, 10),
-          created_at: d.created_at,
-        }))
-      );
+      setLogs(data.map((d: any) => ({
+        id: d.id,
+        workout_type: d.sport || "outro",
+        duration_minutes: d.duration_minutes,
+        rpe: d.perceived_effort,
+        notes: d.notes,
+        log_date: d.activity_date,
+        created_at: d.created_at,
+      })));
     }
   };
 
