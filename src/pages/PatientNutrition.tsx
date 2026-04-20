@@ -433,7 +433,7 @@ export default function PatientNutrition() {
       </div>
 
       {user && patientId && (
-        <FloatingUploadButton patientId={patientId} userId={user.id} userRole="patient" userName={userName} />
+        <FloatingUploadButton patientId={patientId} userId={user.id} userRole="patient" userName={userName} categoryHint="prescricao_nutricional" />
       )}
     </PatientLayout>
   );

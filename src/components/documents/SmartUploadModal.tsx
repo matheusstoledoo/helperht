@@ -37,6 +37,7 @@ interface SmartUploadModalProps {
   userRole: string;
   userName: string;
   onSuccess?: () => void;
+  categoryHint?: string;
 }
 
 const DOCUMENT_CATEGORIES = [
@@ -61,6 +62,7 @@ export const SmartUploadModal = ({
   userRole,
   userName,
   onSuccess,
+  categoryHint,
 }: SmartUploadModalProps) => {
   const [step, setStep] = useState<Step>("source");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -91,7 +93,21 @@ export const SmartUploadModal = ({
 
   const handleFileSelected = (file: File) => {
     setSelectedFile(file);
-    setStep("category");
+    if (categoryHint) {
+      setSelectedCategory(categoryHint);
+      setStep("processing");
+      uploadAndExtract(file, patientId, userId, userRole, userName, categoryHint)
+        .then(result => {
+          if (result) {
+            setDocumentId(result.documentId);
+            setStep("review");
+          } else {
+            setStep("category");
+          }
+        });
+    } else {
+      setStep("category");
+    }
   };
 
   const handleCameraCapture = () => {

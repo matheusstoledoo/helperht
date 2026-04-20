@@ -11,6 +11,7 @@ interface FloatingUploadButtonProps {
   userName: string;
   onSuccess?: () => void;
   className?: string;
+  categoryHint?: string;
 }
 
 export const FloatingUploadButton = ({
@@ -20,6 +21,7 @@ export const FloatingUploadButton = ({
   userName,
   onSuccess,
   className,
+  categoryHint,
 }: FloatingUploadButtonProps) => {
   const [open, setOpen] = useState(false);
 
@@ -46,6 +48,7 @@ export const FloatingUploadButton = ({
         userRole={userRole}
         userName={userName}
         onSuccess={onSuccess}
+        categoryHint={categoryHint}
       />
     </>
   );
