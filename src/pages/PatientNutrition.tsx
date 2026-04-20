@@ -358,6 +358,37 @@ export default function PatientNutrition() {
               ) : activePlan ? (
                 <>
                   {renderPlanCard(activePlan, true)}
+                  {nutritionRecs.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Apple className="h-4 w-4 text-teal-600" />
+                          Orientações da nutricionista
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {nutritionRecs.map((rec, i) => (
+                          <div key={i} className="border-l-2 border-teal-500 pl-3 py-1 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Badge className="text-xs bg-teal-50 text-teal-800 border-teal-200">
+                                {rec.dimension?.replace(/_/g, " ")}
+                              </Badge>
+                              {rec.priority === "urgente" && (
+                                <Badge className="text-xs bg-red-50 text-red-800">urgente</Badge>
+                              )}
+                              {rec.priority === "atencao" && (
+                                <Badge className="text-xs bg-amber-50 text-amber-800">atenção</Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-foreground">{rec.recommendation}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(parseISO(rec.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                            </p>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  )}
                   <Button variant="outline" className="w-full" onClick={() => setShowCreateForm(true)}>
                     <Plus className="h-4 w-4 mr-1" /> Criar novo plano
                   </Button>
