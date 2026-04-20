@@ -48,6 +48,7 @@ export const FloatingUploadButton = ({
         userRole={userRole}
         userName={userName}
         onSuccess={onSuccess}
+        categoryHint={categoryHint}
       />
     </>
   );
