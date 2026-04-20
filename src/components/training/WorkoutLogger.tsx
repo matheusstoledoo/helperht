@@ -74,10 +74,6 @@ export default function WorkoutLogger({ userId, patientId }: WorkoutLoggerProps)
   }, [userId]);
 
   const handleSave = async () => {
-    if (!patientId) {
-      toast.error("Dados do paciente não encontrados");
-      return;
-    }
     setSaving(true);
     const { error } = await supabase.from("workout_logs").insert({
       user_id: userId,
