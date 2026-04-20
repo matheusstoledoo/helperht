@@ -204,38 +204,54 @@ export default function PatientNutrition() {
     const meals: Meal[] = Array.isArray(plan.meals) ? plan.meals : [];
     if (meals.length === 0) return null;
 
+    const completedCount = meals.filter((_, i) => isMealCompleted(plan.id, i)).length;
+    const progressPct = meals.length > 0 ? Math.round((completedCount / meals.length) * 100) : 0;
+
     return (
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Apple className="h-4 w-4 text-green-500" />
-            Refeições
+          <CardTitle className="text-base flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Apple className="h-4 w-4 text-green-500" />
+              Refeições de hoje
+            </span>
+            <span className="text-sm font-normal text-muted-foreground">
+              {completedCount}/{meals.length} cumpridas
+            </span>
           </CardTitle>
+          <div className="w-full bg-muted rounded-full h-1.5 mt-2">
+            <div
+              className="bg-primary rounded-full h-1.5 transition-all"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
         </CardHeader>
         <CardContent className="space-y-2">
           {meals.map((meal, i) => {
-            const key = `${plan.id}-${i}`;
-            const expanded = expandedMeals[key];
-            const completed = completedMeals[key];
+            const mealKey = `${plan.id}-${i}`;
+            const expanded = expandedMeals[mealKey];
+            const completed = isMealCompleted(plan.id, i);
+            const toggling = togglingMeal === mealKey;
 
             return (
               <div
-                key={key}
+                key={mealKey}
                 className={`border rounded-lg transition-colors ${completed ? "bg-muted/50 border-primary/30" : ""}`}
               >
                 <button
                   className="w-full flex items-center justify-between p-3 text-left"
-                  onClick={() => toggleMeal(key)}
+                  onClick={() => toggleMeal(mealKey)}
                 >
                   <div className="flex items-center gap-3">
                     <button
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        toggleMealCompleted(key);
+                        await toggleMealCompleted(mealKey, plan.id, i, meal.name || `Refeição ${i + 1}`);
                       }}
+                      disabled={toggling}
                       className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${
                         completed ? "bg-primary border-primary" : "border-muted-foreground/30"
-                      }`}
+                      } ${toggling ? "opacity-50" : ""}`}
                     >
                       {completed && <Check className="h-3 w-3 text-primary-foreground" />}
                     </button>
