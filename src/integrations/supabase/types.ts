@@ -1368,6 +1368,70 @@ export type Database = {
           },
         ]
       }
+      meal_logs: {
+        Row: {
+          completed: boolean | null
+          created_at: string | null
+          id: string
+          log_date: string
+          meal_index: number
+          meal_name: string | null
+          notes: string | null
+          nutrition_plan_id: string | null
+          patient_id: string | null
+          source: string | null
+          user_id: string | null
+        }
+        Insert: {
+          completed?: boolean | null
+          created_at?: string | null
+          id?: string
+          log_date: string
+          meal_index: number
+          meal_name?: string | null
+          notes?: string | null
+          nutrition_plan_id?: string | null
+          patient_id?: string | null
+          source?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          completed?: boolean | null
+          created_at?: string | null
+          id?: string
+          log_date?: string
+          meal_index?: number
+          meal_name?: string | null
+          notes?: string | null
+          nutrition_plan_id?: string | null
+          patient_id?: string | null
+          source?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_logs_nutrition_plan_id_fkey"
+            columns: ["nutrition_plan_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_logs_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "meal_logs_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
