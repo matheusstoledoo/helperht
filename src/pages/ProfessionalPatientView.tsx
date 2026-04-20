@@ -606,6 +606,22 @@ const ProfessionalPatientView = () => {
                   <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                 </CardContent>
               </Card>
+
+              <Card
+                className="cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() => navigate(`${basePath}/atleta`)}
+              >
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Activity className="h-5 w-5 text-primary shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">Monitor do Atleta</p>
+                      <p className="text-xs text-muted-foreground">Carga, recuperação e provas</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                </CardContent>
+              </Card>
             </div>
           </div>
 
