@@ -147,6 +147,101 @@ const parseSport = (v?: string): string => {
   return SPORT_MAP[key] || "outro";
 };
 
+// Garmin Connect parser
+const parseGarminRow = (row: any): ParsedRow => {
+  const mapSport = (type: string): string => {
+    const t = (type || '').toLowerCase();
+    if (t.includes('running') || t.includes('run')) return 'corrida';
+    if (t.includes('cycling') || t.includes('ride') || t.includes('bike')) return 'ciclismo';
+    if (t.includes('swimming') || t.includes('swim')) return 'natacao';
+    if (t.includes('strength') || t.includes('gym')) return 'musculacao';
+    if (t.includes('trail')) return 'corrida';
+    if (t.includes('triathlon')) return 'triatlo';
+    return 'outro';
+  };
+
+  const parseTime = (timeStr: string): number | null => {
+    if (!timeStr) return null;
+    const parts = timeStr.split(':').map(Number);
+    if (parts.length === 3) return parts[0] * 60 + parts[1] + Math.round(parts[2] / 60);
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    return null;
+  };
+
+  const parseDate = (dateStr: string): string => {
+    if (!dateStr) return new Date().toISOString().split("T")[0];
+    // Garmin usa formato "YYYY-MM-DD HH:MM:SS" ou "DD/MM/YYYY"
+    const clean = dateStr.split(' ')[0];
+    if (clean.includes('-')) return clean.slice(0, 10);
+    const parts = clean.split('/');
+    if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    return new Date().toISOString().split("T")[0];
+  };
+
+  const distRaw = parseFloat(row['Distance'] || row['Distância'] || '0');
+  const distKm = distRaw > 1000 ? distRaw / 1000 : distRaw;
+
+  const durationMin = parseTime(row['Time'] || row['Tempo'] || row['Duration'] || '');
+  const perceived = parseInt(row['RPE'] || '') || null;
+
+  return {
+    selected: true,
+    activity_name: row['Title'] || row['Título'] || row['Activity Name'] || null,
+    sport: mapSport(row['Activity Type'] || row['Tipo de Atividade'] || ''),
+    activity_date: parseDate(row['Date'] || row['Data'] || row['Start Time'] || ''),
+    duration_minutes: durationMin,
+    planned_duration_minutes: null,
+    distance_km: isNaN(distKm) || distKm === 0 ? null : Math.round(distKm * 100) / 100,
+    tss: parseNum(row['Training Stress Score'] || row['TSS'] || ''),
+    intensity_factor: parseNum(row['Intensity Factor'] || row['IF'] || ''),
+    avg_heart_rate: parseInteger(row['Avg HR'] || row['FC Média'] || row['Average HR'] || ''),
+    max_heart_rate: parseInteger(row['Max HR'] || row['FC Máx'] || row['Maximum HR'] || ''),
+    calories: parseInteger(row['Calories'] || row['Calorias'] || ''),
+    elevation_gain_m: parseNum(row['Total Ascent'] || row['Subida Total'] || ''),
+    avg_pace_min_km: null,
+    notes: pick(row, ['Notes', 'Workout Description', 'Descrição']) || null,
+    perceived_effort: perceived,
+    compliance_pct: null,
+    srpe: durationMin && perceived ? durationMin * perceived : null,
+  };
+};
+
+// Training Peaks parser
+const parseTrainingPeaksRow = (row: any): ParsedRow => {
+  const duration_minutes = parseDurationToMinutes(
+    pick(row, ["Duration", "Total Time"])
+  );
+  const perceived_effort = parseInteger(pick(row, ["RPE"]));
+  let distance_km = parseNum(pick(row, ["Distance", "Total Distance"]));
+  if (distance_km !== null && distance_km > 1000) distance_km = distance_km / 1000;
+
+  return {
+    selected: true,
+    activity_name: pick(row, ["Title", "Workout Name"]) || null,
+    sport: parseSport(pick(row, ["Workout Type"])),
+    activity_date: parseDate(pick(row, ["Date", "Workout Date"])),
+    duration_minutes,
+    planned_duration_minutes: parseDurationToMinutes(
+      pick(row, ["Planned Duration"])
+    ),
+    distance_km,
+    tss: parseNum(pick(row, ["TSS"])),
+    intensity_factor: parseNum(pick(row, ["IF", "Intensity Factor"])),
+    avg_heart_rate: parseInteger(pick(row, ["Average Heart Rate"])),
+    max_heart_rate: parseInteger(pick(row, ["Max Heart Rate"])),
+    calories: parseInteger(pick(row, ["Calories"])),
+    elevation_gain_m: parseNum(pick(row, ["Elevation Gain"])),
+    avg_pace_min_km: parseNum(pick(row, ["Average Pace"])),
+    notes: pick(row, ["Notes", "Workout Description"]) || null,
+    perceived_effort,
+    compliance_pct: parseInteger(pick(row, ["Compliance %", "Compliance"])),
+    srpe:
+      duration_minutes !== null && perceived_effort !== null
+        ? duration_minutes * perceived_effort
+        : null,
+  };
+};
+
 export default function TrainingPeaksImport({
   userId,
   patientId,
@@ -156,6 +251,7 @@ export default function TrainingPeaksImport({
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [importing, setImporting] = useState(false);
   const [showManual, setShowManual] = useState(false);
+  const [importSource, setImportSource] = useState<'trainingpeaks' | 'garmin'>('trainingpeaks');
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Manual form state
@@ -179,40 +275,10 @@ export default function TrainingPeaksImport({
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const parsed: ParsedRow[] = (results.data as any[])
-          .map((row) => {
-            const duration_minutes = parseDurationToMinutes(
-              pick(row, ["Duration", "Total Time"])
-            );
-            const perceived_effort = parseInteger(pick(row, ["RPE"]));
-            let distance_km = parseNum(pick(row, ["Distance", "Total Distance"]));
-            if (distance_km !== null && distance_km > 1000) distance_km = distance_km / 1000;
-            return {
-              selected: true,
-              activity_name: pick(row, ["Title", "Workout Name"]) || null,
-              sport: parseSport(pick(row, ["Workout Type"])),
-              activity_date: parseDate(pick(row, ["Date", "Workout Date"])),
-              duration_minutes,
-              planned_duration_minutes: parseDurationToMinutes(
-                pick(row, ["Planned Duration"])
-              ),
-              distance_km,
-              tss: parseNum(pick(row, ["TSS"])),
-              intensity_factor: parseNum(pick(row, ["IF", "Intensity Factor"])),
-              avg_heart_rate: parseInteger(pick(row, ["Average Heart Rate"])),
-              max_heart_rate: parseInteger(pick(row, ["Max Heart Rate"])),
-              calories: parseInteger(pick(row, ["Calories"])),
-              elevation_gain_m: parseNum(pick(row, ["Elevation Gain"])),
-              avg_pace_min_km: parseNum(pick(row, ["Average Pace"])),
-              notes: pick(row, ["Notes", "Workout Description"]) || null,
-              perceived_effort,
-              compliance_pct: parseInteger(pick(row, ["Compliance %", "Compliance"])),
-              srpe:
-                duration_minutes !== null && perceived_effort !== null
-                  ? duration_minutes * perceived_effort
-                  : null,
-            };
-          })
+        const resultData = results.data as any[];
+        const parsed: ParsedRow[] = resultData
+          .filter(row => Object.values(row).some(v => v !== '' && v !== null && v !== undefined))
+          .map(row => importSource === 'garmin' ? parseGarminRow(row) : parseTrainingPeaksRow(row))
           .filter((r) => r.activity_date);
         setRows(parsed);
         if (parsed.length === 0) {
@@ -245,7 +311,7 @@ export default function TrainingPeaksImport({
       ...rest,
       user_id: userId,
       patient_id: patientId,
-      source: "training_peaks",
+      source: importSource === 'garmin' ? 'garmin' : 'training_peaks',
     }));
     const { error } = await supabase.from("workout_logs").insert(payload);
     setImporting(false);
@@ -323,21 +389,48 @@ export default function TrainingPeaksImport({
       </SheetTrigger>
       <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Importar do Training Peaks</SheetTitle>
+          <SheetTitle>Importar atividades</SheetTitle>
           <SheetDescription>
-            Faça upload do CSV exportado ou adicione uma atividade manualmente.
+            Importe de Training Peaks, Garmin Connect ou adicione manualmente.
           </SheetDescription>
         </SheetHeader>
 
         <div className="mt-6 space-y-6">
+          {/* Source selector */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <Button
+              type="button"
+              variant={importSource === 'trainingpeaks' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setImportSource('trainingpeaks')}
+            >
+              Training Peaks
+            </Button>
+            <Button
+              type="button"
+              variant={importSource === 'garmin' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setImportSource('garmin')}
+            >
+              Garmin Connect
+            </Button>
+          </div>
+
           {/* Upload section */}
           <div className="space-y-3">
             <Label>Upload do CSV</Label>
             <div className="border-2 border-dashed rounded-lg p-6 text-center">
               <Upload className="h-8 w-8 mx-auto text-muted-foreground/60 mb-2" />
               <p className="text-sm text-muted-foreground mb-3">
-                Selecione o arquivo .csv exportado do Training Peaks
+                {importSource === 'garmin'
+                  ? "Selecione o arquivo .csv exportado do Garmin Connect"
+                  : "Selecione o arquivo .csv exportado do Training Peaks"}
               </p>
+              {importSource === 'garmin' && (
+                <p className="text-xs text-muted-foreground mb-3">
+                  Para exportar do Garmin Connect: acesse garmin.com/modern/activities → selecione atividades → Export CSV
+                </p>
+              )}
               <Input
                 ref={fileRef}
                 type="file"
