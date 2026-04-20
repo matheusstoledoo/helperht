@@ -37,6 +37,7 @@ interface SmartUploadModalProps {
   userRole: string;
   userName: string;
   onSuccess?: () => void;
+  categoryHint?: string;
 }
 
 const DOCUMENT_CATEGORIES = [
