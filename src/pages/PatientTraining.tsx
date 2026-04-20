@@ -854,6 +854,74 @@ export default function PatientTraining() {
       {user && patientId && (
         <FloatingUploadButton patientId={patientId} userId={user.id} userRole="patient" userName={userName} />
       )}
+
+      {/* Race form Sheet */}
+      <Sheet open={showRaceForm} onOpenChange={setShowRaceForm}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Adicionar prova</SheetTitle>
+            <SheetDescription>Cadastre uma competição, treino especial ou teste de performance.</SheetDescription>
+          </SheetHeader>
+          <div className="mt-6 space-y-4">
+            <div className="space-y-1.5">
+              <Label>Nome da prova *</Label>
+              <Input value={raceName} onChange={(e) => setRaceName(e.target.value)} placeholder="Ex: Maratona de São Paulo" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Esporte *</Label>
+                <Select value={raceSport} onValueChange={setRaceSport}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="corrida">Corrida</SelectItem>
+                    <SelectItem value="ciclismo">Ciclismo</SelectItem>
+                    <SelectItem value="natacao">Natação</SelectItem>
+                    <SelectItem value="triatlo">Triátlo</SelectItem>
+                    <SelectItem value="trail">Trail Running</SelectItem>
+                    <SelectItem value="outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Data *</Label>
+                <Input type="date" value={raceDate} onChange={(e) => setRaceDate(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Distância (km)</Label>
+                <Input type="number" step="0.1" value={raceDistance} onChange={(e) => setRaceDistance(e.target.value)} placeholder="42.2" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Tipo</Label>
+                <Select value={raceType} onValueChange={setRaceType}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="competicao">Competição</SelectItem>
+                    <SelectItem value="treino_especial">Treino especial</SelectItem>
+                    <SelectItem value="teste_performance">Teste de performance</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Local</Label>
+              <Input value={raceLocation} onChange={(e) => setRaceLocation(e.target.value)} placeholder="Cidade / Estado" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Objetivo</Label>
+              <Input value={raceGoal} onChange={(e) => setRaceGoal(e.target.value)} placeholder="Ex: terminar em menos de 4h" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>TSS planejado</Label>
+              <Input type="number" value={racePlannedTss} onChange={(e) => setRacePlannedTss(e.target.value)} placeholder="Ex: 250" />
+            </div>
+            <Button onClick={handleSaveRace} disabled={savingRace || !raceName || !raceSport || !raceDate} className="w-full">
+              {savingRace ? "Salvando..." : "Salvar prova"}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </PatientLayout>
   );
 }
