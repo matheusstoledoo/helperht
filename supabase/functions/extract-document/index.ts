@@ -360,6 +360,74 @@ serve(async (req) => {
       }
     }
 
+    // Insere nutrition_plans se for prescrição nutricional
+    if (
+      extracted.suggested_category === 'prescricao_nutricional' &&
+      extracted.nutrition_data &&
+      (
+        extracted.nutrition_data.total_calories ||
+        (Array.isArray(extracted.nutrition_data.meals) && extracted.nutrition_data.meals.length > 0)
+      )
+    ) {
+      const { data: docRow2 } = await supabase
+        .from('documents')
+        .select('patient_id, uploaded_by')
+        .eq('id', document_id)
+        .single();
+
+      const patientId = docRow2?.patient_id ?? null;
+      const userId = docRow2?.uploaded_by ?? null;
+
+      // Desativar planos anteriores ativos do mesmo usuário
+      await supabase
+        .from('nutrition_plans')
+        .update({ status: 'inactive' })
+        .eq('user_id', userId)
+        .eq('status', 'active');
+
+      const nd = extracted.nutrition_data;
+
+      // Normalizar refeições para o formato esperado pelo frontend
+      const meals = Array.isArray(nd.meals) ? nd.meals.map((m: any) => ({
+        name: m.name || m.meal_name || 'Refeição',
+        time: m.time || m.horario || null,
+        foods: Array.isArray(m.foods)
+          ? m.foods.map((f: any) => typeof f === 'string' ? f : `${f.name || f.alimento}${f.quantity ? ` — ${f.quantity}` : ''}${f.quantidade ? ` — ${f.quantidade}` : ''}`)
+          : [],
+        calories: m.calories || m.calorias || null,
+        notes: m.notes || m.observacoes || null,
+      })) : [];
+
+      const { error: nutritionError } = await supabase
+        .from('nutrition_plans')
+        .insert({
+          document_id,
+          patient_id: patientId,
+          user_id: userId,
+          professional_name: extracted.professional_name || null,
+          professional_registry: extracted.professional_registry || null,
+          total_calories: nd.total_calories ? parseFloat(nd.total_calories) : null,
+          protein_grams: nd.protein_grams ? parseFloat(nd.protein_grams) : null,
+          protein_percent: nd.protein_percent ? parseFloat(nd.protein_percent) : null,
+          carbs_grams: nd.carbs_grams ? parseFloat(nd.carbs_grams) : null,
+          carbs_percent: nd.carbs_percent ? parseFloat(nd.carbs_percent) : null,
+          fat_grams: nd.fat_grams ? parseFloat(nd.fat_grams) : null,
+          fat_percent: nd.fat_percent ? parseFloat(nd.fat_percent) : null,
+          meals,
+          supplements: Array.isArray(nd.supplements) ? nd.supplements : [],
+          restrictions: Array.isArray(nd.restrictions) ? nd.restrictions : [],
+          observations: extracted.raw_text_summary || null,
+          status: 'active',
+          start_date: extracted.document_date || null,
+        });
+
+      if (nutritionError) {
+        console.error('Erro ao inserir nutrition_plan:', nutritionError);
+      } else {
+        console.log('nutrition_plan inserido com sucesso');
+      }
+    }
+
     return new Response(
       JSON.stringify({ success: true, extraction: extracted }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
