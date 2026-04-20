@@ -4,6 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Dumbbell,
   Calendar,
@@ -14,16 +26,20 @@ import {
   Flame,
   TrendingUp,
   Plus,
+  Trophy,
+  MessageSquare,
+  Star,
 } from "lucide-react";
 import PatientLayout from "@/components/patient/PatientLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, differenceInDays, parseISO, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FloatingUploadButton } from "@/components/documents/FloatingUploadButton";
 import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import WorkoutLogger from "@/components/training/WorkoutLogger";
 import ManualTrainingPlanForm from "@/components/training/ManualTrainingPlanForm";
+import TrainingPeaksImport from "@/components/training/TrainingPeaksImport";
 
 interface TrainingPlan {
   id: string;
@@ -83,6 +99,36 @@ export default function PatientTraining() {
   const [expandedSessions, setExpandedSessions] = useState<Record<string, boolean>>({});
   const [showCreateForm, setShowCreateForm] = useState(false);
 
+  // Calendar & Recovery state
+  const [raceEvents, setRaceEvents] = useState<any[]>([]);
+  const [workoutLogsCalendar, setWorkoutLogsCalendar] = useState<any[]>([]);
+  const [recoveryLogs, setRecoveryLogs] = useState<any[]>([]);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [todayRecovery, setTodayRecovery] = useState<any | null>(null);
+  const [showRaceForm, setShowRaceForm] = useState(false);
+  const [showRecoveryForm, setShowRecoveryForm] = useState(false);
+  // Race form
+  const [raceName, setRaceName] = useState("");
+  const [raceSport, setRaceSport] = useState("");
+  const [raceDate, setRaceDate] = useState("");
+  const [raceDistance, setRaceDistance] = useState("");
+  const [raceType, setRaceType] = useState("competicao");
+  const [raceLocation, setRaceLocation] = useState("");
+  const [raceGoal, setRaceGoal] = useState("");
+  const [racePlannedTss, setRacePlannedTss] = useState("");
+  // Recovery form
+  const [recHrv, setRecHrv] = useState("");
+  const [recHr, setRecHr] = useState("");
+  const [recSleepHours, setRecSleepHours] = useState("");
+  const [recSleepQuality, setRecSleepQuality] = useState(0);
+  const [recDisposition, setRecDisposition] = useState(50);
+  const [recEnergy, setRecEnergy] = useState(50);
+  const [recMuscle, setRecMuscle] = useState(50);
+  const [recJoint, setRecJoint] = useState(50);
+  const [recStress, setRecStress] = useState(0);
+  const [recNotes, setRecNotes] = useState("");
+  const [savingRecovery, setSavingRecovery] = useState(false);
+  const [savingRace, setSavingRace] = useState(false);
   useEffect(() => {
     if (authLoading) return;
     if (!user) { setLoading(false); return; }
