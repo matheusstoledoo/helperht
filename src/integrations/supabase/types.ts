@@ -3108,6 +3108,7 @@ export type Database = {
       }
       users: {
         Row: {
+          council_number: string | null
           cpf: string | null
           created_at: string
           email: string | null
@@ -3117,9 +3118,11 @@ export type Database = {
           profession: string | null
           role: Database["public"]["Enums"]["user_role"]
           specialty: string | null
+          subspecialty: string | null
           updated_at: string
         }
         Insert: {
+          council_number?: string | null
           cpf?: string | null
           created_at?: string
           email?: string | null
@@ -3129,9 +3132,11 @@ export type Database = {
           profession?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           specialty?: string | null
+          subspecialty?: string | null
           updated_at?: string
         }
         Update: {
+          council_number?: string | null
           cpf?: string | null
           created_at?: string
           email?: string | null
@@ -3141,6 +3146,7 @@ export type Database = {
           profession?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           specialty?: string | null
+          subspecialty?: string | null
           updated_at?: string
         }
         Relationships: []
