@@ -11,6 +11,7 @@ interface FloatingUploadButtonProps {
   userName: string;
   onSuccess?: () => void;
   className?: string;
+  categoryHint?: string;
 }
 
 export const FloatingUploadButton = ({
