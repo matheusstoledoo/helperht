@@ -2042,6 +2042,87 @@ export type Database = {
           },
         ]
       }
+      professional_recommendations: {
+        Row: {
+          created_at: string | null
+          dimension: string
+          id: string
+          patient_id: string | null
+          priority: string | null
+          professional_id: string | null
+          race_event_id: string | null
+          recommendation: string
+          recovery_log_id: string | null
+          specialty: string
+          visible_to_patient: boolean | null
+          workout_log_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          dimension: string
+          id?: string
+          patient_id?: string | null
+          priority?: string | null
+          professional_id?: string | null
+          race_event_id?: string | null
+          recommendation: string
+          recovery_log_id?: string | null
+          specialty: string
+          visible_to_patient?: boolean | null
+          workout_log_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          dimension?: string
+          id?: string
+          patient_id?: string | null
+          priority?: string | null
+          professional_id?: string | null
+          race_event_id?: string | null
+          recommendation?: string
+          recovery_log_id?: string | null
+          specialty?: string
+          visible_to_patient?: boolean | null
+          workout_log_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_recommendations_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "professional_recommendations_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_recommendations_race_event_id_fkey"
+            columns: ["race_event_id"]
+            isOneToOne: false
+            referencedRelation: "race_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_recommendations_recovery_log_id_fkey"
+            columns: ["recovery_log_id"]
+            isOneToOne: false
+            referencedRelation: "recovery_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_recommendations_workout_log_id_fkey"
+            columns: ["workout_log_id"]
+            isOneToOne: false
+            referencedRelation: "workout_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       protocol_phases: {
         Row: {
           biomarkers_to_track: string[] | null
@@ -2175,6 +2256,147 @@ export type Database = {
             columns: ["performed_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      race_events: {
+        Row: {
+          created_at: string | null
+          distance_km: number | null
+          event_date: string
+          event_type: string | null
+          goal: string | null
+          id: string
+          location: string | null
+          name: string
+          patient_id: string | null
+          planned_tss: number | null
+          result_notes: string | null
+          sport: string
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          distance_km?: number | null
+          event_date: string
+          event_type?: string | null
+          goal?: string | null
+          id?: string
+          location?: string | null
+          name: string
+          patient_id?: string | null
+          planned_tss?: number | null
+          result_notes?: string | null
+          sport: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          distance_km?: number | null
+          event_date?: string
+          event_type?: string | null
+          goal?: string | null
+          id?: string
+          location?: string | null
+          name?: string
+          patient_id?: string | null
+          planned_tss?: number | null
+          result_notes?: string | null
+          sport?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "race_events_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "race_events_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recovery_logs: {
+        Row: {
+          created_at: string | null
+          disposition_score: number | null
+          energy_score: number | null
+          free_notes: string | null
+          hrv_rmssd: number | null
+          id: string
+          joint_score: number | null
+          log_date: string
+          muscle_score: number | null
+          patient_id: string | null
+          resting_heart_rate: number | null
+          sleep_hours: number | null
+          sleep_quality: number | null
+          source: string | null
+          stress_score: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          disposition_score?: number | null
+          energy_score?: number | null
+          free_notes?: string | null
+          hrv_rmssd?: number | null
+          id?: string
+          joint_score?: number | null
+          log_date: string
+          muscle_score?: number | null
+          patient_id?: string | null
+          resting_heart_rate?: number | null
+          sleep_hours?: number | null
+          sleep_quality?: number | null
+          source?: string | null
+          stress_score?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          disposition_score?: number | null
+          energy_score?: number | null
+          free_notes?: string | null
+          hrv_rmssd?: number | null
+          id?: string
+          joint_score?: number | null
+          log_date?: string
+          muscle_score?: number | null
+          patient_id?: string | null
+          resting_heart_rate?: number | null
+          sleep_hours?: number | null
+          sleep_quality?: number | null
+          source?: string | null
+          stress_score?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recovery_logs_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "recovery_logs_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]
@@ -3337,6 +3559,146 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workout_logs: {
+        Row: {
+          activity_date: string
+          activity_name: string | null
+          avg_heart_rate: number | null
+          avg_pace_min_km: number | null
+          calories: number | null
+          compliance_pct: number | null
+          created_at: string | null
+          distance_km: number | null
+          duration_minutes: number | null
+          elevation_gain_m: number | null
+          feeling_score: number | null
+          hrv_rmssd: number | null
+          id: string
+          intensity_factor: number | null
+          max_heart_rate: number | null
+          min_heart_rate: number | null
+          notes: string | null
+          patient_id: string | null
+          perceived_effort: number | null
+          planned_distance_km: number | null
+          planned_duration_minutes: number | null
+          planned_pace_min_km: number | null
+          planned_tss: number | null
+          race_event_id: string | null
+          raw_data: Json | null
+          sleep_hours: number | null
+          source: string | null
+          spo2: number | null
+          sport: string | null
+          srpe: number | null
+          training_plan_id: string | null
+          tss: number | null
+          user_id: string | null
+          workout_steps: Json | null
+        }
+        Insert: {
+          activity_date: string
+          activity_name?: string | null
+          avg_heart_rate?: number | null
+          avg_pace_min_km?: number | null
+          calories?: number | null
+          compliance_pct?: number | null
+          created_at?: string | null
+          distance_km?: number | null
+          duration_minutes?: number | null
+          elevation_gain_m?: number | null
+          feeling_score?: number | null
+          hrv_rmssd?: number | null
+          id?: string
+          intensity_factor?: number | null
+          max_heart_rate?: number | null
+          min_heart_rate?: number | null
+          notes?: string | null
+          patient_id?: string | null
+          perceived_effort?: number | null
+          planned_distance_km?: number | null
+          planned_duration_minutes?: number | null
+          planned_pace_min_km?: number | null
+          planned_tss?: number | null
+          race_event_id?: string | null
+          raw_data?: Json | null
+          sleep_hours?: number | null
+          source?: string | null
+          spo2?: number | null
+          sport?: string | null
+          srpe?: number | null
+          training_plan_id?: string | null
+          tss?: number | null
+          user_id?: string | null
+          workout_steps?: Json | null
+        }
+        Update: {
+          activity_date?: string
+          activity_name?: string | null
+          avg_heart_rate?: number | null
+          avg_pace_min_km?: number | null
+          calories?: number | null
+          compliance_pct?: number | null
+          created_at?: string | null
+          distance_km?: number | null
+          duration_minutes?: number | null
+          elevation_gain_m?: number | null
+          feeling_score?: number | null
+          hrv_rmssd?: number | null
+          id?: string
+          intensity_factor?: number | null
+          max_heart_rate?: number | null
+          min_heart_rate?: number | null
+          notes?: string | null
+          patient_id?: string | null
+          perceived_effort?: number | null
+          planned_distance_km?: number | null
+          planned_duration_minutes?: number | null
+          planned_pace_min_km?: number | null
+          planned_tss?: number | null
+          race_event_id?: string | null
+          raw_data?: Json | null
+          sleep_hours?: number | null
+          source?: string | null
+          spo2?: number | null
+          sport?: string | null
+          srpe?: number | null
+          training_plan_id?: string | null
+          tss?: number | null
+          user_id?: string | null
+          workout_steps?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_logs_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "workout_logs_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_logs_race_event_id_fkey"
+            columns: ["race_event_id"]
+            isOneToOne: false
+            referencedRelation: "race_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_logs_training_plan_id_fkey"
+            columns: ["training_plan_id"]
+            isOneToOne: false
+            referencedRelation: "training_plans"
             referencedColumns: ["id"]
           },
         ]
