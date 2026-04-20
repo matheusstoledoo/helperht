@@ -62,6 +62,7 @@ export const SmartUploadModal = ({
   userRole,
   userName,
   onSuccess,
+  categoryHint,
 }: SmartUploadModalProps) => {
   const [step, setStep] = useState<Step>("source");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
