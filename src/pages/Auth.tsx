@@ -44,9 +44,12 @@ const Auth = () => {
 
   // Professional signup state
   const [showProfessionalSignup, setShowProfessionalSignup] = useState(false);
+  const [signupStep, setSignupStep] = useState<1 | 2>(1);
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
   const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
   const [signupName, setSignupName] = useState("");
   const [signupCpf, setSignupCpf] = useState("");
   const [signupSpecialty, setSignupSpecialty] = useState("");
@@ -117,15 +120,39 @@ const Auth = () => {
     }
   };
 
+  const handleProfessionalStep1 = (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      nameSchema.parse(signupName);
+      emailSchema.parse(signupEmail.trim().toLowerCase());
+      cpfSchema.parse(signupCpf);
+      passwordSchema.parse(signupPassword);
+
+      if (signupPassword !== signupConfirmPassword) {
+        toast({
+          title: "As senhas não coincidem",
+          description: "Verifique a confirmação de senha.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSignupStep(2);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Erro de validação",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   const handleProfessionalSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      emailSchema.parse(signupEmail.trim().toLowerCase());
-      passwordSchema.parse(signupPassword);
-      nameSchema.parse(signupName);
-      cpfSchema.parse(signupCpf);
-
       if (!signupSpecialty) {
         toast({
           title: "Especialidade obrigatória",
@@ -160,10 +187,12 @@ const Auth = () => {
         await supabase
           .from('users')
           .update({
+            role: 'professional',
             specialty: signupSpecialty,
             subspecialty: signupSubspecialty.trim() || null,
             council_number: signupCouncilNumber.trim() || null,
-          })
+            onboarding_completed: true,
+          } as any)
           .eq('id', newUser.id);
       }
 
@@ -197,160 +226,215 @@ const Auth = () => {
 
         {showProfessionalSignup ? (
           <Card>
-            <CardHeader>
-              <CardTitle>Cadastro Profissional</CardTitle>
-              <CardDescription>Crie sua conta de profissional de saúde</CardDescription>
-            </CardHeader>
-            <form onSubmit={handleProfessionalSignup}>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="prof-name">Nome completo</Label>
-                  <Input
-                    id="prof-name"
-                    type="text"
-                    placeholder="Seu nome"
-                    value={signupName}
-                    onChange={(e) => setSignupName(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
+            {signupStep === 1 ? (
+              <>
+                <CardHeader>
+                  <CardTitle>Cadastro Profissional</CardTitle>
+                  <CardDescription>Etapa 1 de 2 — Dados pessoais</CardDescription>
+                </CardHeader>
+                <form onSubmit={handleProfessionalStep1}>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="prof-name">Nome completo</Label>
+                      <Input
+                        id="prof-name"
+                        type="text"
+                        placeholder="Seu nome"
+                        value={signupName}
+                        onChange={(e) => setSignupName(e.target.value)}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="prof-cpf">CPF</Label>
-                  <Input
-                    id="prof-cpf"
-                    type="text"
-                    placeholder="000.000.000-00"
-                    value={signupCpf}
-                    onChange={(e) => setSignupCpf(e.target.value)}
-                    required
-                    disabled={loading}
-                    maxLength={14}
-                  />
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="prof-email">Email</Label>
+                      <Input
+                        id="prof-email"
+                        type="email"
+                        inputMode="email"
+                        autoComplete="email"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        placeholder="seu@email.com"
+                        value={signupEmail}
+                        onChange={(e) => setSignupEmail(e.target.value)}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="prof-email">Email</Label>
-                  <Input
-                    id="prof-email"
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    placeholder="seu@email.com"
-                    value={signupEmail}
-                    onChange={(e) => setSignupEmail(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="prof-cpf">CPF</Label>
+                      <Input
+                        id="prof-cpf"
+                        type="text"
+                        placeholder="000.000.000-00"
+                        value={signupCpf}
+                        onChange={(e) => setSignupCpf(e.target.value)}
+                        required
+                        disabled={loading}
+                        maxLength={14}
+                      />
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="prof-password">Senha</Label>
-                  <div className="relative">
-                    <Input
-                      id="prof-password"
-                      type={showSignupPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={signupPassword}
-                      onChange={(e) => setSignupPassword(e.target.value)}
-                      required
-                      disabled={loading}
-                      className="pr-10"
-                    />
-                    <button
+                    <div className="space-y-2">
+                      <Label htmlFor="prof-password">Senha</Label>
+                      <div className="relative">
+                        <Input
+                          id="prof-password"
+                          type={showSignupPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          value={signupPassword}
+                          onChange={(e) => setSignupPassword(e.target.value)}
+                          required
+                          disabled={loading}
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowSignupPassword((v) => !v)}
+                          disabled={loading}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                          aria-label={showSignupPassword ? "Ocultar senha" : "Mostrar senha"}
+                        >
+                          {showSignupPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="prof-confirm-password">Confirmar senha</Label>
+                      <div className="relative">
+                        <Input
+                          id="prof-confirm-password"
+                          type={showSignupConfirmPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          value={signupConfirmPassword}
+                          onChange={(e) => setSignupConfirmPassword(e.target.value)}
+                          required
+                          disabled={loading}
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowSignupConfirmPassword((v) => !v)}
+                          disabled={loading}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                          aria-label={showSignupConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
+                        >
+                          {showSignupConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex flex-col gap-3">
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      Continuar
+                    </Button>
+                    <Button
                       type="button"
-                      onClick={() => setShowSignupPassword((v) => !v)}
+                      variant="link"
+                      className="text-sm text-muted-foreground"
+                      onClick={() => setShowProfessionalSignup(false)}
                       disabled={loading}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-                      aria-label={showSignupPassword ? "Ocultar senha" : "Mostrar senha"}
                     >
-                      {showSignupPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
+                      Voltar ao login
+                    </Button>
+                  </CardFooter>
+                </form>
+              </>
+            ) : (
+              <>
+                <CardHeader>
+                  <CardTitle>Qual é sua especialidade?</CardTitle>
+                  <CardDescription>
+                    Isso personaliza como você visualiza os dados dos seus pacientes.
+                  </CardDescription>
+                </CardHeader>
+                <form onSubmit={handleProfessionalSignup}>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="prof-specialty">Especialidade principal</Label>
+                      <Select value={signupSpecialty} onValueChange={setSignupSpecialty} disabled={loading}>
+                        <SelectTrigger id="prof-specialty">
+                          <SelectValue placeholder="Selecione sua especialidade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="médico">Médico</SelectItem>
+                          <SelectItem value="fisioterapeuta">Fisioterapeuta</SelectItem>
+                          <SelectItem value="nutricionista">Nutricionista</SelectItem>
+                          <SelectItem value="educador físico">Educador físico</SelectItem>
+                          <SelectItem value="psicólogo">Psicólogo</SelectItem>
+                          <SelectItem value="enfermeiro">Enfermeiro</SelectItem>
+                          <SelectItem value="farmacêutico">Farmacêutico</SelectItem>
+                          <SelectItem value="outro">Outro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="prof-specialty">Especialidade</Label>
-                  <Select value={signupSpecialty} onValueChange={setSignupSpecialty} disabled={loading}>
-                    <SelectTrigger id="prof-specialty">
-                      <SelectValue placeholder="Selecione sua especialidade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="médico">Médico</SelectItem>
-                      <SelectItem value="fisioterapeuta">Fisioterapeuta</SelectItem>
-                      <SelectItem value="nutricionista">Nutricionista</SelectItem>
-                      <SelectItem value="educador físico">Educador Físico</SelectItem>
-                      <SelectItem value="psicólogo">Psicólogo</SelectItem>
-                      <SelectItem value="enfermeiro">Enfermeiro</SelectItem>
-                      <SelectItem value="farmacêutico">Farmacêutico</SelectItem>
-                      <SelectItem value="outro">Outro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="prof-subspecialty">
+                        {signupSpecialty === "médico"
+                          ? "Área de atuação (ex: ortopedia, cardiologia, clínica geral)"
+                          : signupSpecialty === "fisioterapeuta"
+                          ? "Área de atuação (ex: esportiva, neurológica, ortopédica)"
+                          : "Subespecialidade ou área de atuação (opcional)"}
+                      </Label>
+                      <Input
+                        id="prof-subspecialty"
+                        type="text"
+                        value={signupSubspecialty}
+                        onChange={(e) => setSignupSubspecialty(e.target.value)}
+                        disabled={loading}
+                      />
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="prof-subspecialty">
-                    {signupSpecialty === "médico"
-                      ? "Área de atuação (ex: cardiologia, ortopedia, clínica geral)"
-                      : signupSpecialty === "fisioterapeuta"
-                      ? "Área de atuação (ex: esportiva, neurológica, ortopédica)"
-                      : "Subespecialidade ou área de atuação (opcional)"}
-                  </Label>
-                  <Input
-                    id="prof-subspecialty"
-                    type="text"
-                    value={signupSubspecialty}
-                    onChange={(e) => setSignupSubspecialty(e.target.value)}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="prof-council">
-                    {signupSpecialty === "médico" ? "CRM"
-                      : signupSpecialty === "fisioterapeuta" ? "CREFITO"
-                      : signupSpecialty === "nutricionista" ? "CRN"
-                      : signupSpecialty === "educador físico" ? "CREF"
-                      : signupSpecialty === "psicólogo" ? "CRP"
-                      : signupSpecialty === "enfermeiro" ? "COREN"
-                      : signupSpecialty === "farmacêutico" ? "CRF"
-                      : "Número do conselho profissional (opcional)"}
-                  </Label>
-                  <Input
-                    id="prof-council"
-                    type="text"
-                    value={signupCouncilNumber}
-                    onChange={(e) => setSignupCouncilNumber(e.target.value)}
-                    disabled={loading}
-                  />
-                </div>
-              </CardContent>
-              <CardFooter className="flex flex-col gap-3">
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Cadastrando...
-                    </>
-                  ) : (
-                    "Criar conta profissional"
-                  )}
-                </Button>
-                <Button
-                  type="button"
-                  variant="link"
-                  className="text-sm text-muted-foreground"
-                  onClick={() => setShowProfessionalSignup(false)}
-                  disabled={loading}
-                >
-                  Voltar ao login
-                </Button>
-              </CardFooter>
-            </form>
+                    <div className="space-y-2">
+                      <Label htmlFor="prof-council">
+                        {signupSpecialty === "médico" ? "CRM"
+                          : signupSpecialty === "fisioterapeuta" ? "CREFITO"
+                          : signupSpecialty === "nutricionista" ? "CRN"
+                          : signupSpecialty === "educador físico" ? "CREF"
+                          : signupSpecialty === "psicólogo" ? "CRP"
+                          : signupSpecialty === "enfermeiro" ? "COREN"
+                          : signupSpecialty === "farmacêutico" ? "CRF"
+                          : "Número do conselho profissional (opcional)"}
+                      </Label>
+                      <Input
+                        id="prof-council"
+                        type="text"
+                        value={signupCouncilNumber}
+                        onChange={(e) => setSignupCouncilNumber(e.target.value)}
+                        disabled={loading}
+                      />
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex flex-col gap-3">
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Cadastrando...
+                        </>
+                      ) : (
+                        "Finalizar cadastro"
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full"
+                      onClick={() => setSignupStep(1)}
+                      disabled={loading}
+                    >
+                      Voltar
+                    </Button>
+                  </CardFooter>
+                </form>
+              </>
+            )}
           </Card>
         ) : (
           <Card>
