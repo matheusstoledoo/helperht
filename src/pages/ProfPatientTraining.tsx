@@ -882,7 +882,7 @@ export default function ProfPatientTraining() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowAll(v => !v)}
+                  onClick={togglePanelViewMode}
                   className="text-xs px-3 py-1.5 rounded-md border border-border hover:bg-muted/50 transition-colors"
                 >
                   {showAll ? 'Voltar à visão da especialidade' : 'Ver todos os painéis'}
