@@ -384,6 +384,424 @@ export default function ProfPatientTraining() {
     estresse: r.stress_score,
   }));
 
+
+  // Ordenação e destaque baseados na especialidade do profissional logado
+  const { ordered: orderedPanels, highlighted: highlightedPanels } = buildPanelOrder(profSpecialty);
+  const effectiveOrder = showAll ? [1, 2, 3, 4, 5, 6, 7] : orderedPanels;
+  const effectiveHighlight = showAll ? new Set<number>() : highlightedPanels;
+  const specialtyLabel = SPECIALTY_LABELS[profSpecialty] || null;
+
+  // Métricas auxiliares por especialidade (Strava/Garmin/Training Peaks)
+  const last7 = wLogs.filter(l => differenceInDays(now, parseISO(l.activity_date)) < 7);
+  const prev7to30 = wLogs.filter(l => {
+    const d = differenceInDays(now, parseISO(l.activity_date));
+    return d >= 7 && d < 30;
+  });
+  const avgHR = (() => {
+    const vals = wLogs.filter(l => l.avg_heart_rate).slice(-10).map(l => l.avg_heart_rate);
+    return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+  })();
+  const restingHR7 = (() => {
+    const vals = rLogs.filter(r => r.resting_heart_rate &&
+      differenceInDays(now, parseISO(r.log_date)) < 7).map(r => r.resting_heart_rate);
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  })();
+  const restingHR30 = (() => {
+    const vals = rLogs.filter(r => {
+      const d = differenceInDays(now, parseISO(r.log_date));
+      return r.resting_heart_rate && d >= 7 && d < 37;
+    }).map(r => r.resting_heart_rate);
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  })();
+  const weekCalories = last7.reduce((s, l) => s + (l.calories || 0), 0);
+  const weekDurationMin = last7.reduce((s, l) => s + (l.duration_minutes || 0), 0);
+  const plannedTSSWeek = last7.reduce((s, l) => s + (Number(l.planned_tss) || 0), 0);
+  const realizedTSSWeek = last7.reduce((s, l) => s + (Number(l.tss) || 0), 0);
+  const complianceVals = last7.filter(l => l.compliance_pct != null).map(l => l.compliance_pct);
+  const complianceWeek = complianceVals.length
+    ? Math.round(complianceVals.reduce((a, b) => a + b, 0) / complianceVals.length) : null;
+
+  // ACWR zone label for Strava/Garmin section
+  const acwrZone = acwr === null ? null
+    : (acwr >= 0.85 && acwr <= 1.25 ? '🟢 Zona ideal' : '🔴 Fora da zona');
+
+  const isFisioOrEdu = profSpecialty === 'fisioterapeuta' || profSpecialty === 'educador físico';
+  const isMedico = profSpecialty === 'médico';
+  const isNutri = profSpecialty === 'nutricionista';
+  const isEdu = profSpecialty === 'educador físico';
+
+  // Renderização de cada painel mapeada por ID
+  const renderPanel = (n: number) => {
+    const isHighlighted = effectiveHighlight.has(n);
+    const cardClass = isHighlighted ? 'border-primary border-2 shadow-sm' : '';
+    switch (n) {
+      case 1: return (
+        <Card key={n} className={cardClass}>
+          {isHighlighted && (
+            <div className="px-4 pt-3">
+              <Badge className="bg-primary text-primary-foreground text-[10px] uppercase tracking-wide">
+                Foco da especialidade
+              </Badge>
+            </div>
+          )}
+          {renderPanelHeader(1, "Carga de Treino (ACWR)", <Activity className="h-4 w-4 text-primary" />)}
+          {openPanels.has(1) && (
+            <CardContent className="space-y-4 pt-0">
+              {acwr === null ? (
+                <p className="text-sm text-muted-foreground p-4 bg-muted/30 rounded">
+                  Dados insuficientes — registre pelo menos 2 semanas de treino para calcular o ACWR.
+                </p>
+              ) : (
+                <>
+                  <div className="flex items-end gap-4">
+                    <span className="text-5xl font-bold" style={{ color: acwrColor }}>{acwr.toFixed(2)}</span>
+                    <div className="pb-2">
+                      <p className="text-sm font-medium" style={{ color: acwrColor }}>{acwrLabel}</p>
+                      <p className="text-xs text-muted-foreground">Razão carga aguda / carga crônica</p>
+                      {isFisioOrEdu && acwrZone && (
+                        <p className="text-xs mt-1 font-medium">{acwrZone}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {isEdu && (plannedTSSWeek > 0 || realizedTSSWeek > 0) && (
+                    <div className="grid grid-cols-3 gap-3 p-3 bg-primary/5 rounded border border-primary/20">
+                      <div>
+                        <p className="text-xs text-muted-foreground">TSS planejado (7d)</p>
+                        <p className="text-lg font-semibold">{Math.round(plannedTSSWeek)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">TSS realizado (7d)</p>
+                        <p className="text-lg font-semibold">{Math.round(realizedTSSWeek)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Compliance</p>
+                        <p className="text-lg font-semibold">
+                          {complianceWeek != null ? `${complianceWeek}%` : '—'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">ACWR — últimas 8 semanas</p>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={acwrChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="week" tick={{ fontSize: 11 }} />
+                        <YAxis domain={[0, 2]} tick={{ fontSize: 11 }} />
+                        <Tooltip />
+                        <ReferenceLine y={0.85} stroke="#888" strokeDasharray="3 3" />
+                        <ReferenceLine y={1.25} stroke="#888" strokeDasharray="3 3" />
+                        <Line type="monotone" dataKey="acwr" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">Carga semanal (TSS/sRPE) — últimas 8 semanas</p>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <BarChart data={acwrChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="week" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} />
+                        <Tooltip />
+                        <Bar dataKey="load" fill="hsl(var(--primary))" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          )}
+        </Card>
+      );
+      case 2: return (
+        <Card key={n} className={cardClass}>
+          {isHighlighted && (
+            <div className="px-4 pt-3">
+              <Badge className="bg-primary text-primary-foreground text-[10px] uppercase tracking-wide">
+                Foco da especialidade
+              </Badge>
+            </div>
+          )}
+          {renderPanelHeader(2, "Recuperação Musculoesquelética")}
+          {openPanels.has(2) && (
+            <CardContent className="space-y-4 pt-0">
+              {rLogs.length === 0 ? (
+                <p className="text-sm text-muted-foreground p-4 bg-muted/30 rounded">Nenhum registro de recuperação encontrado.</p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-2">
+                    {(['muscle_score', 'joint_score', 'disposition_score', 'energy_score'] as const).map((key, i) => {
+                      const labels = ['Músculos', 'Articulações', 'Disposição', 'Energia'];
+                      const val = latestRecovery?.[key];
+                      if (val == null) return null;
+                      const color = val >= 70 ? 'bg-green-100 text-green-800' : val >= 40 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800';
+                      return <Badge key={key} className={color}>{labels[i]}: {Math.round(val)}</Badge>;
+                    })}
+                  </div>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <AreaChart data={recoveryChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
+                      <Tooltip />
+                      <Area type="monotone" dataKey="disposicao" stroke="#378ADD" fill="#378ADD" fillOpacity={0.2} />
+                      <Area type="monotone" dataKey="energia" stroke="#1D9E75" fill="#1D9E75" fillOpacity={0.2} />
+                      <Area type="monotone" dataKey="musculos" stroke="#D85A30" fill="#D85A30" fillOpacity={0.2} />
+                      <Area type="monotone" dataKey="articulacoes" stroke="#E24B4A" fill="#E24B4A" fillOpacity={0.2} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </>
+              )}
+            </CardContent>
+          )}
+        </Card>
+      );
+      case 3: return (
+        <Card key={n} className={cardClass}>
+          {isHighlighted && (
+            <div className="px-4 pt-3">
+              <Badge className="bg-primary text-primary-foreground text-[10px] uppercase tracking-wide">
+                Foco da especialidade
+              </Badge>
+            </div>
+          )}
+          {renderPanelHeader(3, "Sinais Fisiológicos")}
+          {openPanels.has(3) && (
+            <CardContent className="space-y-4 pt-0">
+              {isMedico && (avgHR != null || restingHR7 != null) && (
+                <div className="grid grid-cols-2 gap-3 p-3 bg-primary/5 rounded border border-primary/20">
+                  {avgHR != null && (
+                    <div>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Heart className="h-3 w-3" /> FC média (últimas atividades)
+                      </p>
+                      <p className="text-lg font-semibold">{avgHR} bpm</p>
+                    </div>
+                  )}
+                  {restingHR7 != null && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">FC repouso (7d vs 30d)</p>
+                      <p className="text-lg font-semibold">
+                        {Math.round(restingHR7)}{' '}
+                        {restingHR30 != null && (
+                          <span className={`text-sm ${restingHR7 > restingHR30 ? 'text-red-600' : 'text-green-600'}`}>
+                            ({restingHR7 > restingHR30 ? '↑' : '↓'} {Math.abs(Math.round(restingHR7 - restingHR30))})
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+              {rLogs.length === 0 ? (
+                <p className="text-sm text-muted-foreground p-4 bg-muted/30 rounded">Nenhum dado fisiológico registrado.</p>
+              ) : (
+                <>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <LineChart data={physioChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                      <YAxis yAxisId="left" tick={{ fontSize: 11 }} />
+                      <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} />
+                      <Tooltip />
+                      <Line yAxisId="left" type="monotone" dataKey="hrv" stroke="#378ADD" strokeWidth={2} name="HRV (ms)" />
+                      <Line yAxisId="right" type="monotone" dataKey="fc" stroke="#E24B4A" strokeWidth={2} name="FC repouso (bpm)" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <p className="text-xs text-muted-foreground">
+                    HRV abaixo da média individual dos últimos 7 dias pode indicar recuperação incompleta.
+                  </p>
+                </>
+              )}
+            </CardContent>
+          )}
+        </Card>
+      );
+      case 4: return (
+        <Card key={n} className={cardClass}>
+          {isHighlighted && (
+            <div className="px-4 pt-3">
+              <Badge className="bg-primary text-primary-foreground text-[10px] uppercase tracking-wide">
+                Foco da especialidade
+              </Badge>
+            </div>
+          )}
+          {renderPanelHeader(4, "Sono e Energia")}
+          {openPanels.has(4) && (
+            <CardContent className="space-y-4 pt-0">
+              {isNutri && (weekCalories > 0 || weekDurationMin > 0) && (
+                <div className="grid grid-cols-2 gap-3 p-3 bg-primary/5 rounded border border-primary/20">
+                  <div>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Flame className="h-3 w-3" /> Gasto calórico (7d)
+                    </p>
+                    <p className="text-lg font-semibold">{Math.round(weekCalories)} kcal</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Duração de atividades (7d)</p>
+                    <p className="text-lg font-semibold">
+                      {Math.floor(weekDurationMin / 60)}h {Math.round(weekDurationMin % 60)}min
+                    </p>
+                  </div>
+                </div>
+              )}
+              {rLogs.length === 0 ? (
+                <p className="text-sm text-muted-foreground p-4 bg-muted/30 rounded">Nenhum dado de sono registrado.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={200}>
+                  <ComposedChart data={sleepChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                    <YAxis yAxisId="left" tick={{ fontSize: 11 }} />
+                    <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar yAxisId="left" dataKey="sono" fill="#378ADD" name="Sono (h)" />
+                    <Line yAxisId="right" type="monotone" dataKey="energia" stroke="#1D9E75" strokeWidth={2} name="Energia" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          )}
+        </Card>
+      );
+      case 5: return (
+        <Card key={n} className={cardClass}>
+          {isHighlighted && (
+            <div className="px-4 pt-3">
+              <Badge className="bg-primary text-primary-foreground text-[10px] uppercase tracking-wide">
+                Foco da especialidade
+              </Badge>
+            </div>
+          )}
+          {renderPanelHeader(5, "Humor e Estresse")}
+          {openPanels.has(5) && (
+            <CardContent className="space-y-4 pt-0">
+              {rLogs.length === 0 ? (
+                <p className="text-sm text-muted-foreground p-4 bg-muted/30 rounded">Nenhum dado de humor registrado.</p>
+              ) : (
+                <>
+                  <ResponsiveContainer width="100%" height={160}>
+                    <LineChart data={stressChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                      <YAxis domain={[0, 5]} tick={{ fontSize: 11 }} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="estresse" stroke="#E24B4A" strokeWidth={2} dot={{ r: 4 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <div className="space-y-2">
+                    {rLogs.filter(r => r.free_notes).slice(-5).reverse().map((r, i) => (
+                      <div key={i} className="border-l-2 border-muted-foreground/30 pl-3 py-1">
+                        <p className="text-xs text-muted-foreground">{formatDate(parseISO(r.log_date), "dd/MM/yyyy", { locale: ptBR })}</p>
+                        <p className="text-sm">{r.free_notes}</p>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </CardContent>
+          )}
+        </Card>
+      );
+      case 6: return (
+        <Card key={n} className={cardClass}>
+          {isHighlighted && (
+            <div className="px-4 pt-3">
+              <Badge className="bg-primary text-primary-foreground text-[10px] uppercase tracking-wide">
+                Foco da especialidade
+              </Badge>
+            </div>
+          )}
+          {renderPanelHeader(6, "Provas e Periodização", <Trophy className="h-4 w-4 text-primary" />)}
+          {openPanels.has(6) && (
+            <CardContent className="space-y-3 pt-0">
+              {races.length === 0 ? (
+                <p className="text-sm text-muted-foreground p-4 bg-muted/30 rounded">Nenhuma prova agendada.</p>
+              ) : races.map(race => {
+                const days = differenceInDays(parseISO(race.event_date), now);
+                const highLoad = acwr !== null && acwr > 1.3 && days <= 14;
+                const daysBadgeColor = days > 30 ? 'bg-green-100 text-green-800' : days >= 8 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800';
+                return (
+                  <div key={race.id} className="space-y-2">
+                    <div className="border rounded-lg p-3 flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm">{race.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(parseISO(race.event_date), "dd/MM/yyyy", { locale: ptBR })} · {race.sport}
+                          {race.distance_km && ` · ${race.distance_km} km`}
+                          {race.planned_tss && ` · TSS ${Math.round(race.planned_tss)}`}
+                        </p>
+                      </div>
+                      <Badge className={daysBadgeColor}>{days}d</Badge>
+                    </div>
+                    {highLoad && (
+                      <div className="flex items-center gap-2 p-3 rounded text-sm" style={{ background: '#FCEBEB', color: '#791F1F' }}>
+                        <AlertTriangle className="h-4 w-4 shrink-0" />
+                        <span>Carga elevada próxima à prova — considerar semana de regeneração</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </CardContent>
+          )}
+        </Card>
+      );
+      case 7: return (
+        <Card key={n} className={cardClass}>
+          {isHighlighted && (
+            <div className="px-4 pt-3">
+              <Badge className="bg-primary text-primary-foreground text-[10px] uppercase tracking-wide">
+                Foco da especialidade
+              </Badge>
+            </div>
+          )}
+          {renderPanelHeader(7, "Histórico de Atividades")}
+          {openPanels.has(7) && (
+            <CardContent className="pt-0">
+              {wLogs.length === 0 ? (
+                <p className="text-sm text-muted-foreground p-4 bg-muted/30 rounded">Nenhuma atividade registrada.</p>
+              ) : (
+                <div className="space-y-2">
+                  {[...wLogs].reverse().slice(0, 10).map((log, i) => {
+                    const load = getLoad(log);
+                    const highLoad = (log.tss && log.tss > 100) || (log.srpe && log.srpe > 600);
+                    const feelingEmoji = ['', '😫', '😕', '😐', '🙂', '💪'][log.feeling_score] || '';
+                    return (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between gap-3 p-3 rounded border"
+                        style={highLoad ? { background: '#FCEBEB' } : undefined}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="text-xs text-muted-foreground font-mono shrink-0">
+                            {formatDate(parseISO(log.activity_date), "dd/MM", { locale: ptBR })}
+                          </span>
+                          <span className="text-sm truncate">{log.activity_name || log.sport || '—'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
+                          {log.distance_km && <span>{Number(log.distance_km).toFixed(1)}km</span>}
+                          {log.duration_minutes && <span>{Math.round(log.duration_minutes)}min</span>}
+                          {load && <Badge variant="outline" className="text-xs">{Math.round(load)}</Badge>}
+                          {log.compliance_pct != null && <span>{Math.round(log.compliance_pct)}%</span>}
+                          {feelingEmoji && <span className="text-base">{feelingEmoji}</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          )}
+        </Card>
+      );
+      default: return null;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card px-4 sm:px-6 py-4">
