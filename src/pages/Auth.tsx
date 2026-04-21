@@ -120,15 +120,39 @@ const Auth = () => {
     }
   };
 
+  const handleProfessionalStep1 = (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      nameSchema.parse(signupName);
+      emailSchema.parse(signupEmail.trim().toLowerCase());
+      cpfSchema.parse(signupCpf);
+      passwordSchema.parse(signupPassword);
+
+      if (signupPassword !== signupConfirmPassword) {
+        toast({
+          title: "As senhas não coincidem",
+          description: "Verifique a confirmação de senha.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSignupStep(2);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Erro de validação",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   const handleProfessionalSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      emailSchema.parse(signupEmail.trim().toLowerCase());
-      passwordSchema.parse(signupPassword);
-      nameSchema.parse(signupName);
-      cpfSchema.parse(signupCpf);
-
       if (!signupSpecialty) {
         toast({
           title: "Especialidade obrigatória",
@@ -163,10 +187,12 @@ const Auth = () => {
         await supabase
           .from('users')
           .update({
+            role: 'professional',
             specialty: signupSpecialty,
             subspecialty: signupSubspecialty.trim() || null,
             council_number: signupCouncilNumber.trim() || null,
-          })
+            onboarding_completed: true,
+          } as any)
           .eq('id', newUser.id);
       }
 
