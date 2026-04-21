@@ -173,9 +173,7 @@ export default function ProfPatientTraining() {
       setRaces(racesRes.data || []);
 
       const specialty = (profRes.data as any)?.specialty || '';
-      const savedMode = (profRes.data as any)?.panel_view_mode;
       setProfSpecialty(specialty);
-      setShowAll(savedMode === 'all');
       const defaultOpen: Record<string, number[]> = {
         'médico': [1, 3, 4],
         'fisioterapeuta': [1, 2, 3],
@@ -264,20 +262,9 @@ export default function ProfPatientTraining() {
     }
   };
 
-  const togglePanelViewMode = async () => {
-    const next = !showAll;
-    setShowAll(next);
-    if (!user) return;
-    const { error } = await supabase
-      .from("users")
-      .update({ panel_view_mode: next ? 'all' : 'specialty' } as any)
-      .eq("id", user.id);
-    if (error) {
-      console.error("Erro ao salvar preferência de visualização:", error);
-      toast.error("Não foi possível salvar sua preferência");
-      setShowAll(!next);
-    }
-  };
+  // togglePanelViewMode é fornecido pelo hook usePanelViewMode (persiste em users.panel_view_mode
+  // e mantém todas as telas profissionais sincronizadas)
+
 
   if (authLoading || roleLoading || loading) return <FullPageLoading />;
 
