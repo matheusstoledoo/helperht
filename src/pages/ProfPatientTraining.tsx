@@ -130,6 +130,7 @@ export default function ProfPatientTraining() {
   const [races, setRaces] = useState<any[]>([]);
   const [profSpecialty, setProfSpecialty] = useState<string>('');
   const [openPanels, setOpenPanels] = useState<Set<number>>(new Set([1, 2, 3, 4, 5, 6, 7]));
+  const [showAll, setShowAll] = useState<boolean>(false);
   const [recDimension, setRecDimension] = useState<string>('');
   const [recText, setRecText] = useState<string>('');
   const [recPriority, setRecPriority] = useState<string>('normal');
