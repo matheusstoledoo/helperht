@@ -173,14 +173,14 @@ export default function ProfPatientTraining() {
 
       const specialty = (profRes.data as any)?.specialty || '';
       setProfSpecialty(specialty);
-      const defaultPanels: Record<string, number[]> = {
+      const defaultOpen: Record<string, number[]> = {
         'médico': [1, 3, 4],
         'fisioterapeuta': [1, 2, 3],
         'educador físico': [1, 6, 7],
         'nutricionista': [4, 1, 7],
         'psicólogo': [5, 4, 2],
       };
-      setOpenPanels(new Set(defaultPanels[specialty] || [1, 2, 3, 4, 5, 6, 7]));
+      setOpenPanels(new Set(defaultOpen[specialty] || [1, 2, 3, 4, 5, 6, 7]));
       setLoading(false);
     };
     fetchData();
