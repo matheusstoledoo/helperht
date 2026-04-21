@@ -131,7 +131,7 @@ export default function ProfPatientTraining() {
   const [races, setRaces] = useState<any[]>([]);
   const [profSpecialty, setProfSpecialty] = useState<string>('');
   const [openPanels, setOpenPanels] = useState<Set<number>>(new Set([1, 2, 3, 4, 5, 6, 7]));
-  const { showAll, toggle: togglePanelViewMode, specialty: viewSpecialty } = usePanelViewMode();
+  const { showAll, toggle: togglePanelViewMode } = usePanelViewMode();
   const [recDimension, setRecDimension] = useState<string>('');
   const [recText, setRecText] = useState<string>('');
   const [recPriority, setRecPriority] = useState<string>('normal');
