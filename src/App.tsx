@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ProfessionalProfileGate } from "@/components/auth/ProfessionalProfileGate";
 import { FullPageLoading } from "@/components/ui/loading-spinner";
 
 // Eager load landing + auth (first interaction)
@@ -13,6 +14,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import CompletarPerfil from "./pages/CompletarPerfil";
 
 // Lazy load everything else
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -62,13 +64,15 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Suspense fallback={<FullPageLoading />}>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+          <ProfessionalProfileGate>
+            <Suspense fallback={<FullPageLoading />}>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/completar-perfil" element={<CompletarPerfil />} />
+                <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/prof/pacientes/novo" element={<NewPatient />} />
               <Route path="/prof/paciente/:id/timeline" element={<PatientTimeline />} />
               <Route path="/prof/paciente/:id/diagnosticos" element={<PatientDiagnoses />} />
@@ -111,8 +115,9 @@ const App = () => (
               <Route path="/prof/trilhas" element={<PatientCareTrails />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
+              </Routes>
+            </Suspense>
+          </ProfessionalProfileGate>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
