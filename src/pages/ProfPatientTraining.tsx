@@ -163,7 +163,7 @@ export default function ProfPatientTraining() {
         supabase.from("race_events").select("*").eq("patient_id", id)
           .gte("event_date", today)
           .order("event_date", { ascending: true }),
-        supabase.from("users").select("specialty").eq("id", user!.id).maybeSingle(),
+        supabase.from("users").select("specialty, panel_view_mode").eq("id", user!.id).maybeSingle(),
       ]);
       if (patientRes.data?.users) setPatientName((patientRes.data.users as any).name || "Paciente");
       if (plansRes.data) setPlans(plansRes.data as unknown as TrainingPlan[]);
