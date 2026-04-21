@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ProfessionalProfileGate } from "@/components/auth/ProfessionalProfileGate";
 import { FullPageLoading } from "@/components/ui/loading-spinner";
 
 // Eager load landing + auth (first interaction)
@@ -13,6 +14,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import CompletarPerfil from "./pages/CompletarPerfil";
 
 // Lazy load everything else
 const Dashboard = lazy(() => import("./pages/Dashboard"));
