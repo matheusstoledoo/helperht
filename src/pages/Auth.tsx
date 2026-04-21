@@ -44,9 +44,12 @@ const Auth = () => {
 
   // Professional signup state
   const [showProfessionalSignup, setShowProfessionalSignup] = useState(false);
+  const [signupStep, setSignupStep] = useState<1 | 2>(1);
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
   const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
   const [signupName, setSignupName] = useState("");
   const [signupCpf, setSignupCpf] = useState("");
   const [signupSpecialty, setSignupSpecialty] = useState("");
