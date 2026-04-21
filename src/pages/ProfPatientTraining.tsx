@@ -43,6 +43,77 @@ const SPORT_LABELS: Record<string, string> = {
   natacao: "Natação", funcional: "Funcional", outro: "Outro",
 };
 
+// Mapeamento entre chaves semânticas (na config) e os IDs reais dos painéis
+// renderizados nesta tela. Várias chaves podem apontar para o mesmo painel.
+const PANEL_KEY_TO_ID: Record<string, number> = {
+  acwr: 1, tss: 1, compliance: 1, carga_muscular: 1,
+  recuperacao: 2, padrao_movimento: 2,
+  hrv: 3, fc_repouso: 3, sinais_vitais: 3,
+  sono: 4, energia: 4, gasto_calorico: 4,
+  humor: 5, estresse: 5, bem_estar: 5,
+  performance: 6,
+  atividade: 7, alertas: 7,
+};
+
+const SPECIALTY_LABELS: Record<string, string> = {
+  'médico': 'Médico',
+  'fisioterapeuta': 'Fisioterapeuta',
+  'educador físico': 'Educador Físico',
+  'nutricionista': 'Nutricionista',
+  'psicólogo': 'Psicólogo',
+  'enfermeiro': 'Enfermeiro',
+  'farmacêutico': 'Farmacêutico',
+  'outro': 'Outro',
+};
+
+const getPanelConfig = (specialty: string): { priority: string[]; highlight: string[] } => {
+  const configs: Record<string, { priority: string[]; highlight: string[] }> = {
+    'médico': {
+      priority: ['sinais_vitais', 'hrv', 'fc_repouso', 'alertas', 'sono', 'atividade'],
+      highlight: ['sinais_vitais', 'hrv', 'fc_repouso'],
+    },
+    'fisioterapeuta': {
+      priority: ['carga_muscular', 'acwr', 'padrao_movimento', 'recuperacao', 'atividade', 'sinais_vitais'],
+      highlight: ['carga_muscular', 'acwr', 'recuperacao'],
+    },
+    'educador físico': {
+      priority: ['acwr', 'tss', 'compliance', 'performance', 'recuperacao', 'sono'],
+      highlight: ['acwr', 'tss', 'compliance'],
+    },
+    'nutricionista': {
+      priority: ['sono', 'energia', 'gasto_calorico', 'atividade', 'recuperacao', 'sinais_vitais'],
+      highlight: ['sono', 'energia', 'gasto_calorico'],
+    },
+    'psicólogo': {
+      priority: ['humor', 'estresse', 'bem_estar', 'sono', 'recuperacao', 'atividade'],
+      highlight: ['humor', 'estresse', 'bem_estar'],
+    },
+  };
+  return configs[specialty] || { priority: [], highlight: [] };
+};
+
+const buildPanelOrder = (specialty: string): { ordered: number[]; highlighted: Set<number> } => {
+  const ALL = [1, 2, 3, 4, 5, 6, 7];
+  const cfg = getPanelConfig(specialty);
+  const seen = new Set<number>();
+  const ordered: number[] = [];
+  for (const key of cfg.priority) {
+    const id = PANEL_KEY_TO_ID[key];
+    if (id != null && !seen.has(id)) {
+      ordered.push(id);
+      seen.add(id);
+    }
+  }
+  for (const id of ALL) if (!seen.has(id)) ordered.push(id);
+
+  const highlighted = new Set<number>();
+  for (const key of cfg.highlight) {
+    const id = PANEL_KEY_TO_ID[key];
+    if (id != null) highlighted.add(id);
+  }
+  return { ordered, highlighted };
+};
+
 export default function ProfPatientTraining() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
