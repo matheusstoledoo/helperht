@@ -172,7 +172,9 @@ export default function ProfPatientTraining() {
       setRaces(racesRes.data || []);
 
       const specialty = (profRes.data as any)?.specialty || '';
+      const savedMode = (profRes.data as any)?.panel_view_mode;
       setProfSpecialty(specialty);
+      setShowAll(savedMode === 'all');
       const defaultOpen: Record<string, number[]> = {
         'médico': [1, 3, 4],
         'fisioterapeuta': [1, 2, 3],
