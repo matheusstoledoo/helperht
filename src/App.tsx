@@ -64,13 +64,15 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Suspense fallback={<FullPageLoading />}>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+          <ProfessionalProfileGate>
+            <Suspense fallback={<FullPageLoading />}>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/completar-perfil" element={<CompletarPerfil />} />
+                <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/prof/pacientes/novo" element={<NewPatient />} />
               <Route path="/prof/paciente/:id/timeline" element={<PatientTimeline />} />
               <Route path="/prof/paciente/:id/diagnosticos" element={<PatientDiagnoses />} />
