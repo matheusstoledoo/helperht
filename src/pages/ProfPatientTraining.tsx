@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { usePanelViewMode } from "@/hooks/usePanelViewMode";
 
 interface TrainingPlan {
   id: string;
@@ -130,7 +131,7 @@ export default function ProfPatientTraining() {
   const [races, setRaces] = useState<any[]>([]);
   const [profSpecialty, setProfSpecialty] = useState<string>('');
   const [openPanels, setOpenPanels] = useState<Set<number>>(new Set([1, 2, 3, 4, 5, 6, 7]));
-  const [showAll, setShowAll] = useState<boolean>(false);
+  const { showAll, toggle: togglePanelViewMode } = usePanelViewMode();
   const [recDimension, setRecDimension] = useState<string>('');
   const [recText, setRecText] = useState<string>('');
   const [recPriority, setRecPriority] = useState<string>('normal');
@@ -172,9 +173,7 @@ export default function ProfPatientTraining() {
       setRaces(racesRes.data || []);
 
       const specialty = (profRes.data as any)?.specialty || '';
-      const savedMode = (profRes.data as any)?.panel_view_mode;
       setProfSpecialty(specialty);
-      setShowAll(savedMode === 'all');
       const defaultOpen: Record<string, number[]> = {
         'médico': [1, 3, 4],
         'fisioterapeuta': [1, 2, 3],
@@ -263,20 +262,9 @@ export default function ProfPatientTraining() {
     }
   };
 
-  const togglePanelViewMode = async () => {
-    const next = !showAll;
-    setShowAll(next);
-    if (!user) return;
-    const { error } = await supabase
-      .from("users")
-      .update({ panel_view_mode: next ? 'all' : 'specialty' } as any)
-      .eq("id", user.id);
-    if (error) {
-      console.error("Erro ao salvar preferência de visualização:", error);
-      toast.error("Não foi possível salvar sua preferência");
-      setShowAll(!next);
-    }
-  };
+  // togglePanelViewMode é fornecido pelo hook usePanelViewMode (persiste em users.panel_view_mode
+  // e mantém todas as telas profissionais sincronizadas)
+
 
   if (authLoading || roleLoading || loading) return <FullPageLoading />;
 
