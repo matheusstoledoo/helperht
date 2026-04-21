@@ -3401,6 +3401,7 @@ export type Database = {
           id: string
           name: string
           onboarding_completed: boolean
+          panel_view_mode: string
           phone: string | null
           profession: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -3416,6 +3417,7 @@ export type Database = {
           id?: string
           name: string
           onboarding_completed?: boolean
+          panel_view_mode?: string
           phone?: string | null
           profession?: string | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -3431,6 +3433,7 @@ export type Database = {
           id?: string
           name?: string
           onboarding_completed?: boolean
+          panel_view_mode?: string
           phone?: string | null
           profession?: string | null
           role?: Database["public"]["Enums"]["user_role"]

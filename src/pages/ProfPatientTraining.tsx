@@ -163,7 +163,7 @@ export default function ProfPatientTraining() {
         supabase.from("race_events").select("*").eq("patient_id", id)
           .gte("event_date", today)
           .order("event_date", { ascending: true }),
-        supabase.from("users").select("specialty").eq("id", user!.id).maybeSingle(),
+        supabase.from("users").select("specialty, panel_view_mode").eq("id", user!.id).maybeSingle(),
       ]);
       if (patientRes.data?.users) setPatientName((patientRes.data.users as any).name || "Paciente");
       if (plansRes.data) setPlans(plansRes.data as unknown as TrainingPlan[]);
@@ -172,7 +172,9 @@ export default function ProfPatientTraining() {
       setRaces(racesRes.data || []);
 
       const specialty = (profRes.data as any)?.specialty || '';
+      const savedMode = (profRes.data as any)?.panel_view_mode;
       setProfSpecialty(specialty);
+      setShowAll(savedMode === 'all');
       const defaultOpen: Record<string, number[]> = {
         'médico': [1, 3, 4],
         'fisioterapeuta': [1, 2, 3],
@@ -258,6 +260,21 @@ export default function ProfPatientTraining() {
       setRecVisible(true); setRecRaceId('');
     } else {
       toast.error("Erro ao salvar recomendação");
+    }
+  };
+
+  const togglePanelViewMode = async () => {
+    const next = !showAll;
+    setShowAll(next);
+    if (!user) return;
+    const { error } = await supabase
+      .from("users")
+      .update({ panel_view_mode: next ? 'all' : 'specialty' } as any)
+      .eq("id", user.id);
+    if (error) {
+      console.error("Erro ao salvar preferência de visualização:", error);
+      toast.error("Não foi possível salvar sua preferência");
+      setShowAll(!next);
     }
   };
 
@@ -865,7 +882,7 @@ export default function ProfPatientTraining() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowAll(v => !v)}
+                  onClick={togglePanelViewMode}
                   className="text-xs px-3 py-1.5 rounded-md border border-border hover:bg-muted/50 transition-colors"
                 >
                   {showAll ? 'Voltar à visão da especialidade' : 'Ver todos os painéis'}
