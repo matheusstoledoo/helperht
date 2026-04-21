@@ -115,8 +115,9 @@ const App = () => (
               <Route path="/prof/trilhas" element={<PatientCareTrails />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
+              </Routes>
+            </Suspense>
+          </ProfessionalProfileGate>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
