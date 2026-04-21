@@ -852,256 +852,29 @@ export default function ProfPatientTraining() {
           {/* ABA 2 — Monitor do Atleta */}
           <TabsContent value="monitor" className="space-y-4">
 
-            {/* Painel 1 — Carga de Treino (ACWR) */}
-            <Card>
-              {renderPanelHeader(1, "Carga de Treino (ACWR)", <Activity className="h-4 w-4 text-primary" />)}
-              {openPanels.has(1) && (
-                <CardContent className="space-y-4 pt-0">
-                  {acwr === null ? (
-                    <p className="text-sm text-muted-foreground p-4 bg-muted/30 rounded">
-                      Dados insuficientes — registre pelo menos 2 semanas de treino para calcular o ACWR.
-                    </p>
-                  ) : (
-                    <>
-                      <div className="flex items-end gap-4">
-                        <span className="text-5xl font-bold" style={{ color: acwrColor }}>{acwr.toFixed(2)}</span>
-                        <div className="pb-2">
-                          <p className="text-sm font-medium" style={{ color: acwrColor }}>{acwrLabel}</p>
-                          <p className="text-xs text-muted-foreground">Razão carga aguda / carga crônica</p>
-                        </div>
-                      </div>
+            {/* Chip de contexto da especialidade */}
+            {specialtyLabel && (
+              <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg border border-primary/30 bg-primary/5">
+                <div className="flex items-center gap-2 text-sm">
+                  <Eye className="h-4 w-4 text-primary" />
+                  <span className="text-muted-foreground">Visualizando como</span>
+                  <Badge className="bg-primary text-primary-foreground">{specialtyLabel}</Badge>
+                  <span className="text-xs text-muted-foreground hidden sm:inline">
+                    — painéis priorizados para sua especialidade
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAll(v => !v)}
+                  className="text-xs px-3 py-1.5 rounded-md border border-border hover:bg-muted/50 transition-colors"
+                >
+                  {showAll ? 'Voltar à visão da especialidade' : 'Ver todos os painéis'}
+                </button>
+              </div>
+            )}
 
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-2">ACWR — últimas 8 semanas</p>
-                        <ResponsiveContainer width="100%" height={300}>
-                          <LineChart data={acwrChartData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                            <XAxis dataKey="week" tick={{ fontSize: 11 }} />
-                            <YAxis domain={[0, 2]} tick={{ fontSize: 11 }} />
-                            <Tooltip />
-                            <ReferenceLine y={0.85} stroke="#888" strokeDasharray="3 3" />
-                            <ReferenceLine y={1.25} stroke="#888" strokeDasharray="3 3" />
-                            <Line type="monotone" dataKey="acwr" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-2">Carga semanal (TSS/sRPE) — últimas 8 semanas</p>
-                        <ResponsiveContainer width="100%" height={200}>
-                          <BarChart data={acwrChartData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                            <XAxis dataKey="week" tick={{ fontSize: 11 }} />
-                            <YAxis tick={{ fontSize: 11 }} />
-                            <Tooltip />
-                            <Bar dataKey="load" fill="hsl(var(--primary))" />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </>
-                  )}
-                </CardContent>
-              )}
-            </Card>
-
-            {/* Painel 2 — Recuperação Musculoesquelética */}
-            <Card>
-              {renderPanelHeader(2, "Recuperação Musculoesquelética")}
-              {openPanels.has(2) && (
-                <CardContent className="space-y-4 pt-0">
-                  {rLogs.length === 0 ? (
-                    <p className="text-sm text-muted-foreground p-4 bg-muted/30 rounded">Nenhum registro de recuperação encontrado.</p>
-                  ) : (
-                    <>
-                      <div className="flex flex-wrap gap-2">
-                        {(['muscle_score', 'joint_score', 'disposition_score', 'energy_score'] as const).map((key, i) => {
-                          const labels = ['Músculos', 'Articulações', 'Disposição', 'Energia'];
-                          const val = latestRecovery?.[key];
-                          if (val == null) return null;
-                          const color = val >= 70 ? 'bg-green-100 text-green-800' : val >= 40 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800';
-                          return <Badge key={key} className={color}>{labels[i]}: {Math.round(val)}</Badge>;
-                        })}
-                      </div>
-                      <ResponsiveContainer width="100%" height={200}>
-                        <AreaChart data={recoveryChartData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                          <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                          <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-                          <Tooltip />
-                          <Area type="monotone" dataKey="disposicao" stroke="#378ADD" fill="#378ADD" fillOpacity={0.2} />
-                          <Area type="monotone" dataKey="energia" stroke="#1D9E75" fill="#1D9E75" fillOpacity={0.2} />
-                          <Area type="monotone" dataKey="musculos" stroke="#D85A30" fill="#D85A30" fillOpacity={0.2} />
-                          <Area type="monotone" dataKey="articulacoes" stroke="#E24B4A" fill="#E24B4A" fillOpacity={0.2} />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </>
-                  )}
-                </CardContent>
-              )}
-            </Card>
-
-            {/* Painel 3 — Sinais Fisiológicos */}
-            <Card>
-              {renderPanelHeader(3, "Sinais Fisiológicos")}
-              {openPanels.has(3) && (
-                <CardContent className="space-y-4 pt-0">
-                  {rLogs.length === 0 ? (
-                    <p className="text-sm text-muted-foreground p-4 bg-muted/30 rounded">Nenhum dado fisiológico registrado.</p>
-                  ) : (
-                    <>
-                      <ResponsiveContainer width="100%" height={200}>
-                        <LineChart data={physioChartData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                          <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                          <YAxis yAxisId="left" tick={{ fontSize: 11 }} />
-                          <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} />
-                          <Tooltip />
-                          <Line yAxisId="left" type="monotone" dataKey="hrv" stroke="#378ADD" strokeWidth={2} name="HRV (ms)" />
-                          <Line yAxisId="right" type="monotone" dataKey="fc" stroke="#E24B4A" strokeWidth={2} name="FC repouso (bpm)" />
-                        </LineChart>
-                      </ResponsiveContainer>
-                      <p className="text-xs text-muted-foreground">
-                        HRV abaixo da média individual dos últimos 7 dias pode indicar recuperação incompleta.
-                      </p>
-                    </>
-                  )}
-                </CardContent>
-              )}
-            </Card>
-
-            {/* Painel 4 — Sono e Energia */}
-            <Card>
-              {renderPanelHeader(4, "Sono e Energia")}
-              {openPanels.has(4) && (
-                <CardContent className="space-y-4 pt-0">
-                  {rLogs.length === 0 ? (
-                    <p className="text-sm text-muted-foreground p-4 bg-muted/30 rounded">Nenhum dado de sono registrado.</p>
-                  ) : (
-                    <ResponsiveContainer width="100%" height={200}>
-                      <ComposedChart data={sleepChartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                        <YAxis yAxisId="left" tick={{ fontSize: 11 }} />
-                        <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 11 }} />
-                        <Tooltip />
-                        <Bar yAxisId="left" dataKey="sono" fill="#378ADD" name="Sono (h)" />
-                        <Line yAxisId="right" type="monotone" dataKey="energia" stroke="#1D9E75" strokeWidth={2} name="Energia" />
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                  )}
-                </CardContent>
-              )}
-            </Card>
-
-            {/* Painel 5 — Humor e Estresse */}
-            <Card>
-              {renderPanelHeader(5, "Humor e Estresse")}
-              {openPanels.has(5) && (
-                <CardContent className="space-y-4 pt-0">
-                  {rLogs.length === 0 ? (
-                    <p className="text-sm text-muted-foreground p-4 bg-muted/30 rounded">Nenhum dado de humor registrado.</p>
-                  ) : (
-                    <>
-                      <ResponsiveContainer width="100%" height={160}>
-                        <LineChart data={stressChartData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                          <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                          <YAxis domain={[0, 5]} tick={{ fontSize: 11 }} />
-                          <Tooltip />
-                          <Line type="monotone" dataKey="estresse" stroke="#E24B4A" strokeWidth={2} dot={{ r: 4 }} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                      <div className="space-y-2">
-                        {rLogs.filter(r => r.free_notes).slice(-5).reverse().map((r, i) => (
-                          <div key={i} className="border-l-2 border-muted-foreground/30 pl-3 py-1">
-                            <p className="text-xs text-muted-foreground">{formatDate(parseISO(r.log_date), "dd/MM/yyyy", { locale: ptBR })}</p>
-                            <p className="text-sm">{r.free_notes}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </CardContent>
-              )}
-            </Card>
-
-            {/* Painel 6 — Provas e Periodização */}
-            <Card>
-              {renderPanelHeader(6, "Provas e Periodização", <Trophy className="h-4 w-4 text-primary" />)}
-              {openPanels.has(6) && (
-                <CardContent className="space-y-3 pt-0">
-                  {races.length === 0 ? (
-                    <p className="text-sm text-muted-foreground p-4 bg-muted/30 rounded">Nenhuma prova agendada.</p>
-                  ) : races.map(race => {
-                    const days = differenceInDays(parseISO(race.event_date), now);
-                    const highLoad = acwr !== null && acwr > 1.3 && days <= 14;
-                    const daysBadgeColor = days > 30 ? 'bg-green-100 text-green-800' : days >= 8 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800';
-                    return (
-                      <div key={race.id} className="space-y-2">
-                        <div className="border rounded-lg p-3 flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm">{race.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatDate(parseISO(race.event_date), "dd/MM/yyyy", { locale: ptBR })} · {race.sport}
-                              {race.distance_km && ` · ${race.distance_km} km`}
-                              {race.planned_tss && ` · TSS ${Math.round(race.planned_tss)}`}
-                            </p>
-                          </div>
-                          <Badge className={daysBadgeColor}>{days}d</Badge>
-                        </div>
-                        {highLoad && (
-                          <div className="flex items-center gap-2 p-3 rounded text-sm" style={{ background: '#FCEBEB', color: '#791F1F' }}>
-                            <AlertTriangle className="h-4 w-4 shrink-0" />
-                            <span>Carga elevada próxima à prova — considerar semana de regeneração</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              )}
-            </Card>
-
-            {/* Painel 7 — Histórico de Atividades */}
-            <Card>
-              {renderPanelHeader(7, "Histórico de Atividades")}
-              {openPanels.has(7) && (
-                <CardContent className="pt-0">
-                  {wLogs.length === 0 ? (
-                    <p className="text-sm text-muted-foreground p-4 bg-muted/30 rounded">Nenhuma atividade registrada.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {[...wLogs].reverse().slice(0, 10).map((log, i) => {
-                        const load = getLoad(log);
-                        const highLoad = (log.tss && log.tss > 100) || (log.srpe && log.srpe > 600);
-                        const feelingEmoji = ['', '😫', '😕', '😐', '🙂', '💪'][log.feeling_score] || '';
-                        return (
-                          <div
-                            key={i}
-                            className="flex items-center justify-between gap-3 p-3 rounded border"
-                            style={highLoad ? { background: '#FCEBEB' } : undefined}
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <span className="text-xs text-muted-foreground font-mono shrink-0">
-                                {formatDate(parseISO(log.activity_date), "dd/MM", { locale: ptBR })}
-                              </span>
-                              <span className="text-sm truncate">{log.activity_name || log.sport || '—'}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
-                              {log.distance_km && <span>{Number(log.distance_km).toFixed(1)}km</span>}
-                              {log.duration_minutes && <span>{Math.round(log.duration_minutes)}min</span>}
-                              {load && <Badge variant="outline" className="text-xs">{Math.round(load)}</Badge>}
-                              {log.compliance_pct != null && <span>{Math.round(log.compliance_pct)}%</span>}
-                              {feelingEmoji && <span className="text-base">{feelingEmoji}</span>}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              )}
-            </Card>
+            {/* Painéis ordenados/destacados conforme a especialidade do profissional */}
+            {effectiveOrder.map(n => renderPanel(n))}
 
             {/* Campo de Recomendação */}
             <Card>
