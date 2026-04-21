@@ -263,6 +263,21 @@ export default function ProfPatientTraining() {
     }
   };
 
+  const togglePanelViewMode = async () => {
+    const next = !showAll;
+    setShowAll(next);
+    if (!user) return;
+    const { error } = await supabase
+      .from("users")
+      .update({ panel_view_mode: next ? 'all' : 'specialty' } as any)
+      .eq("id", user.id);
+    if (error) {
+      console.error("Erro ao salvar preferência de visualização:", error);
+      toast.error("Não foi possível salvar sua preferência");
+      setShowAll(!next);
+    }
+  };
+
   if (authLoading || roleLoading || loading) return <FullPageLoading />;
 
   const renderSessions = (plan: TrainingPlan) => {
