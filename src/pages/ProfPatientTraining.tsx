@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Dumbbell, Calendar, ChevronDown, ChevronUp, Clock, Flame, TrendingUp, Activity, Trophy, AlertTriangle } from "lucide-react";
+import { Dumbbell, Calendar, ChevronDown, ChevronUp, Clock, Flame, TrendingUp, Activity, Trophy, AlertTriangle, Eye, Heart } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
