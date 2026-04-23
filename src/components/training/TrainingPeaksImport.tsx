@@ -415,9 +415,27 @@ export default function TrainingPeaksImport({
   const [mNotes, setMNotes] = useState("");
   const [savingManual, setSavingManual] = useState(false);
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const isFit = file.name.toLowerCase().endsWith('.fit');
+
+    if (isFit) {
+      try {
+        const parsed = await parseGarminFit(file);
+        setRows(parsed);
+        if (parsed.length === 0) {
+          toast.error("Nenhuma sessão encontrada no arquivo .FIT");
+        } else {
+          toast.success(`${parsed.length} atividade${parsed.length > 1 ? 's' : ''} carregada${parsed.length > 1 ? 's' : ''}`);
+        }
+      } catch (err) {
+        toast.error("Erro ao ler arquivo .FIT. Verifique se o arquivo não está corrompido.");
+      }
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
