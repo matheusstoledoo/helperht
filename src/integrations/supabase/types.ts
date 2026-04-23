@@ -3633,6 +3633,88 @@ export type Database = {
           },
         ]
       }
+      workout_laps: {
+        Row: {
+          avg_cadence: number | null
+          avg_heart_rate: number | null
+          avg_speed_kmh: number | null
+          created_at: string | null
+          distance_km: number | null
+          duration_seconds: number | null
+          elevation_gain_m: number | null
+          id: string
+          intensity: string | null
+          lap_index: number
+          lap_trigger: string | null
+          max_heart_rate: number | null
+          max_speed_kmh: number | null
+          patient_id: string | null
+          total_calories: number | null
+          user_id: string | null
+          workout_log_id: string | null
+        }
+        Insert: {
+          avg_cadence?: number | null
+          avg_heart_rate?: number | null
+          avg_speed_kmh?: number | null
+          created_at?: string | null
+          distance_km?: number | null
+          duration_seconds?: number | null
+          elevation_gain_m?: number | null
+          id?: string
+          intensity?: string | null
+          lap_index: number
+          lap_trigger?: string | null
+          max_heart_rate?: number | null
+          max_speed_kmh?: number | null
+          patient_id?: string | null
+          total_calories?: number | null
+          user_id?: string | null
+          workout_log_id?: string | null
+        }
+        Update: {
+          avg_cadence?: number | null
+          avg_heart_rate?: number | null
+          avg_speed_kmh?: number | null
+          created_at?: string | null
+          distance_km?: number | null
+          duration_seconds?: number | null
+          elevation_gain_m?: number | null
+          id?: string
+          intensity?: string | null
+          lap_index?: number
+          lap_trigger?: string | null
+          max_heart_rate?: number | null
+          max_speed_kmh?: number | null
+          patient_id?: string | null
+          total_calories?: number | null
+          user_id?: string | null
+          workout_log_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_laps_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "workout_laps_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_laps_workout_log_id_fkey"
+            columns: ["workout_log_id"]
+            isOneToOne: false
+            referencedRelation: "workout_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workout_logs: {
         Row: {
           activity_date: string
@@ -3769,6 +3851,70 @@ export type Database = {
             columns: ["training_plan_id"]
             isOneToOne: false
             referencedRelation: "training_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workout_records: {
+        Row: {
+          altitude_m: number | null
+          cadence: number | null
+          created_at: string | null
+          distance_km: number | null
+          elapsed_seconds: number
+          heart_rate: number | null
+          id: string
+          patient_id: string | null
+          speed_kmh: number | null
+          user_id: string | null
+          workout_log_id: string | null
+        }
+        Insert: {
+          altitude_m?: number | null
+          cadence?: number | null
+          created_at?: string | null
+          distance_km?: number | null
+          elapsed_seconds: number
+          heart_rate?: number | null
+          id?: string
+          patient_id?: string | null
+          speed_kmh?: number | null
+          user_id?: string | null
+          workout_log_id?: string | null
+        }
+        Update: {
+          altitude_m?: number | null
+          cadence?: number | null
+          created_at?: string | null
+          distance_km?: number | null
+          elapsed_seconds?: number
+          heart_rate?: number | null
+          id?: string
+          patient_id?: string | null
+          speed_kmh?: number | null
+          user_id?: string | null
+          workout_log_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_records_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "workout_records_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_records_workout_log_id_fkey"
+            columns: ["workout_log_id"]
+            isOneToOne: false
+            referencedRelation: "workout_logs"
             referencedColumns: ["id"]
           },
         ]
