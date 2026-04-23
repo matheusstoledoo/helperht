@@ -40,6 +40,7 @@ import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import WorkoutLogger from "@/components/training/WorkoutLogger";
 import ManualTrainingPlanForm from "@/components/training/ManualTrainingPlanForm";
 import TrainingPeaksImport from "@/components/training/TrainingPeaksImport";
+import PerformanceEvolution from "@/components/training/PerformanceEvolution";
 
 interface TrainingPlan {
   id: string;
