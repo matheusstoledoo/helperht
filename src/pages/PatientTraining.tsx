@@ -496,6 +496,7 @@ export default function PatientTraining() {
               <TabsTrigger value="plan" className="flex-1">Plano de Treino</TabsTrigger>
               <TabsTrigger value="log" className="flex-1">Registrar Treino</TabsTrigger>
               <TabsTrigger value="calendar" className="flex-1">Calendário & Recuperação</TabsTrigger>
+              <TabsTrigger value="evolution" className="flex-1">Evolução</TabsTrigger>
             </TabsList>
 
             <TabsContent value="plan" className="space-y-4 mt-4">
