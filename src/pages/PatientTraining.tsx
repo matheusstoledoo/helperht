@@ -767,7 +767,7 @@ export default function PatientTraining() {
                                     if (log.max_heart_rate != null) detailRows.push({ label: 'FC máxima', value: `${log.max_heart_rate} bpm` });
                                     if (log.tss != null) detailRows.push({ label: 'TSS', value: `${log.tss}` });
                                     if (log.planned_tss != null) detailRows.push({ label: 'TSS planejado', value: `${log.planned_tss}` });
-                                    if (log.intensity_factor != null) detailRows.push({ label: 'IF', value: `${log.intensity_factor}` });
+                                    if (log.intensity_factor != null) detailRows.push({ label: 'IF', value: parseFloat(log.intensity_factor).toFixed(2) });
                                     if (log.perceived_effort != null) detailRows.push({ label: 'RPE', value: `${log.perceived_effort}/10` });
                                     const fEmoji = feelingEmoji(log.feeling_score);
                                     if (fEmoji) detailRows.push({ label: 'Como se sentiu', value: `${fEmoji} (${log.feeling_score}/5)` });
