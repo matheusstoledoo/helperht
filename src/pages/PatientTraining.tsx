@@ -819,6 +819,21 @@ export default function PatientTraining() {
 
                                         {isActExpanded && (
                                           <div className="px-3 pb-3 pt-1 space-y-3 border-t">
+                                            {(log.source === 'garmin' || log.tss != null) && (
+                                              <div className="flex justify-end pt-2">
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="h-7 text-xs text-primary hover:text-primary"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    navigate(`/pac/atividade/${log.id}`);
+                                                  }}
+                                                >
+                                                  Ver análise →
+                                                </Button>
+                                              </div>
+                                            )}
                                             {detailRows.length > 0 && (
                                               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 pt-2">
                                                 {detailRows.map((r) => (
