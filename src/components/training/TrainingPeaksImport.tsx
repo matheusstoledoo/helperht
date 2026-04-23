@@ -59,8 +59,8 @@ interface ParsedRow {
   compliance_pct: number | null;
   srpe: number | null;
   feeling_score?: number | null;
-  workout_steps?: Record<string, unknown> | null;
-  raw_data?: Record<string, unknown> | null;
+  workout_steps?: any;
+  raw_data?: any;
 }
 
 const SPORT_MAP: Record<string, string> = {
