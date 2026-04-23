@@ -550,16 +550,49 @@ export default function TrainingPeaksImport({
       return;
     }
     setImporting(true);
-    const payload = selected.map(({ selected: _s, ...rest }) => ({
-      ...rest,
-      user_id: userId,
-      patient_id: patientId,
-      source: importSource === 'garmin' ? 'garmin' : 'training_peaks',
-    }));
-    const { error } = await supabase.from("workout_logs").insert(payload);
+    const source = importSource === 'garmin' ? 'garmin' : 'training_peaks';
+
+    // Para Garmin .FIT: inserir um a um para capturar o id e salvar laps/records
+    const hasFitData = selected.some((r) => r._fitData);
+
+    let hadError = false;
+
+    if (hasFitData) {
+      for (const row of selected) {
+        const { selected: _s, _fitData, ...rest } = row;
+        const rowToInsert = {
+          ...rest,
+          user_id: userId,
+          patient_id: patientId,
+          source,
+        };
+        const { data: inserted, error } = await supabase
+          .from("workout_logs")
+          .insert(rowToInsert)
+          .select("id")
+          .single();
+        if (error) {
+          hadError = true;
+          continue;
+        }
+        if (inserted?.id && _fitData) {
+          await saveLapsAndRecords(inserted.id, userId, patientId, _fitData);
+        }
+      }
+    } else {
+      const payload = selected.map(({ selected: _s, _fitData, ...rest }) => ({
+        ...rest,
+        user_id: userId,
+        patient_id: patientId,
+        source,
+      }));
+      const { error } = await supabase.from("workout_logs").insert(payload);
+      if (error) hadError = true;
+    }
+
     setImporting(false);
-    if (error) {
-      toast.error("Erro ao importar atividades");
+    if (hadError) {
+      toast.error("Erro ao importar algumas atividades");
       return;
     }
     toast.success(
