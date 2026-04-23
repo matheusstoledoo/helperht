@@ -775,6 +775,7 @@ export default function ProfPatientTraining() {
                     const load = getLoad(log);
                     const highLoad = (log.tss && log.tss > 100) || (log.srpe && log.srpe > 600);
                     const feelingEmoji = ['', '😫', '😕', '😐', '🙂', '💪'][log.feeling_score] || '';
+                    const canAnalyze = log.source === 'garmin' || log.tss != null;
                     return (
                       <div
                         key={i}
@@ -793,6 +794,15 @@ export default function ProfPatientTraining() {
                           {load && <Badge variant="outline" className="text-xs">{Math.round(load)}</Badge>}
                           {log.compliance_pct != null && <span>{Math.round(log.compliance_pct)}%</span>}
                           {feelingEmoji && <span className="text-base">{feelingEmoji}</span>}
+                          {canAnalyze && (
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/prof/paciente/${id}/atividade/${log.id}`)}
+                              className="text-xs text-primary hover:underline whitespace-nowrap ml-1"
+                            >
+                              Analisar →
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
