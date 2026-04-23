@@ -354,7 +354,7 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
 
   // Period buttons
   const PeriodButtons = (
-    <div className="flex gap-1">
+    <div className="flex flex-wrap gap-1">
       {([
         { v: "4s", label: "4 sem" },
         { v: "3m", label: "3 meses" },
@@ -366,6 +366,7 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
           size="sm"
           variant={period === opt.v ? "default" : "outline"}
           onClick={() => setPeriod(opt.v)}
+          className="h-8 px-2.5 text-xs"
         >
           {opt.label}
         </Button>
@@ -389,11 +390,11 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
     <div className="space-y-6">
       {/* Top controls */}
       <Card>
-        <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
+        <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Esporte:</span>
+            <span className="text-sm text-muted-foreground shrink-0">Esporte:</span>
             <Select value={sport} onValueChange={setSport}>
-              <SelectTrigger className="w-[160px] h-9">
+              <SelectTrigger className="w-full sm:w-[160px] h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
