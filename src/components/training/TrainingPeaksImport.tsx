@@ -356,10 +356,30 @@ export default function TrainingPeaksImport({
       toast.error("Erro ao importar atividades");
       return;
     }
-    toast.success(`${selected.length} atividade(s) importada(s)! 💪`);
+    toast.success(
+      `${selected.length} atividade${selected.length > 1 ? 's' : ''} importada${selected.length > 1 ? 's' : ''} com sucesso`
+    );
     setRows([]);
     onImported();
-    setOpen(false);
+    setTimeout(() => setOpen(false), 1500);
+  };
+
+  const handleClearPreviousImports = async () => {
+    const ok = window.confirm(
+      "Deseja realmente excluir todas as atividades importadas anteriormente do Training Peaks? Esta ação não pode ser desfeita."
+    );
+    if (!ok) return;
+    const { error } = await supabase
+      .from("workout_logs")
+      .delete()
+      .eq("user_id", userId)
+      .eq("source", "training_peaks");
+    if (error) {
+      toast.error("Erro ao limpar importações anteriores");
+      return;
+    }
+    toast.success("Importações anteriores removidas com sucesso");
+    onImported();
   };
 
   const handleManualSave = async () => {
