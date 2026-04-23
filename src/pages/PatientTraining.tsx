@@ -1140,6 +1140,12 @@ export default function PatientTraining() {
                 )}
               </div>
             </TabsContent>
+
+            <TabsContent value="evolution" className="mt-4">
+              {user && (
+                <PerformanceEvolution userId={user.id} patientId={patientId} />
+              )}
+            </TabsContent>
           </Tabs>
         )}
       </div>
