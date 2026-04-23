@@ -379,6 +379,7 @@ const parseGarminFit = (file: File): Promise<ParsedRow[]> => {
             raw_data: Object.keys(hrZones).length > 0 ? hrZones : null,
             notes: null,
             compliance_pct: null,
+            _fitData: data,
           } as ParsedRow;
         });
 
