@@ -354,7 +354,7 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
 
   // Period buttons
   const PeriodButtons = (
-    <div className="flex gap-1">
+    <div className="flex flex-wrap gap-1">
       {([
         { v: "4s", label: "4 sem" },
         { v: "3m", label: "3 meses" },
@@ -366,6 +366,7 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
           size="sm"
           variant={period === opt.v ? "default" : "outline"}
           onClick={() => setPeriod(opt.v)}
+          className="h-8 px-2.5 text-xs"
         >
           {opt.label}
         </Button>
@@ -389,11 +390,11 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
     <div className="space-y-6">
       {/* Top controls */}
       <Card>
-        <CardContent className="p-4 flex flex-wrap items-center justify-between gap-3">
+        <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Esporte:</span>
+            <span className="text-sm text-muted-foreground shrink-0">Esporte:</span>
             <Select value={sport} onValueChange={setSport}>
-              <SelectTrigger className="w-[160px] h-9">
+              <SelectTrigger className="w-full sm:w-[160px] h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -670,8 +671,8 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
                     </ResponsiveContainer>
                   )}
 
-                  {/* Comparison table */}
-                  <div className="overflow-x-auto">
+                  {/* Comparison — Desktop table */}
+                  <div className="hidden md:block overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -725,6 +726,77 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
                         })}
                       </TableBody>
                     </Table>
+                  </div>
+
+                  {/* Comparison — Mobile cards */}
+                  <div className="md:hidden space-y-3">
+                    {selectedForComparison.map((id, idx) => {
+                      const log = logs.find((l) => l.id === id);
+                      if (!log) return null;
+                      const isBest = (key: string) => bestValues[key] === id;
+                      const pace =
+                        log.avg_pace_min_km ||
+                        (log.avg_speed_kmh > 0 ? 60 / log.avg_speed_kmh : null);
+                      const color = COMPARE_COLORS[idx % COMPARE_COLORS.length];
+                      const Cell = ({ label, value, best }: { label: string; value: string; best: boolean }) => (
+                        <div className={best ? "rounded px-1.5 py-1 bg-green-50" : "px-1.5 py-1"}>
+                          <p className="text-[10px] text-muted-foreground">{label}</p>
+                          <p className={`text-xs ${best ? "font-semibold text-green-800" : "font-medium"}`}>
+                            {value}
+                          </p>
+                        </div>
+                      );
+                      return (
+                        <div key={id} className="rounded-md border p-3 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="h-2.5 w-2.5 rounded-full shrink-0"
+                              style={{ backgroundColor: color }}
+                            />
+                            <span className="text-sm font-semibold">
+                              {format(parseISO(log.activity_date), "dd 'de' MMM yyyy", { locale: ptBR })}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-1">
+                            <Cell
+                              label="Distância"
+                              value={log.distance_km ? `${log.distance_km} km` : "—"}
+                              best={isBest("distance_km")}
+                            />
+                            <Cell
+                              label="Duração"
+                              value={formatDuration(log.duration_seconds)}
+                              best={isBest("duration_seconds")}
+                            />
+                            <Cell
+                              label="Pace médio"
+                              value={pace ? formatPace(pace) : "—"}
+                              best={isBest("pace")}
+                            />
+                            <Cell
+                              label="FC média"
+                              value={log.avg_heart_rate ? `${log.avg_heart_rate} bpm` : "—"}
+                              best={isBest("avg_heart_rate")}
+                            />
+                            <Cell
+                              label="FC máx"
+                              value={log.max_heart_rate ? `${log.max_heart_rate} bpm` : "—"}
+                              best={isBest("max_heart_rate")}
+                            />
+                            <Cell
+                              label="TSS"
+                              value={log.tss ? `${Math.round(log.tss)}` : "—"}
+                              best={isBest("tss")}
+                            />
+                            <Cell
+                              label="Cadência"
+                              value={log.avg_cadence ? `${Math.round(log.avg_cadence)} spm` : "—"}
+                              best={isBest("avg_cadence")}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </>
               )}
