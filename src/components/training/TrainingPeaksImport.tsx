@@ -494,6 +494,7 @@ export default function TrainingPeaksImport({
                 accept=".csv"
                 onChange={handleFile}
                 className="max-w-xs mx-auto"
+              />
             </div>
 
             {importSource === 'trainingpeaks' && (
