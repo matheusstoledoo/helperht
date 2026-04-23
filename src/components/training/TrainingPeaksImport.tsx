@@ -391,6 +391,82 @@ const parseGarminFit = (file: File): Promise<ParsedRow[]> => {
   });
 };
 
+// Salva laps e records detalhados (somente arquivos .FIT)
+const saveLapsAndRecords = async (
+  workoutLogId: string,
+  userId: string,
+  patientId: string | null,
+  fitData: any
+) => {
+  try {
+    const session = fitData?.sessions?.[0] || fitData?.activity?.sessions?.[0];
+    if (!session) return;
+
+    // Salvar laps
+    const laps = (session.laps || []).map((lap: any, i: number) => ({
+      workout_log_id: workoutLogId,
+      user_id: userId,
+      patient_id: patientId ?? null,
+      lap_index: i,
+      distance_km: lap.total_distance
+        ? Math.round(lap.total_distance * 100) / 100
+        : null,
+      duration_seconds: lap.total_timer_time
+        ? Math.round(lap.total_timer_time)
+        : null,
+      avg_speed_kmh: lap.avg_speed || null,
+      max_speed_kmh: lap.max_speed || null,
+      avg_heart_rate: lap.avg_heart_rate || null,
+      max_heart_rate: lap.max_heart_rate || null,
+      avg_cadence: lap.avg_cadence ? lap.avg_cadence * 2 : null,
+      total_calories: lap.total_calories || null,
+      elevation_gain_m: lap.total_ascent
+        ? Math.round(lap.total_ascent * 1000)
+        : null,
+      intensity: lap.intensity || null,
+      lap_trigger: lap.lap_trigger || null,
+    }));
+
+    if (laps.length > 0) {
+      await (supabase.from('workout_laps' as any) as any).insert(laps);
+    }
+
+    // Salvar records com downsampling a cada 10 segundos
+    const allRecords: any[] = [];
+    (session.laps || []).forEach((lap: any) => {
+      (lap.records || []).forEach((r: any) => {
+        allRecords.push(r);
+      });
+    });
+
+    const sampled = allRecords.filter(
+      (r: any) => r.elapsed_time !== undefined && r.elapsed_time % 10 === 0
+    );
+    const recordsToSave = sampled.length >= 10 ? sampled : allRecords;
+
+    const records = recordsToSave.map((r: any) => ({
+      workout_log_id: workoutLogId,
+      user_id: userId,
+      patient_id: patientId ?? null,
+      elapsed_seconds: Math.round(r.elapsed_time || r.timer_time || 0),
+      heart_rate: r.heart_rate || null,
+      speed_kmh: r.speed || null,
+      cadence: r.cadence ? r.cadence * 2 : null,
+      altitude_m: r.altitude ? Math.round(r.altitude * 10) / 10 : null,
+      distance_km: r.distance ? Math.round(r.distance * 1000) / 1000 : null,
+    }));
+
+    const batchSize = 500;
+    for (let i = 0; i < records.length; i += batchSize) {
+      await (supabase.from('workout_records' as any) as any).insert(
+        records.slice(i, i + batchSize)
+      );
+    }
+  } catch {
+    // Falha silenciosa: workout_log já está salvo
+  }
+};
+
 export default function TrainingPeaksImport({
   userId,
   patientId,
