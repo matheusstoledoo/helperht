@@ -208,38 +208,72 @@ const parseGarminRow = (row: any): ParsedRow => {
 
 // Training Peaks parser
 const parseTrainingPeaksRow = (row: any): ParsedRow => {
-  const duration_minutes = parseDurationToMinutes(
-    pick(row, ["Duration", "Total Time"])
-  );
-  const perceived_effort = parseInteger(pick(row, ["RPE"]));
-  let distance_km = parseNum(pick(row, ["Distance", "Total Distance"]));
-  if (distance_km !== null && distance_km > 1000) distance_km = distance_km / 1000;
+  const mapSport = (type: string): string => {
+    const t = (type || '').toLowerCase().trim();
+    if (t === 'run') return 'corrida';
+    if (t === 'ride' || t === 'cycling') return 'ciclismo';
+    if (t === 'swim') return 'natacao';
+    if (t === 'strength') return 'musculacao';
+    if (t === 'triathlon') return 'triatlo';
+    return 'outro';
+  };
+
+  const plannedHours = parseFloat(row['PlannedDuration'] || '');
+  const actualHours = parseFloat(row['TimeTotalInHours'] || '');
+  const plannedMin = !isNaN(plannedHours) ? Math.round(plannedHours * 60) : null;
+  const actualMin = !isNaN(actualHours) && actualHours > 0 ? Math.round(actualHours * 60) : null;
+  const durationMin = actualMin ?? plannedMin;
+
+  const distMeters = parseFloat(row['DistanceInMeters'] || '');
+  const distKm = !isNaN(distMeters) && distMeters > 0
+    ? Math.round(distMeters) / 1000
+    : null;
+
+  const velMs = parseFloat(row['VelocityAverage'] || '');
+  const paceMinKm = !isNaN(velMs) && velMs > 0
+    ? Math.round((1000 / (velMs * 60)) * 100) / 100
+    : null;
+
+  const tss = parseFloat(row['TSS'] || '');
+  const intensityFactor = parseFloat(row['IF'] || '');
+  const hrAvg = parseInt(row['HeartRateAverage'] || '');
+  const hrMax = parseInt(row['HeartRateMax'] || '');
+  const rpe = parseInt(row['Rpe'] || '');
+  const feeling = parseInt(row['Feeling'] || '');
+  const srpe = durationMin && !isNaN(rpe) && rpe > 0 ? durationMin * rpe : null;
+
+  const hrZones: Record<string, number> = {};
+  for (let i = 1; i <= 10; i++) {
+    const val = parseFloat(row[`HRZone${i}Minutes`] || '');
+    if (!isNaN(val) && val > 0) hrZones[`zone_${i}_minutes`] = val;
+  }
 
   return {
     selected: true,
-    activity_name: pick(row, ["Title", "Workout Name"]) || null,
-    sport: parseSport(pick(row, ["Workout Type"])),
-    activity_date: parseDate(pick(row, ["Date", "Workout Date"])),
-    duration_minutes,
-    planned_duration_minutes: parseDurationToMinutes(
-      pick(row, ["Planned Duration"])
-    ),
-    distance_km,
-    tss: parseNum(pick(row, ["TSS"])),
-    intensity_factor: parseNum(pick(row, ["IF", "Intensity Factor"])),
-    avg_heart_rate: parseInteger(pick(row, ["Average Heart Rate"])),
-    max_heart_rate: parseInteger(pick(row, ["Max Heart Rate"])),
-    calories: parseInteger(pick(row, ["Calories"])),
-    elevation_gain_m: parseNum(pick(row, ["Elevation Gain"])),
-    avg_pace_min_km: parseNum(pick(row, ["Average Pace"])),
-    notes: pick(row, ["Notes", "Workout Description"]) || null,
-    perceived_effort,
-    compliance_pct: parseInteger(pick(row, ["Compliance %", "Compliance"])),
-    srpe:
-      duration_minutes !== null && perceived_effort !== null
-        ? duration_minutes * perceived_effort
-        : null,
-  };
+    activity_name: row['Title'] || null,
+    sport: mapSport(row['WorkoutType'] || ''),
+    activity_date: row['WorkoutDay'] || null,
+    duration_minutes: durationMin,
+    planned_duration_minutes: plannedMin,
+    distance_km: distKm,
+    avg_pace_min_km: paceMinKm,
+    avg_heart_rate: !isNaN(hrAvg) && hrAvg > 0 ? hrAvg : null,
+    max_heart_rate: !isNaN(hrMax) && hrMax > 0 ? hrMax : null,
+    tss: !isNaN(tss) && tss > 0 ? tss : null,
+    intensity_factor: !isNaN(intensityFactor) && intensityFactor > 0 ? intensityFactor : null,
+    perceived_effort: !isNaN(rpe) && rpe > 0 ? rpe : null,
+    feeling_score: !isNaN(feeling) && feeling > 0 ? Math.min(5, Math.round(feeling / 2)) : null,
+    srpe,
+    notes: [row['AthleteComments'], row['CoachComments']]
+      .filter(Boolean).join('\n\n').trim() || null,
+    workout_steps: row['WorkoutDescription']
+      ? { description: row['WorkoutDescription'] }
+      : null,
+    raw_data: Object.keys(hrZones).length > 0 ? hrZones : null,
+    calories: null,
+    elevation_gain_m: null,
+    compliance_pct: null,
+  } as ParsedRow;
 };
 
 export default function TrainingPeaksImport({
