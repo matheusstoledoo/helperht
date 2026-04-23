@@ -487,7 +487,7 @@ export default function PatientTraining() {
       showHeader={false}
       breadcrumb={<PatientBreadcrumb currentPage="Treinos" />}
     >
-      <div className="p-4 sm:p-6 space-y-6 max-w-2xl mx-auto">
+      <div className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto">
         {loading ? (
           <div className="text-center py-12 text-muted-foreground">Carregando...</div>
         ) : (
@@ -1150,9 +1150,6 @@ export default function PatientTraining() {
         )}
       </div>
 
-      {user && patientId && (
-        <FloatingUploadButton patientId={patientId} userId={user.id} userRole="patient" userName={userName} />
-      )}
 
       {/* Race form Sheet */}
       <Sheet open={showRaceForm} onOpenChange={setShowRaceForm}>
