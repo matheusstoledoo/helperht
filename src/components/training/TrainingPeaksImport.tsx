@@ -494,8 +494,21 @@ export default function TrainingPeaksImport({
                 accept=".csv"
                 onChange={handleFile}
                 className="max-w-xs mx-auto"
-              />
             </div>
+
+            {importSource === 'trainingpeaks' && (
+              <div className="flex justify-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearPreviousImports}
+                  className="text-xs text-destructive/70 hover:text-destructive hover:bg-destructive/5"
+                >
+                  Limpar atividades importadas anteriormente
+                </Button>
+              </div>
+            )}
 
             {rows.length > 0 && (
               <div className="space-y-3">
