@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import Papa from "papaparse";
+import FitParser from "fit-file-parser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -279,6 +280,115 @@ const parseTrainingPeaksRow = (row: any): ParsedRow => {
   } as ParsedRow;
 };
 
+// Garmin .FIT parser
+const parseGarminFit = (file: File): Promise<ParsedRow[]> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const buffer = e.target?.result as ArrayBuffer;
+      const parser = new (FitParser as any)({
+        force: true,
+        speedUnit: 'km/h',
+        lengthUnit: 'km',
+        temperatureUnit: 'celsius',
+        elapsedRecordField: true,
+        mode: 'both',
+      });
+
+      parser.parse(buffer, (err: any, data: any) => {
+        if (err) { reject(err); return; }
+
+        const sessions = data.sessions || data.activity?.sessions || [];
+        const rows: ParsedRow[] = sessions.map((s: any) => {
+          const mapSport = (sport: string, profileName: string): string => {
+            const name = (profileName || sport || '').toLowerCase();
+            if (name.includes('corrid') || name.includes('run')) return 'corrida';
+            if (name.includes('cicl') || name.includes('bike') || name.includes('ride')) return 'ciclismo';
+            if (name.includes('swim') || name.includes('nat')) return 'natacao';
+            if (name.includes('strength') || name.includes('força') || name.includes('gym')) return 'musculacao';
+            if (name.includes('triathl')) return 'triatlo';
+            return 'outro';
+          };
+
+          const startTime = new Date(s.start_time);
+          const activityDate = !isNaN(startTime.getTime())
+            ? startTime.toISOString().split('T')[0]
+            : new Date().toISOString().split('T')[0];
+
+          const durationMin = s.total_timer_time
+            ? Math.round(s.total_timer_time / 60)
+            : null;
+
+          const distKm = s.total_distance
+            ? Math.round(s.total_distance * 100) / 100
+            : null;
+
+          const paceMinKm = s.avg_speed && s.avg_speed > 0
+            ? Math.round((60 / s.avg_speed) * 100) / 100
+            : null;
+
+          const rpe = s.workout_rpe && s.workout_rpe > 0 ? s.workout_rpe : null;
+
+          const feelingRaw = s.workout_feel;
+          const feelingScore = feelingRaw != null
+            ? Math.max(1, Math.min(5, Math.round(feelingRaw / 20) + 1))
+            : null;
+
+          const hrZones: Record<string, number> = {};
+          if (data.time_in_zone) {
+            data.time_in_zone.forEach((z: any) => {
+              if (z.time_in_hr_zone) {
+                z.time_in_hr_zone.forEach((t: number, zi: number) => {
+                  if (t > 0) hrZones[`zone_${zi + 1}_minutes`] = Math.round(t / 60);
+                });
+              }
+            });
+          }
+
+          const lapsData = s.laps?.map((lap: any, i: number) => ({
+            lap: i + 1,
+            distance_km: lap.total_distance ? Math.round(lap.total_distance * 100) / 100 : null,
+            duration_min: lap.total_timer_time ? Math.round(lap.total_timer_time / 60 * 10) / 10 : null,
+            avg_hr: lap.avg_heart_rate || null,
+            avg_speed_kmh: lap.avg_speed || null,
+            intensity: lap.intensity || null,
+          }));
+
+          return {
+            selected: true,
+            activity_name: s.sport_profile_name || null,
+            sport: mapSport(s.sport || '', s.sport_profile_name || ''),
+            activity_date: activityDate,
+            duration_minutes: durationMin,
+            planned_duration_minutes: null,
+            distance_km: distKm,
+            avg_pace_min_km: paceMinKm,
+            avg_heart_rate: s.avg_heart_rate || null,
+            max_heart_rate: s.max_heart_rate || null,
+            calories: s.total_calories || null,
+            elevation_gain_m: s.total_ascent
+              ? Math.round(s.total_ascent * 1000)
+              : null,
+            tss: null,
+            intensity_factor: null,
+            perceived_effort: rpe,
+            feeling_score: feelingScore,
+            srpe: durationMin && rpe ? durationMin * rpe : null,
+            workout_steps: lapsData?.length > 0 ? { laps: lapsData } : null,
+            raw_data: Object.keys(hrZones).length > 0 ? hrZones : null,
+            notes: null,
+            compliance_pct: null,
+          } as ParsedRow;
+        });
+
+        resolve(rows.filter((r) => r.activity_date !== null));
+      });
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+};
+
 export default function TrainingPeaksImport({
   userId,
   patientId,
@@ -305,9 +415,27 @@ export default function TrainingPeaksImport({
   const [mNotes, setMNotes] = useState("");
   const [savingManual, setSavingManual] = useState(false);
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const isFit = file.name.toLowerCase().endsWith('.fit');
+
+    if (isFit) {
+      try {
+        const parsed = await parseGarminFit(file);
+        setRows(parsed);
+        if (parsed.length === 0) {
+          toast.error("Nenhuma sessão encontrada no arquivo .FIT");
+        } else {
+          toast.success(`${parsed.length} atividade${parsed.length > 1 ? 's' : ''} carregada${parsed.length > 1 ? 's' : ''}`);
+        }
+      } catch (err) {
+        toast.error("Erro ao ler arquivo .FIT. Verifique se o arquivo não está corrompido.");
+      }
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
@@ -475,23 +603,23 @@ export default function TrainingPeaksImport({
 
           {/* Upload section */}
           <div className="space-y-3">
-            <Label>Upload do CSV</Label>
+            <Label>{importSource === 'garmin' ? 'Upload do arquivo (.FIT ou .CSV)' : 'Upload do CSV'}</Label>
             <div className="border-2 border-dashed rounded-lg p-6 text-center">
               <Upload className="h-8 w-8 mx-auto text-muted-foreground/60 mb-2" />
               <p className="text-sm text-muted-foreground mb-3">
                 {importSource === 'garmin'
-                  ? "Selecione o arquivo .csv exportado do Garmin Connect"
+                  ? "Selecione o arquivo .FIT ou .CSV exportado do Garmin Connect"
                   : "Selecione o arquivo .csv exportado do Training Peaks"}
               </p>
               {importSource === 'garmin' && (
                 <p className="text-xs text-muted-foreground mb-3">
-                  Para exportar do Garmin Connect: acesse garmin.com/modern/activities → selecione atividades → Export CSV
+                  Para exportar do Garmin Connect: acesse garmin.com → Atividades → selecione a atividade → Export Original. Aceita arquivos .FIT e .CSV.
                 </p>
               )}
               <Input
                 ref={fileRef}
                 type="file"
-                accept=".csv"
+                accept={importSource === 'garmin' ? '.csv,.fit' : '.csv'}
                 onChange={handleFile}
                 className="max-w-xs mx-auto"
               />
