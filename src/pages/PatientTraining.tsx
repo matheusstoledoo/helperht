@@ -35,7 +35,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { format, differenceInDays, parseISO, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { FloatingUploadButton } from "@/components/documents/FloatingUploadButton";
+
 import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import WorkoutLogger from "@/components/training/WorkoutLogger";
 import ManualTrainingPlanForm from "@/components/training/ManualTrainingPlanForm";
