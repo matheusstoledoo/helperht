@@ -129,6 +129,87 @@ export default function PatientTraining() {
   const [recNotes, setRecNotes] = useState("");
   const [savingRecovery, setSavingRecovery] = useState(false);
   const [savingRace, setSavingRace] = useState(false);
+  // Timeline state
+  const [timePeriod, setTimePeriod] = useState<'4s' | '1m' | '3m'>('4s');
+  const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
+  const [expandedActivities, setExpandedActivities] = useState<Set<string>>(new Set());
+  const [extendedLogs, setExtendedLogs] = useState<any[]>([]);
+  const [loadingExtended, setLoadingExtended] = useState(false);
+
+  useEffect(() => {
+    if (timePeriod !== '3m' || !user || extendedLogs.length > 0) return;
+    const fetchExtended = async () => {
+      setLoadingExtended(true);
+      const { data } = await supabase
+        .from('workout_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .gte('activity_date', subDays(new Date(), 90).toISOString().split('T')[0])
+        .order('activity_date', { ascending: true });
+      setExtendedLogs(data || []);
+      setLoadingExtended(false);
+    };
+    fetchExtended();
+  }, [timePeriod, user, extendedLogs.length]);
+
+  const sportBadgeClass = (sport: string): string => {
+    const map: Record<string, string> = {
+      corrida: "bg-orange-100 text-orange-800 border-orange-200",
+      ciclismo: "bg-blue-100 text-blue-800 border-blue-200",
+      musculacao: "bg-purple-100 text-purple-800 border-purple-200",
+      natacao: "bg-cyan-100 text-cyan-800 border-cyan-200",
+      triatlo: "bg-indigo-100 text-indigo-800 border-indigo-200",
+    };
+    return map[sport] || "bg-muted text-muted-foreground border-border";
+  };
+
+  const formatPace = (pace: number | null | undefined): string | null => {
+    if (pace == null || isNaN(pace) || pace <= 0) return null;
+    const mins = Math.floor(pace);
+    const secs = Math.round((pace - mins) * 60);
+    return `${mins}:${secs.toString().padStart(2, '0')} min/km`;
+  };
+
+  const feelingEmoji = (val: number | null | undefined): string | null => {
+    if (val == null) return null;
+    const map: Record<number, string> = { 1: '😫', 2: '😕', 3: '😐', 4: '🙂', 5: '💪' };
+    return map[val] || null;
+  };
+
+  const toggleWeek = (key: string) => {
+    setExpandedWeeks((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const toggleActivity = (id: string) => {
+    setExpandedActivities((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const getWeeks = () => {
+    const days = timePeriod === '3m' ? 90 : timePeriod === '1m' ? 30 : 28;
+    const weeks: { start: Date; end: Date; key: string }[] = [];
+    const now = new Date();
+    for (let w = 0; w < Math.ceil(days / 7); w++) {
+      const end = subDays(now, w * 7);
+      const start = subDays(now, w * 7 + 6);
+      weeks.push({
+        start,
+        end,
+        key: format(start, 'yyyy-MM-dd'),
+      });
+    }
+    return weeks.reverse();
+  };
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) { setLoading(false); return; }
