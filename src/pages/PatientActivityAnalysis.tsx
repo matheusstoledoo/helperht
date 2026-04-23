@@ -274,7 +274,7 @@ export default function PatientActivityAnalysis() {
   // === Renderização ===
   if (loading) {
     return (
-      <PatientLayout>
+      <PatientLayout title="Análise de atividade">
         <div className="space-y-4 p-4">
           <Skeleton className="h-6 w-64" />
           <Skeleton className="h-32 w-full" />
@@ -286,7 +286,7 @@ export default function PatientActivityAnalysis() {
 
   if (!log) {
     return (
-      <PatientLayout>
+      <PatientLayout title="Análise de atividade">
         <div className="p-6 space-y-3">
           <PatientBreadcrumb
             currentPage="Atividade não encontrada"
@@ -390,7 +390,7 @@ export default function PatientActivityAnalysis() {
   };
 
   return (
-    <PatientLayout>
+    <PatientLayout title="Análise de atividade">
       <div className="p-4 sm:p-6 space-y-4 max-w-6xl mx-auto">
         <PatientBreadcrumb
           currentPage={title}
