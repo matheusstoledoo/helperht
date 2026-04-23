@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   ComposedChart,
   Line,
@@ -30,7 +30,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useState } from "react";
 import { Activity, Heart, Zap, TrendingUp } from "lucide-react";
 
 // ===== Cores por intensidade =====
@@ -295,10 +294,16 @@ export default function ActivityAnalysisCharts({ laps, records }: Props) {
 
   return (
     <Tabs defaultValue="laps" className="w-full">
-      <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="laps">Por trecho</TabsTrigger>
-        <TabsTrigger value="continuous">Contínuo</TabsTrigger>
-        <TabsTrigger value="scatter">Correlações</TabsTrigger>
+      <TabsList className="grid w-full grid-cols-3 h-auto">
+        <TabsTrigger value="laps" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5">
+          Por trecho
+        </TabsTrigger>
+        <TabsTrigger value="continuous" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5">
+          Contínuo
+        </TabsTrigger>
+        <TabsTrigger value="scatter" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5">
+          Correlações
+        </TabsTrigger>
       </TabsList>
 
       {/* ===== Aba 1 — Por trecho ===== */}
@@ -312,14 +317,14 @@ export default function ActivityAnalysisCharts({ laps, records }: Props) {
         ) : (
           <>
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
+              <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-sm sm:text-base flex items-center gap-2">
                   <Activity className="h-4 w-4" /> FC, Pace e Cadência por trecho
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={280}>
-                  <ComposedChart data={lapsChartData}>
+              <CardContent className="px-1 sm:px-6 pb-3 sm:pb-6">
+                <ResponsiveContainer width="100%" height={260}>
+                  <ComposedChart data={lapsChartData} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                     {lapsChartData.map((d, i) => (
                       <ReferenceArea
@@ -334,35 +339,15 @@ export default function ActivityAnalysisCharts({ laps, records }: Props) {
                       dataKey="x"
                       type="number"
                       domain={[0.5, lapsChartData.length + 0.5]}
-                      tick={{ fontSize: 11 }}
-                      label={{
-                        value: "Trecho",
-                        position: "insideBottom",
-                        offset: -2,
-                        fontSize: 11,
-                      }}
+                      tick={{ fontSize: 10 }}
                     />
-                    <YAxis
-                      yAxisId="left"
-                      tick={{ fontSize: 11 }}
-                      label={{
-                        value: "FC (bpm) / Cadência",
-                        angle: -90,
-                        position: "insideLeft",
-                        fontSize: 11,
-                      }}
-                    />
+                    <YAxis yAxisId="left" tick={{ fontSize: 10 }} width={32} />
                     <YAxis
                       yAxisId="right"
                       orientation="right"
                       reversed
-                      tick={{ fontSize: 11 }}
-                      label={{
-                        value: "Pace (min/km)",
-                        angle: 90,
-                        position: "insideRight",
-                        fontSize: 11,
-                      }}
+                      tick={{ fontSize: 10 }}
+                      width={36}
                       tickFormatter={(v) => formatPace(v)}
                     />
                     <Tooltip content={<LapTooltip />} />
@@ -371,10 +356,10 @@ export default function ActivityAnalysisCharts({ laps, records }: Props) {
                       yAxisId="left"
                       type="monotone"
                       dataKey="hr"
-                      name="FC média"
+                      name="FC"
                       stroke="#E24B4A"
                       strokeWidth={2}
-                      dot={{ r: 3 }}
+                      dot={{ r: 2 }}
                       connectNulls
                     />
                     <Line
@@ -384,7 +369,7 @@ export default function ActivityAnalysisCharts({ laps, records }: Props) {
                       name="Pace"
                       stroke="#378ADD"
                       strokeWidth={2}
-                      dot={{ r: 3 }}
+                      dot={{ r: 2 }}
                       connectNulls
                     />
                     <Line
@@ -394,7 +379,7 @@ export default function ActivityAnalysisCharts({ laps, records }: Props) {
                       name="Cadência"
                       stroke="#D85A30"
                       strokeWidth={2}
-                      dot={{ r: 3 }}
+                      dot={{ r: 2 }}
                       connectNulls
                     />
                   </ComposedChart>
@@ -403,70 +388,150 @@ export default function ActivityAnalysisCharts({ laps, records }: Props) {
             </Card>
 
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Tabela de trechos</CardTitle>
+              <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-sm sm:text-base">Trechos</CardTitle>
               </CardHeader>
-              <CardContent className="overflow-x-auto p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Trecho</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead className="text-right">Distância</TableHead>
-                      <TableHead className="text-right">Duração</TableHead>
-                      <TableHead className="text-right">Pace</TableHead>
-                      <TableHead className="text-right">FC méd.</TableHead>
-                      <TableHead className="text-right">FC máx.</TableHead>
-                      <TableHead className="text-right">Cadência</TableHead>
-                      <TableHead className="text-right">Elevação</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {lapsChartData.map((l) => (
-                      <TableRow
-                        key={l.x}
-                        style={{
-                          backgroundColor:
-                            l.intensity === "active"
-                              ? INTENSITY_BG.active
-                              : l.intensity === "rest"
-                              ? INTENSITY_BG.rest
-                              : undefined,
-                        }}
-                      >
-                        <TableCell>{l.x}</TableCell>
-                        <TableCell className="capitalize">
+              <CardContent className="p-0">
+                {/* Mobile: cards empilhados */}
+                <div className="md:hidden space-y-2 px-3 pb-3">
+                  {lapsChartData.map((l) => (
+                    <div
+                      key={l.x}
+                      className="rounded-md border p-3 space-y-2"
+                      style={{
+                        backgroundColor:
+                          l.intensity === "active"
+                            ? INTENSITY_BG.active
+                            : l.intensity === "rest"
+                            ? INTENSITY_BG.rest
+                            : INTENSITY_BG[l.intensity] || undefined,
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold">
+                          Trecho {l.x}
+                        </span>
+                        <span
+                          className="text-[11px] font-medium px-2 py-0.5 rounded-full"
+                          style={{
+                            color: INTENSITY_FG[l.intensity],
+                            backgroundColor: "rgba(255,255,255,0.6)",
+                          }}
+                        >
                           {INTENSITY_LABEL[l.intensity] || l.intensity}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {l.distance_km != null ? `${l.distance_km} km` : "—"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {l.duration_seconds != null
-                            ? formatSeconds(l.duration_seconds)
-                            : "—"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {l.pace ? `${l.paceLabel}` : "—"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {l.hr != null ? `${l.hr}` : "—"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {l.maxHr != null ? `${l.maxHr}` : "—"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {l.cadence != null ? `${l.cadence}` : "—"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {l.elevation != null && l.elevation > 0
-                            ? `+${l.elevation}m`
-                            : "—"}
-                        </TableCell>
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                        {l.distance_km != null && (
+                          <div>
+                            <span className="text-muted-foreground">Distância: </span>
+                            <span className="font-medium">{l.distance_km} km</span>
+                          </div>
+                        )}
+                        {l.duration_seconds != null && (
+                          <div>
+                            <span className="text-muted-foreground">Duração: </span>
+                            <span className="font-medium">{formatSeconds(l.duration_seconds)}</span>
+                          </div>
+                        )}
+                        {l.pace != null && (
+                          <div>
+                            <span className="text-muted-foreground">Pace: </span>
+                            <span className="font-medium">{l.paceLabel}</span>
+                          </div>
+                        )}
+                        {l.hr != null && (
+                          <div>
+                            <span className="text-muted-foreground">FC méd.: </span>
+                            <span className="font-medium">{l.hr} bpm</span>
+                          </div>
+                        )}
+                        {l.maxHr != null && (
+                          <div>
+                            <span className="text-muted-foreground">FC máx.: </span>
+                            <span className="font-medium">{l.maxHr} bpm</span>
+                          </div>
+                        )}
+                        {l.cadence != null && (
+                          <div>
+                            <span className="text-muted-foreground">Cadência: </span>
+                            <span className="font-medium">{l.cadence}</span>
+                          </div>
+                        )}
+                        {l.elevation != null && l.elevation > 0 && (
+                          <div>
+                            <span className="text-muted-foreground">Elevação: </span>
+                            <span className="font-medium">+{l.elevation}m</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop: tabela */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Trecho</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead className="text-right">Distância</TableHead>
+                        <TableHead className="text-right">Duração</TableHead>
+                        <TableHead className="text-right">Pace</TableHead>
+                        <TableHead className="text-right">FC méd.</TableHead>
+                        <TableHead className="text-right">FC máx.</TableHead>
+                        <TableHead className="text-right">Cadência</TableHead>
+                        <TableHead className="text-right">Elevação</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {lapsChartData.map((l) => (
+                        <TableRow
+                          key={l.x}
+                          style={{
+                            backgroundColor:
+                              l.intensity === "active"
+                                ? INTENSITY_BG.active
+                                : l.intensity === "rest"
+                                ? INTENSITY_BG.rest
+                                : undefined,
+                          }}
+                        >
+                          <TableCell>{l.x}</TableCell>
+                          <TableCell className="capitalize">
+                            {INTENSITY_LABEL[l.intensity] || l.intensity}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {l.distance_km != null ? `${l.distance_km} km` : "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {l.duration_seconds != null
+                              ? formatSeconds(l.duration_seconds)
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {l.pace ? `${l.paceLabel}` : "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {l.hr != null ? `${l.hr}` : "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {l.maxHr != null ? `${l.maxHr}` : "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {l.cadence != null ? `${l.cadence}` : "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {l.elevation != null && l.elevation > 0
+                              ? `+${l.elevation}m`
+                              : "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </>
@@ -484,11 +549,11 @@ export default function ActivityAnalysisCharts({ laps, records }: Props) {
           </Card>
         ) : (
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
+            <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
                 <Heart className="h-4 w-4" /> Dados contínuos
               </CardTitle>
-              <div className="flex flex-wrap gap-4 pt-2">
+              <div className="flex flex-wrap gap-3 sm:gap-4 pt-2">
                 <label className="flex items-center gap-2 text-xs">
                   <Switch checked={showHr} onCheckedChange={setShowHr} />
                   FC
@@ -506,9 +571,9 @@ export default function ActivityAnalysisCharts({ laps, records }: Props) {
                 </label>
               </div>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <ComposedChart data={recordsChartData}>
+            <CardContent className="px-1 sm:px-6 pb-3 sm:pb-6">
+              <ResponsiveContainer width="100%" height={280}>
+                <ComposedChart data={recordsChartData} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                   {recordIntensityBands.map((b, i) => (
                     <ReferenceArea
@@ -523,29 +588,15 @@ export default function ActivityAnalysisCharts({ laps, records }: Props) {
                     dataKey="x"
                     type="number"
                     domain={["dataMin", "dataMax"]}
-                    tick={{ fontSize: 11 }}
+                    tick={{ fontSize: 10 }}
                     tickFormatter={(v) => formatSeconds(v)}
                   />
-                  <YAxis
-                    yAxisId="left"
-                    tick={{ fontSize: 11 }}
-                    label={{
-                      value: "FC / Cadência",
-                      angle: -90,
-                      position: "insideLeft",
-                      fontSize: 11,
-                    }}
-                  />
+                  <YAxis yAxisId="left" tick={{ fontSize: 10 }} width={32} />
                   <YAxis
                     yAxisId="right"
                     orientation="right"
-                    tick={{ fontSize: 11 }}
-                    label={{
-                      value: "km/h",
-                      angle: 90,
-                      position: "insideRight",
-                      fontSize: 11,
-                    }}
+                    tick={{ fontSize: 10 }}
+                    width={32}
                   />
                   <Tooltip
                     labelFormatter={(v) => `Tempo: ${formatSeconds(Number(v))}`}
@@ -607,39 +658,28 @@ export default function ActivityAnalysisCharts({ laps, records }: Props) {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
+                <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                  <CardTitle className="text-sm sm:text-base flex items-center gap-2">
                     <Heart className="h-4 w-4" /> FC × Pace
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={260}>
-                    <ScatterChart>
+                <CardContent className="px-1 sm:px-6 pb-3 sm:pb-6">
+                  <ResponsiveContainer width="100%" height={240}>
+                    <ScatterChart margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                       <XAxis
                         type="number"
                         dataKey="x"
                         name="Pace"
-                        tick={{ fontSize: 11 }}
+                        tick={{ fontSize: 10 }}
                         tickFormatter={(v) => formatPace(v)}
-                        label={{
-                          value: "Pace (min/km)",
-                          position: "insideBottom",
-                          offset: -2,
-                          fontSize: 11,
-                        }}
                       />
                       <YAxis
                         type="number"
                         dataKey="y"
                         name="FC"
-                        tick={{ fontSize: 11 }}
-                        label={{
-                          value: "FC (bpm)",
-                          angle: -90,
-                          position: "insideLeft",
-                          fontSize: 11,
-                        }}
+                        tick={{ fontSize: 10 }}
+                        width={32}
                       />
                       <ZAxis type="number" dataKey="z" range={[40, 200]} />
                       <Tooltip
@@ -680,40 +720,29 @@ export default function ActivityAnalysisCharts({ laps, records }: Props) {
               </Card>
 
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
+                <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                  <CardTitle className="text-sm sm:text-base flex items-center gap-2">
                     <Zap className="h-4 w-4" /> Cadência × Pace
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={260}>
-                    <ScatterChart>
+                <CardContent className="px-1 sm:px-6 pb-3 sm:pb-6">
+                  <ResponsiveContainer width="100%" height={240}>
+                    <ScatterChart margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                       <XAxis
                         type="number"
                         dataKey="x"
                         name="Cadência"
-                        tick={{ fontSize: 11 }}
-                        label={{
-                          value: "Cadência (spm)",
-                          position: "insideBottom",
-                          offset: -2,
-                          fontSize: 11,
-                        }}
+                        tick={{ fontSize: 10 }}
                       />
                       <YAxis
                         type="number"
                         dataKey="y"
                         name="Pace"
                         reversed
-                        tick={{ fontSize: 11 }}
+                        tick={{ fontSize: 10 }}
+                        width={36}
                         tickFormatter={(v) => formatPace(v)}
-                        label={{
-                          value: "Pace (min/km)",
-                          angle: -90,
-                          position: "insideLeft",
-                          fontSize: 11,
-                        }}
                       />
                       <ZAxis type="number" dataKey="z" range={[40, 200]} />
                       <Tooltip
@@ -746,8 +775,7 @@ export default function ActivityAnalysisCharts({ laps, records }: Props) {
                   {cadenceBadge && (
                     <div className="mt-2">
                       <Badge className={cadenceBadge.className}>
-                        {cadenceBadge.label} · média{" "}
-                        {metrics.avgCadence} spm
+                        {cadenceBadge.label} · média {metrics.avgCadence} spm
                       </Badge>
                     </div>
                   )}
@@ -757,18 +785,18 @@ export default function ActivityAnalysisCharts({ laps, records }: Props) {
 
             {/* Métricas de eficiência */}
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
+              <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-sm sm:text-base flex items-center gap-2">
                   <TrendingUp className="h-4 w-4" /> Métricas de eficiência
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                   <div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[11px] sm:text-xs text-muted-foreground">
                       Aerobic Decoupling
                     </p>
-                    <p className="text-lg font-semibold">
+                    <p className="text-base sm:text-lg font-semibold">
                       {metrics.decoupling != null
                         ? `${metrics.decoupling}%`
                         : "—"}
@@ -782,10 +810,10 @@ export default function ActivityAnalysisCharts({ laps, records }: Props) {
                     )}
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[11px] sm:text-xs text-muted-foreground">
                       Cardiac Drift
                     </p>
-                    <p className="text-lg font-semibold">
+                    <p className="text-base sm:text-lg font-semibold">
                       {metrics.cardiacDrift != null
                         ? `${metrics.cardiacDrift > 0 ? "+" : ""}${
                             metrics.cardiacDrift
@@ -793,24 +821,24 @@ export default function ActivityAnalysisCharts({ laps, records }: Props) {
                         : "—"}
                     </p>
                     <p className="text-[10px] text-muted-foreground mt-1">
-                      Diferença entre início e fim
+                      Diferença início → fim
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[11px] sm:text-xs text-muted-foreground">
                       Cadência média (ativos)
                     </p>
-                    <p className="text-lg font-semibold">
+                    <p className="text-base sm:text-lg font-semibold">
                       {metrics.avgCadence != null
                         ? `${metrics.avgCadence} spm`
                         : "—"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[11px] sm:text-xs text-muted-foreground">
                       Pace médio (ativos)
                     </p>
-                    <p className="text-lg font-semibold">
+                    <p className="text-base sm:text-lg font-semibold">
                       {metrics.avgPace != null
                         ? `${formatPace(metrics.avgPace)} min/km`
                         : "—"}
