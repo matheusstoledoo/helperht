@@ -487,16 +487,16 @@ export default function PatientTraining() {
       showHeader={false}
       breadcrumb={<PatientBreadcrumb currentPage="Treinos" />}
     >
-      <div className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto">
+      <div className="p-3 sm:p-6 space-y-6 max-w-6xl mx-auto">
         {loading ? (
           <div className="text-center py-12 text-muted-foreground">Carregando...</div>
         ) : (
           <Tabs defaultValue="plan">
-            <TabsList className="w-full">
-              <TabsTrigger value="plan" className="flex-1">Plano de Treino</TabsTrigger>
-              <TabsTrigger value="log" className="flex-1">Registrar Treino</TabsTrigger>
-              <TabsTrigger value="calendar" className="flex-1">Calendário & Recuperação</TabsTrigger>
-              <TabsTrigger value="evolution" className="flex-1">Evolução</TabsTrigger>
+            <TabsList className="w-full h-auto grid grid-cols-2 sm:grid-cols-4 gap-1 p-1">
+              <TabsTrigger value="plan" className="text-[11px] sm:text-sm px-1 sm:px-3 py-1.5 whitespace-normal leading-tight">Plano</TabsTrigger>
+              <TabsTrigger value="log" className="text-[11px] sm:text-sm px-1 sm:px-3 py-1.5 whitespace-normal leading-tight">Registrar</TabsTrigger>
+              <TabsTrigger value="calendar" className="text-[11px] sm:text-sm px-1 sm:px-3 py-1.5 whitespace-normal leading-tight">Calendário</TabsTrigger>
+              <TabsTrigger value="evolution" className="text-[11px] sm:text-sm px-1 sm:px-3 py-1.5 whitespace-normal leading-tight">Evolução</TabsTrigger>
             </TabsList>
 
             <TabsContent value="plan" className="space-y-4 mt-4">
