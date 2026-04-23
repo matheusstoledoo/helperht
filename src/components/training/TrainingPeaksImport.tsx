@@ -62,6 +62,7 @@ interface ParsedRow {
   feeling_score?: number | null;
   workout_steps?: any;
   raw_data?: any;
+  _fitData?: any;
 }
 
 const SPORT_MAP: Record<string, string> = {
