@@ -603,23 +603,23 @@ export default function TrainingPeaksImport({
 
           {/* Upload section */}
           <div className="space-y-3">
-            <Label>Upload do CSV</Label>
+            <Label>{importSource === 'garmin' ? 'Upload do arquivo (.FIT ou .CSV)' : 'Upload do CSV'}</Label>
             <div className="border-2 border-dashed rounded-lg p-6 text-center">
               <Upload className="h-8 w-8 mx-auto text-muted-foreground/60 mb-2" />
               <p className="text-sm text-muted-foreground mb-3">
                 {importSource === 'garmin'
-                  ? "Selecione o arquivo .csv exportado do Garmin Connect"
+                  ? "Selecione o arquivo .FIT ou .CSV exportado do Garmin Connect"
                   : "Selecione o arquivo .csv exportado do Training Peaks"}
               </p>
               {importSource === 'garmin' && (
                 <p className="text-xs text-muted-foreground mb-3">
-                  Para exportar do Garmin Connect: acesse garmin.com/modern/activities → selecione atividades → Export CSV
+                  Para exportar do Garmin Connect: acesse garmin.com → Atividades → selecione a atividade → Export Original. Aceita arquivos .FIT e .CSV.
                 </p>
               )}
               <Input
                 ref={fileRef}
                 type="file"
-                accept=".csv"
+                accept={importSource === 'garmin' ? '.csv,.fit' : '.csv'}
                 onChange={handleFile}
                 className="max-w-xs mx-auto"
               />
