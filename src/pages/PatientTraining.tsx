@@ -618,69 +618,264 @@ export default function PatientTraining() {
 
               {/* Seção B — Linha do Tempo */}
               <div className="space-y-3">
-                <h3 className="text-base font-medium flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-blue-500" />
-                  Linha do tempo — últimas 4 semanas
-                </h3>
-                <Card>
-                  <CardContent className="p-4 space-y-4">
-                    {[0, 1, 2, 3].map(w => ({
-                      start: subDays(new Date(), (w + 1) * 7),
-                      end: subDays(new Date(), w * 7),
-                    })).reverse().map((week, idx) => {
-                      const weekLogs = workoutLogsCalendar.filter((l) => {
-                        const d = parseISO(l.activity_date);
-                        return d >= week.start && d < week.end;
-                      });
-                      const totalTss = weekLogs.reduce((s, l) => s + (l.tss || 0), 0);
-                      const totalSrpe = weekLogs.reduce((s, l) => s + (l.srpe || 0), 0);
-                      const useTss = totalTss > 0;
-                      const upcomingRace = raceEvents.find((r) => {
-                        const d = parseISO(r.event_date);
-                        return d >= week.end && differenceInDays(d, week.end) <= 7;
-                      });
-                      return (
-                        <div key={idx} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs font-medium text-muted-foreground">
-                              Sem {format(week.start, "dd/MM", { locale: ptBR })}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {useTss ? `TSS ${totalTss.toFixed(0)}` : totalSrpe > 0 ? `sRPE ${totalSrpe}` : "—"}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1.5 min-h-[24px]">
-                            {weekLogs.length === 0 ? (
-                              <div className="text-xs text-muted-foreground italic">Sem treinos</div>
-                            ) : weekLogs.map((log) => {
-                              const sc = sportColor(log.sport);
-                              const size = Math.max(8, Math.min(20, ((log.tss ?? log.srpe ?? 20) / 150) * 20));
-                              return (
-                                <div
-                                  key={log.id}
-                                  className="rounded-full border-2"
-                                  style={{
-                                    width: `${size}px`,
-                                    height: `${size}px`,
-                                    backgroundColor: sc.bg,
-                                    borderColor: sc.text,
-                                  }}
-                                  title={`${log.sport} — ${log.activity_date}`}
-                                />
-                              );
-                            })}
-                            {upcomingRace && (
-                              <div className="ml-auto flex items-center gap-1 text-xs text-amber-700">
-                                <Trophy className="h-3 w-3" />
-                                <span className="truncate max-w-[120px]">{upcomingRace.name}</span>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h3 className="text-base font-medium flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-blue-500" />
+                    Linha do tempo
+                  </h3>
+                  <div className="flex gap-1 rounded-lg border bg-muted/30 p-0.5">
+                    {([
+                      { v: '4s', label: '4 semanas' },
+                      { v: '1m', label: '1 mês' },
+                      { v: '3m', label: '3 meses' },
+                    ] as const).map((opt) => (
+                      <button
+                        key={opt.v}
+                        onClick={() => setTimePeriod(opt.v)}
+                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                          timePeriod === opt.v
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {(() => {
+                  const logsToShow = timePeriod === '3m' ? extendedLogs : workoutLogsCalendar;
+
+                  if (timePeriod === '3m' && loadingExtended) {
+                    return (
+                      <Card>
+                        <CardContent className="p-6 text-center text-sm text-muted-foreground">
+                          Carregando atividades...
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+
+                  if (logsToShow.length === 0) {
+                    return (
+                      <Card>
+                        <CardContent className="p-8 text-center">
+                          <Calendar className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                          <p className="text-sm text-muted-foreground">
+                            Nenhuma atividade registrada neste período
+                          </p>
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+
+                  const weeks = getWeeks();
+
+                  return (
+                    <div className="space-y-2">
+                      {weeks.map((week) => {
+                        const weekLogs = logsToShow.filter((l) => {
+                          const d = parseISO(l.activity_date);
+                          return d >= week.start && d <= new Date(week.end.getTime() + 86399999);
+                        });
+                        const isExpanded = expandedWeeks.has(week.key);
+                        const totalKm = weekLogs.reduce((s, l) => s + (l.distance_km || 0), 0);
+                        const totalTss = weekLogs.reduce((s, l) => s + (l.tss || 0), 0);
+                        const totalSrpe = weekLogs.reduce((s, l) => s + (l.srpe || 0), 0);
+                        const sportCounts: Record<string, number> = {};
+                        weekLogs.forEach((l) => {
+                          const sp = l.sport || 'outro';
+                          sportCounts[sp] = (sportCounts[sp] || 0) + 1;
+                        });
+                        const weekLabel = `Sem ${format(week.start, 'dd/MM', { locale: ptBR })} – ${format(week.end, 'dd/MM', { locale: ptBR })}`;
+
+                        if (weekLogs.length === 0) {
+                          return (
+                            <Card key={week.key} className="bg-muted/20">
+                              <CardContent className="p-3 flex items-center justify-between">
+                                <span className="text-sm font-medium text-muted-foreground">{weekLabel}</span>
+                                <span className="text-xs text-muted-foreground italic">Sem treinos</span>
+                              </CardContent>
+                            </Card>
+                          );
+                        }
+
+                        return (
+                          <Card key={week.key}>
+                            <button
+                              onClick={() => toggleWeek(week.key)}
+                              className="w-full p-3 flex items-center justify-between gap-3 text-left hover:bg-muted/30 transition-colors rounded-lg"
+                            >
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                {isExpanded ? (
+                                  <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                                ) : (
+                                  <ChevronUp className="h-4 w-4 rotate-90 text-muted-foreground shrink-0" />
+                                )}
+                                <span className="text-sm font-semibold">{weekLabel}</span>
+                              </div>
+                              <div className="hidden sm:flex items-center gap-3 text-xs text-muted-foreground">
+                                <span>{weekLogs.length} ativ.</span>
+                                {totalKm > 0 && <span>{totalKm.toFixed(1)} km</span>}
+                                {totalTss > 0 ? (
+                                  <span>TSS {totalTss.toFixed(0)}</span>
+                                ) : totalSrpe > 0 ? (
+                                  <span>sRPE {totalSrpe.toFixed(0)}</span>
+                                ) : null}
+                              </div>
+                              <div className="flex items-center gap-1 flex-wrap justify-end">
+                                {Object.entries(sportCounts).map(([sp, count]) => (
+                                  <Badge
+                                    key={sp}
+                                    variant="outline"
+                                    className={`text-[10px] px-1.5 py-0 ${sportBadgeClass(sp)}`}
+                                  >
+                                    {SPORT_LABELS[sp] || sp} ×{count}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </button>
+
+                            {isExpanded && (
+                              <div className="px-3 pb-3 space-y-2 border-t bg-muted/10">
+                                <div className="sm:hidden flex items-center gap-3 text-xs text-muted-foreground pt-2">
+                                  <span>{weekLogs.length} ativ.</span>
+                                  {totalKm > 0 && <span>{totalKm.toFixed(1)} km</span>}
+                                  {totalTss > 0 ? (
+                                    <span>TSS {totalTss.toFixed(0)}</span>
+                                  ) : totalSrpe > 0 ? (
+                                    <span>sRPE {totalSrpe.toFixed(0)}</span>
+                                  ) : null}
+                                </div>
+                                {weekLogs
+                                  .slice()
+                                  .sort((a, b) => (a.activity_date > b.activity_date ? 1 : -1))
+                                  .map((log) => {
+                                    const isActExpanded = expandedActivities.has(log.id);
+                                    const dateLabel = format(parseISO(log.activity_date), "EEE dd/MM", { locale: ptBR });
+                                    const sportLabel = SPORT_LABELS[log.sport] || log.sport;
+                                    const title = log.activity_name || sportLabel;
+
+                                    const detailRows: { label: string; value: string }[] = [];
+                                    if (log.distance_km != null) detailRows.push({ label: 'Distância', value: `${log.distance_km} km` });
+                                    if (log.duration_minutes != null) detailRows.push({ label: 'Duração', value: `${log.duration_minutes} min` });
+                                    if (log.planned_duration_minutes != null) detailRows.push({ label: 'Duração planejada', value: `${log.planned_duration_minutes} min` });
+                                    const paceStr = formatPace(log.avg_pace_min_km);
+                                    if (paceStr) detailRows.push({ label: 'Pace médio', value: paceStr });
+                                    if (log.avg_heart_rate != null) detailRows.push({ label: 'FC média', value: `${log.avg_heart_rate} bpm` });
+                                    if (log.max_heart_rate != null) detailRows.push({ label: 'FC máxima', value: `${log.max_heart_rate} bpm` });
+                                    if (log.tss != null) detailRows.push({ label: 'TSS', value: `${log.tss}` });
+                                    if (log.planned_tss != null) detailRows.push({ label: 'TSS planejado', value: `${log.planned_tss}` });
+                                    if (log.intensity_factor != null) detailRows.push({ label: 'IF', value: `${log.intensity_factor}` });
+                                    if (log.perceived_effort != null) detailRows.push({ label: 'RPE', value: `${log.perceived_effort}/10` });
+                                    const fEmoji = feelingEmoji(log.feeling_score);
+                                    if (fEmoji) detailRows.push({ label: 'Como se sentiu', value: `${fEmoji} (${log.feeling_score}/5)` });
+                                    if (log.compliance_percent != null) detailRows.push({ label: 'Compliance', value: `${log.compliance_percent}%` });
+
+                                    const hrZones: { zone: string; minutes: number }[] = [];
+                                    if (log.raw_data && typeof log.raw_data === 'object') {
+                                      Object.entries(log.raw_data).forEach(([k, v]) => {
+                                        const m = k.match(/^zone_(\d+)_minutes$/);
+                                        if (m && typeof v === 'number' && v > 0) {
+                                          hrZones.push({ zone: `Zona ${m[1]}`, minutes: v });
+                                        }
+                                      });
+                                      hrZones.sort((a, b) => a.zone.localeCompare(b.zone));
+                                    }
+                                    const maxZone = hrZones.reduce((m, z) => Math.max(m, z.minutes), 0);
+                                    const description = log.workout_steps?.description as string | undefined;
+
+                                    return (
+                                      <div key={log.id} className="border rounded-lg bg-background">
+                                        <button
+                                          onClick={() => toggleActivity(log.id)}
+                                          className="w-full p-2.5 flex items-center gap-2 text-left hover:bg-muted/40 transition-colors rounded-lg"
+                                        >
+                                          {isActExpanded ? (
+                                            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                          ) : (
+                                            <ChevronUp className="h-3.5 w-3.5 rotate-90 text-muted-foreground shrink-0" />
+                                          )}
+                                          <span className="text-xs text-muted-foreground w-16 shrink-0 capitalize">{dateLabel}</span>
+                                          <Badge
+                                            variant="outline"
+                                            className={`text-[10px] px-1.5 py-0 shrink-0 ${sportBadgeClass(log.sport)}`}
+                                          >
+                                            {sportLabel}
+                                          </Badge>
+                                          <span className="text-sm font-medium truncate flex-1">{title}</span>
+                                          <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground shrink-0">
+                                            {log.distance_km != null && <span>{log.distance_km} km</span>}
+                                            {log.duration_minutes != null && <span>{log.duration_minutes}min</span>}
+                                            {log.tss != null ? (
+                                              <span>TSS {log.tss}</span>
+                                            ) : log.srpe != null ? (
+                                              <span>sRPE {log.srpe}</span>
+                                            ) : null}
+                                            {log.perceived_effort != null && <span>RPE {log.perceived_effort}</span>}
+                                          </div>
+                                        </button>
+
+                                        {isActExpanded && (
+                                          <div className="px-3 pb-3 pt-1 space-y-3 border-t">
+                                            {detailRows.length > 0 && (
+                                              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 pt-2">
+                                                {detailRows.map((r) => (
+                                                  <div key={r.label} className="flex justify-between text-xs">
+                                                    <span className="text-muted-foreground">{r.label}</span>
+                                                    <span className="font-medium">{r.value}</span>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            )}
+
+                                            {description && (
+                                              <div className="space-y-1">
+                                                <p className="text-xs font-medium text-muted-foreground">Descrição do treino</p>
+                                                <p className="text-xs italic text-muted-foreground whitespace-pre-wrap">{description}</p>
+                                              </div>
+                                            )}
+
+                                            {log.notes && (
+                                              <div className="space-y-1">
+                                                <p className="text-xs font-medium text-muted-foreground">Observações</p>
+                                                <p className="text-xs whitespace-pre-wrap">{log.notes}</p>
+                                              </div>
+                                            )}
+
+                                            {hrZones.length > 0 && (
+                                              <div className="space-y-1.5">
+                                                <p className="text-xs font-medium text-muted-foreground">Zonas de FC</p>
+                                                <div className="space-y-1">
+                                                  {hrZones.map((z) => (
+                                                    <div key={z.zone} className="flex items-center gap-2">
+                                                      <span className="text-[10px] text-muted-foreground w-12 shrink-0">{z.zone}</span>
+                                                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                                                        <div
+                                                          className="h-full bg-blue-500/70 rounded-full"
+                                                          style={{ width: `${maxZone > 0 ? (z.minutes / maxZone) * 100 : 0}%` }}
+                                                        />
+                                                      </div>
+                                                      <span className="text-[10px] text-muted-foreground w-12 text-right shrink-0">{z.minutes} min</span>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
                               </div>
                             )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </CardContent>
-                </Card>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Seção C — Diário de Recuperação */}
