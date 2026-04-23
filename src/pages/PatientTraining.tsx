@@ -40,6 +40,7 @@ import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import WorkoutLogger from "@/components/training/WorkoutLogger";
 import ManualTrainingPlanForm from "@/components/training/ManualTrainingPlanForm";
 import TrainingPeaksImport from "@/components/training/TrainingPeaksImport";
+import PerformanceEvolution from "@/components/training/PerformanceEvolution";
 
 interface TrainingPlan {
   id: string;
@@ -495,6 +496,7 @@ export default function PatientTraining() {
               <TabsTrigger value="plan" className="flex-1">Plano de Treino</TabsTrigger>
               <TabsTrigger value="log" className="flex-1">Registrar Treino</TabsTrigger>
               <TabsTrigger value="calendar" className="flex-1">Calendário & Recuperação</TabsTrigger>
+              <TabsTrigger value="evolution" className="flex-1">Evolução</TabsTrigger>
             </TabsList>
 
             <TabsContent value="plan" className="space-y-4 mt-4">
@@ -1137,6 +1139,12 @@ export default function PatientTraining() {
                   ))
                 )}
               </div>
+            </TabsContent>
+
+            <TabsContent value="evolution" className="mt-4">
+              {user && (
+                <PerformanceEvolution userId={user.id} patientId={patientId} />
+              )}
             </TabsContent>
           </Tabs>
         )}
