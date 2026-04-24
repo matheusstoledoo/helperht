@@ -208,7 +208,7 @@ serve(async (req) => {
 
     const arrayBuffer = await fileData.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
-    const base64Data = base64Encode(uint8Array);
+    const base64Data = base64Encode(arrayBuffer);
     const mimeType = file_type || "application/octet-stream";
 
     console.log(`Arquivo: ${file_path}, tamanho: ${uint8Array.length} bytes, tipo: ${mimeType}`);
