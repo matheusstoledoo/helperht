@@ -1029,8 +1029,8 @@ export default function TrainingHub({ userId, patientId }: TrainingHubProps) {
                     <Activity className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="font-medium">Garmin Connect</p>
-                    <p className="text-sm text-muted-foreground">Importar .FIT ou CSV do Garmin</p>
+                    <p className="font-medium">Garmin · Coros · Polar · Suunto</p>
+                    <p className="text-sm text-muted-foreground">Importar arquivo .FIT ou CSV do Garmin</p>
                   </div>
                 </button>
 
