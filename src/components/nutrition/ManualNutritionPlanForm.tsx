@@ -152,7 +152,7 @@ export default function ManualNutritionPlanForm({ userId, patientId, onSaved, on
       toast.error("Erro ao salvar plano alimentar");
       return;
     }
-    toast.success(editingPlan ? "Plano alimentar atualizado! 🥗" : "Plano alimentar criado! 🥗");
+    toast.success(editingPlan ? "Plano atualizado com sucesso!" : "Plano alimentar criado! 🥗");
     onSaved();
   };
 

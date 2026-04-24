@@ -349,13 +349,20 @@ export default function PatientNutrition() {
             </TabsList>
 
             <TabsContent value="plan" className="space-y-4 mt-4">
-               {showCreateForm ? (
+              {editingPlan ? (
                 <ManualNutritionPlanForm
                   userId={user!.id}
                   patientId={patientId}
-                   editingPlan={editingPlan}
-                   onSaved={() => { setShowCreateForm(false); setEditingPlan(null); window.location.reload(); }}
-                   onCancel={() => { setShowCreateForm(false); setEditingPlan(null); }}
+                  editingPlan={editingPlan}
+                  onSaved={() => { setEditingPlan(null); window.location.reload(); }}
+                  onCancel={() => setEditingPlan(null)}
+                />
+              ) : showCreateForm ? (
+                <ManualNutritionPlanForm
+                  userId={user!.id}
+                  patientId={patientId}
+                  onSaved={() => { setShowCreateForm(false); window.location.reload(); }}
+                  onCancel={() => setShowCreateForm(false)}
                 />
               ) : activePlan ? (
                 <>
@@ -393,14 +400,12 @@ export default function PatientNutrition() {
                   )}
                   <div className="grid gap-2 sm:grid-cols-2">
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       className="w-full"
-                      onClick={() => {
-                        setEditingPlan(activePlan);
-                        setShowCreateForm(true);
-                      }}
+                      size="sm"
+                      onClick={() => setEditingPlan(activePlan)}
                     >
-                      Editar plano atual
+                      Editar plano
                     </Button>
                     <Button
                       variant="outline"
