@@ -708,7 +708,7 @@ export default function TrainingPeaksImport({
               size="sm"
               onClick={() => setImportSource('garmin')}
             >
-              Garmin Connect
+              Garmin · Coros · Polar · Suunto
             </Button>
           </div>
 
@@ -719,7 +719,7 @@ export default function TrainingPeaksImport({
               <Upload className="h-8 w-8 mx-auto text-muted-foreground/60 mb-2" />
               <p className="text-sm text-muted-foreground mb-3">
                 {importSource === 'garmin'
-                  ? "Selecione o arquivo .FIT ou .CSV exportado do Garmin Connect"
+                  ? "Aceita arquivos .FIT (Garmin, Coros, Polar, Suunto) e .CSV (Garmin Connect)"
                   : "Selecione o arquivo .csv exportado do Training Peaks"}
               </p>
               {importSource === 'garmin' && (
