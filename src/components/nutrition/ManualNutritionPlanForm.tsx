@@ -13,6 +13,7 @@ interface ManualNutritionPlanFormProps {
   patientId: string | null;
   onSaved: () => void;
   onCancel: () => void;
+  editingPlan?: any;
 }
 
 interface FoodInput {
@@ -41,13 +42,29 @@ const emptyMeal = (index: number): MealInput => ({
   expanded: true,
 });
 
-export default function ManualNutritionPlanForm({ userId, patientId, onSaved, onCancel }: ManualNutritionPlanFormProps) {
-  const [totalCalories, setTotalCalories] = useState("");
-  const [proteinGrams, setProteinGrams] = useState("");
-  const [carbsGrams, setCarbsGrams] = useState("");
-  const [fatGrams, setFatGrams] = useState("");
-  const [observations, setObservations] = useState("");
-  const [meals, setMeals] = useState<MealInput[]>([emptyMeal(0), emptyMeal(1), emptyMeal(2)]);
+const mapEditingMeals = (editingPlan?: any): MealInput[] => {
+  if (!editingPlan || !Array.isArray(editingPlan.meals) || editingPlan.meals.length === 0) {
+    return [emptyMeal(0), emptyMeal(1), emptyMeal(2)];
+  }
+
+  return editingPlan.meals.map((meal: any, index: number) => ({
+    name: meal?.name || MEAL_SUGGESTIONS[index] || `Refeição ${index + 1}`,
+    time: meal?.time || "",
+    foods: Array.isArray(meal?.foods) && meal.foods.length > 0
+      ? meal.foods.map((food: string) => ({ text: food }))
+      : [emptyFood()],
+    notes: meal?.notes || "",
+    expanded: true,
+  }));
+};
+
+export default function ManualNutritionPlanForm({ userId, patientId, onSaved, onCancel, editingPlan }: ManualNutritionPlanFormProps) {
+  const [totalCalories, setTotalCalories] = useState(editingPlan?.total_calories?.toString() || "");
+  const [proteinGrams, setProteinGrams] = useState(editingPlan?.protein_grams?.toString() || "");
+  const [carbsGrams, setCarbsGrams] = useState(editingPlan?.carbs_grams?.toString() || "");
+  const [fatGrams, setFatGrams] = useState(editingPlan?.fat_grams?.toString() || "");
+  const [observations, setObservations] = useState(editingPlan?.observations || "");
+  const [meals, setMeals] = useState<MealInput[]>(() => mapEditingMeals(editingPlan));
   const [saving, setSaving] = useState(false);
 
   const updateMeal = (idx: number, patch: Partial<MealInput>) => {
@@ -110,7 +127,7 @@ export default function ManualNutritionPlanForm({ userId, patientId, onSaved, on
       if (fat) fatPercent = Math.round((fat * 9 / cal) * 100);
     }
 
-    const { error } = await supabase.from("nutrition_plans").insert({
+    const payload = {
       user_id: userId,
       patient_id: patientId,
       total_calories: cal,
@@ -123,15 +140,19 @@ export default function ManualNutritionPlanForm({ userId, patientId, onSaved, on
       meals: mealsPayload,
       observations: observations.trim() || null,
       status: "active",
-      start_date: new Date().toISOString().slice(0, 10),
-    });
+      start_date: editingPlan?.start_date || new Date().toISOString().slice(0, 10),
+    };
+
+    const { error } = editingPlan
+      ? await supabase.from("nutrition_plans").update(payload).eq("id", editingPlan.id)
+      : await supabase.from("nutrition_plans").insert(payload);
 
     setSaving(false);
     if (error) {
       toast.error("Erro ao salvar plano alimentar");
       return;
     }
-    toast.success("Plano alimentar criado! 🥗");
+    toast.success(editingPlan ? "Plano alimentar atualizado! 🥗" : "Plano alimentar criado! 🥗");
     onSaved();
   };
 
@@ -142,7 +163,7 @@ export default function ManualNutritionPlanForm({ userId, patientId, onSaved, on
           <div className="flex items-center justify-between">
             <h3 className="text-base font-medium flex items-center gap-2">
               <Apple className="h-4 w-4 text-green-500" />
-              Novo Plano Alimentar
+              {editingPlan ? "Editar Plano Alimentar" : "Novo Plano Alimentar"}
             </h3>
             <Button variant="ghost" size="sm" onClick={onCancel}>
               <X className="h-4 w-4" />
@@ -250,7 +271,7 @@ export default function ManualNutritionPlanForm({ userId, patientId, onSaved, on
       </Button>
 
       <Button onClick={handleSave} disabled={saving} className="w-full">
-        {saving ? "Salvando..." : "Criar plano alimentar"}
+        {saving ? "Salvando..." : editingPlan ? "Salvar alterações" : "Criar plano alimentar"}
       </Button>
     </div>
   );
