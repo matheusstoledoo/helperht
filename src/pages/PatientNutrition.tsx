@@ -65,6 +65,7 @@ export default function PatientNutrition() {
   const [userName, setUserName] = useState("");
   const [expandedMeals, setExpandedMeals] = useState<Record<string, boolean>>({});
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<NutritionPlan | null>(null);
   const [mealLogs, setMealLogs] = useState<any[]>([]);
   const [nutritionRecs, setNutritionRecs] = useState<any[]>([]);
   const [togglingMeal, setTogglingMeal] = useState<string | null>(null);
@@ -348,12 +349,13 @@ export default function PatientNutrition() {
             </TabsList>
 
             <TabsContent value="plan" className="space-y-4 mt-4">
-              {showCreateForm ? (
+               {showCreateForm ? (
                 <ManualNutritionPlanForm
                   userId={user!.id}
                   patientId={patientId}
-                  onSaved={() => { setShowCreateForm(false); window.location.reload(); }}
-                  onCancel={() => setShowCreateForm(false)}
+                   editingPlan={editingPlan}
+                   onSaved={() => { setShowCreateForm(false); setEditingPlan(null); window.location.reload(); }}
+                   onCancel={() => { setShowCreateForm(false); setEditingPlan(null); }}
                 />
               ) : activePlan ? (
                 <>
@@ -389,9 +391,28 @@ export default function PatientNutrition() {
                       </CardContent>
                     </Card>
                   )}
-                  <Button variant="outline" className="w-full" onClick={() => setShowCreateForm(true)}>
-                    <Plus className="h-4 w-4 mr-1" /> Criar novo plano
-                  </Button>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        setEditingPlan(activePlan);
+                        setShowCreateForm(true);
+                      }}
+                    >
+                      Editar plano atual
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        setEditingPlan(null);
+                        setShowCreateForm(true);
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Criar novo plano
+                    </Button>
+                  </div>
                 </>
               ) : (
                 <Card>
@@ -401,7 +422,7 @@ export default function PatientNutrition() {
                     <p className="text-sm text-muted-foreground mt-1">
                       Crie seu plano alimentar ou faça upload de uma prescrição
                     </p>
-                    <Button className="mt-4" onClick={() => setShowCreateForm(true)}>
+                    <Button className="mt-4" onClick={() => { setEditingPlan(null); setShowCreateForm(true); }}>
                       <Plus className="h-4 w-4 mr-1" /> Criar plano alimentar
                     </Button>
                   </CardContent>
