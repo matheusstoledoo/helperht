@@ -13,6 +13,7 @@ function calculateHealthScore(data: {
   activeNutrition: any,
   activeDiagnoses: any[],
   stravaActivities: any[],
+  workoutLogs: any[],
   age: number | null,
 }): { score: number, score_label: string, domain_scores: Record<string, number>, domain_details: Record<string, string> } {
   const domains: Record<string, number> = {};
@@ -102,7 +103,21 @@ function calculateHealthScore(data: {
 
   // ── 5. ATIVIDADE FÍSICA ──
   let activityScore = 0;
-  if (data.stravaActivities.length > 0) {
+  if (data.workoutLogs && data.workoutLogs.length > 0) {
+    // Usar workout_logs como fonte primária
+    const last28Days = data.workoutLogs.filter((l: any) => {
+      const d = new Date(l.activity_date);
+      return d >= new Date(Date.now() - 28 * 24 * 60 * 60 * 1000);
+    });
+    const totalMinutes = last28Days.reduce((s: number, l: any) => s + (l.duration_minutes || 0), 0);
+    const weeklyMin = totalMinutes / 4;
+    if (weeklyMin >= 150) { activityScore = 100; details.atividade = `${Math.round(weeklyMin)} min/semana (${last28Days.length} treinos) — Ótimo`; }
+    else if (weeklyMin >= 90) { activityScore = 75; details.atividade = `${Math.round(weeklyMin)} min/semana — Bom`; }
+    else if (weeklyMin >= 60) { activityScore = 55; details.atividade = `${Math.round(weeklyMin)} min/semana — Regular`; }
+    else if (weeklyMin >= 30) { activityScore = 35; details.atividade = `${Math.round(weeklyMin)} min/semana — Insuficiente`; }
+    else { activityScore = 15; details.atividade = `${Math.round(weeklyMin)} min/semana — Muito baixo`; }
+  } else if (data.stravaActivities.length > 0) {
+    // Fallback para Strava se não houver workout_logs
     const totalMinutes = data.stravaActivities.reduce((s: number, a: any) => s + (a.moving_time || 0), 0) / 60;
     const weeklyMin = totalMinutes / 4;
     if (weeklyMin >= 150) { activityScore = 100; details.atividade = `${Math.round(weeklyMin)} min/semana (Strava) — Ótimo`; }
