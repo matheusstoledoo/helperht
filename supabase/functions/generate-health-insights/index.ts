@@ -13,6 +13,7 @@ function calculateHealthScore(data: {
   activeNutrition: any,
   activeDiagnoses: any[],
   stravaActivities: any[],
+  workoutLogs: any[],
   age: number | null,
 }): { score: number, score_label: string, domain_scores: Record<string, number>, domain_details: Record<string, string> } {
   const domains: Record<string, number> = {};
@@ -102,7 +103,21 @@ function calculateHealthScore(data: {
 
   // ── 5. ATIVIDADE FÍSICA ──
   let activityScore = 0;
-  if (data.stravaActivities.length > 0) {
+  if (data.workoutLogs && data.workoutLogs.length > 0) {
+    // Usar workout_logs como fonte primária
+    const last28Days = data.workoutLogs.filter((l: any) => {
+      const d = new Date(l.activity_date);
+      return d >= new Date(Date.now() - 28 * 24 * 60 * 60 * 1000);
+    });
+    const totalMinutes = last28Days.reduce((s: number, l: any) => s + (l.duration_minutes || 0), 0);
+    const weeklyMin = totalMinutes / 4;
+    if (weeklyMin >= 150) { activityScore = 100; details.atividade = `${Math.round(weeklyMin)} min/semana (${last28Days.length} treinos) — Ótimo`; }
+    else if (weeklyMin >= 90) { activityScore = 75; details.atividade = `${Math.round(weeklyMin)} min/semana — Bom`; }
+    else if (weeklyMin >= 60) { activityScore = 55; details.atividade = `${Math.round(weeklyMin)} min/semana — Regular`; }
+    else if (weeklyMin >= 30) { activityScore = 35; details.atividade = `${Math.round(weeklyMin)} min/semana — Insuficiente`; }
+    else { activityScore = 15; details.atividade = `${Math.round(weeklyMin)} min/semana — Muito baixo`; }
+  } else if (data.stravaActivities.length > 0) {
+    // Fallback para Strava se não houver workout_logs
     const totalMinutes = data.stravaActivities.reduce((s: number, a: any) => s + (a.moving_time || 0), 0) / 60;
     const weeklyMin = totalMinutes / 4;
     if (weeklyMin >= 150) { activityScore = 100; details.atividade = `${Math.round(weeklyMin)} min/semana (Strava) — Ótimo`; }
@@ -332,7 +347,7 @@ serve(async (req) => {
     // Step 2: all clinical data in parallel (including vitals_log and alerts)
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-    const [diagRes, treatRes, nutritionRes, trainingRes, examsRes, supplementsRes, goalsRes, patientGoalsRes, vitalsRes, alertsRes, consultationsRes] = await Promise.all([
+    const [diagRes, treatRes, nutritionRes, trainingRes, examsRes, supplementsRes, goalsRes, patientGoalsRes, vitalsRes, alertsRes, consultationsRes, workoutLogsRes, recoveryLogsRes, raceEventsRes, profRecsRes] = await Promise.all([
       supabase.from("diagnoses")
         .select("name, status, severity, icd_code, diagnosed_date, resolved_date, public_notes")
         .eq("patient_id", patientId),
@@ -389,7 +404,42 @@ serve(async (req) => {
         .eq("patient_id", patientId)
         .order("consultation_date", { ascending: false })
         .limit(1),
+      // Workout logs — últimos 56 dias
+      supabase.from("workout_logs")
+        .select("activity_date, activity_name, sport, duration_minutes, distance_km, avg_heart_rate, max_heart_rate, avg_pace_min_km, calories, elevation_gain_m, tss, srpe, perceived_effort, feeling_score, compliance_pct, notes, source")
+        .eq("user_id", user.id)
+        .gte("activity_date", new Date(Date.now() - 56 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+        .order("activity_date", { ascending: false })
+        .limit(50),
+      // Recovery logs — últimos 14 dias
+      supabase.from("recovery_logs")
+        .select("log_date, hrv_rmssd, resting_heart_rate, sleep_quality, sleep_hours, disposition_score, energy_score, muscle_score, joint_score, stress_score, free_notes")
+        .eq("user_id", user.id)
+        .gte("log_date", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+        .order("log_date", { ascending: false })
+        .limit(14),
+      // Race events — próximas provas
+      supabase.from("race_events")
+        .select("name, sport, event_date, distance_km, goal, status")
+        .eq("user_id", user.id)
+        .eq("status", "scheduled")
+        .gte("event_date", new Date().toISOString().split('T')[0])
+        .order("event_date", { ascending: true })
+        .limit(5),
+      // Professional recommendations — últimas 30 dias
+      supabase.from("professional_recommendations")
+        .select("specialty, dimension, recommendation, priority, created_at")
+        .eq("patient_id", patientId)
+        .eq("visible_to_patient", true)
+        .gte("created_at", thirtyDaysAgo)
+        .order("created_at", { ascending: false })
+        .limit(10),
     ]);
+
+    const workoutLogs = workoutLogsRes.data || [];
+    const recoveryLogs = recoveryLogsRes.data || [];
+    const raceEvents = raceEventsRes.data || [];
+    const profRecs = profRecsRes.data || [];
 
     // Separate active and resolved diagnoses
     const allDiagnoses = diagRes.data || [];
@@ -602,6 +652,66 @@ Fonte: Strava (dados sincronizados)`;
       trainingSection = "Sem plano de treino ativo e sem dados do Strava";
     }
 
+    // Workout logs section
+    const workoutLogsSection = workoutLogs.length > 0 ? (() => {
+      const last28 = workoutLogs.filter((l: any) =>
+        new Date(l.activity_date) >= new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)
+      );
+      const totalTss = last28.reduce((s: number, l: any) => s + (l.tss ?? l.srpe ?? 0), 0);
+      const totalKm = last28.reduce((s: number, l: any) => s + (l.distance_km ?? 0), 0);
+      const totalMin = last28.reduce((s: number, l: any) => s + (l.duration_minutes ?? 0), 0);
+      const sportCounts: Record<string, number> = {};
+      last28.forEach((l: any) => { sportCounts[l.sport || 'outro'] = (sportCounts[l.sport || 'outro'] || 0) + 1; });
+
+      const summary = `Últimos 28 dias: ${last28.length} atividades | ${totalKm.toFixed(1)} km | ${Math.round(totalMin / 60)} horas | TSS/sRPE total: ${Math.round(totalTss)}\nEsportes: ${Object.entries(sportCounts).map(([k, v]) => `${k} (${v}x)`).join(', ')}`;
+
+      const recent = workoutLogs.slice(0, 10).map((l: any) =>
+        `- ${l.activity_date} | ${l.activity_name || l.sport} | ${l.duration_minutes ?? '?'} min | ${l.distance_km ? l.distance_km + ' km' : ''} | TSS: ${l.tss ?? l.srpe ?? '?'} | RPE: ${l.perceived_effort ?? '?'}/10 | FC: ${l.avg_heart_rate ?? '?'} bpm | Fonte: ${l.source}`
+      ).join('\n');
+
+      return `${summary}\n\nAtividades recentes:\n${recent}`;
+    })() : "Sem atividades registradas nos últimos 28 dias";
+
+    // Recovery logs section
+    const recoverySection = recoveryLogs.length > 0 ? (() => {
+      const avgHrv = recoveryLogs.filter((l: any) => l.hrv_rmssd).length > 0
+        ? Math.round(recoveryLogs.filter((l: any) => l.hrv_rmssd).reduce((s: number, l: any) => s + l.hrv_rmssd, 0) / recoveryLogs.filter((l: any) => l.hrv_rmssd).length)
+        : null;
+      const avgSleep = recoveryLogs.filter((l: any) => l.sleep_hours).length > 0
+        ? (recoveryLogs.filter((l: any) => l.sleep_hours).reduce((s: number, l: any) => s + l.sleep_hours, 0) / recoveryLogs.filter((l: any) => l.sleep_hours).length).toFixed(1)
+        : null;
+      const avgMuscle = recoveryLogs.filter((l: any) => l.muscle_score != null).length > 0
+        ? Math.round(recoveryLogs.filter((l: any) => l.muscle_score != null).reduce((s: number, l: any) => s + l.muscle_score, 0) / recoveryLogs.filter((l: any) => l.muscle_score != null).length)
+        : null;
+      const avgJoint = recoveryLogs.filter((l: any) => l.joint_score != null).length > 0
+        ? Math.round(recoveryLogs.filter((l: any) => l.joint_score != null).reduce((s: number, l: any) => s + l.joint_score, 0) / recoveryLogs.filter((l: any) => l.joint_score != null).length)
+        : null;
+      const latest = recoveryLogs[0];
+
+      return `Médias (últimos 14 dias):
+HRV matinal (RMSSD): ${avgHrv ?? 'N/A'} ms | Sono: ${avgSleep ?? 'N/A'} h/noite | Score muscular: ${avgMuscle ?? 'N/A'}/100 | Score articular: ${avgJoint ?? 'N/A'}/100
+
+Registro mais recente (${latest.log_date}):
+HRV: ${latest.hrv_rmssd ?? 'N/A'} ms | FC repouso: ${latest.resting_heart_rate ?? 'N/A'} bpm | Sono: ${latest.sleep_hours ?? 'N/A'} h (qualidade ${latest.sleep_quality ?? 'N/A'}/5)
+Disposição: ${latest.disposition_score ?? 'N/A'}/100 | Energia: ${latest.energy_score ?? 'N/A'}/100 | Músculos: ${latest.muscle_score ?? 'N/A'}/100 | Articulações: ${latest.joint_score ?? 'N/A'}/100
+${latest.free_notes ? `Notas: ${latest.free_notes}` : ''}`;
+    })() : "Sem registros de recuperação";
+
+    // Race events section
+    const raceEventsSection = raceEvents.length > 0
+      ? raceEvents.map((r: any) => {
+          const daysUntil = Math.ceil((new Date(r.event_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+          return `- ${r.name} | ${r.sport} | ${r.event_date} (em ${daysUntil} dias) | ${r.distance_km ? r.distance_km + ' km' : ''}${r.goal ? ` | Objetivo: ${r.goal}` : ''}`;
+        }).join('\n')
+      : "Nenhuma prova agendada";
+
+    // Professional recommendations section
+    const profRecsSection = profRecs.length > 0
+      ? profRecs.map((r: any) =>
+          `- [${r.specialty}] ${r.dimension?.replace(/_/g, ' ')}: ${r.recommendation} (${new Date(r.created_at).toLocaleDateString('pt-BR')}) | Prioridade: ${r.priority}`
+        ).join('\n')
+      : "Nenhuma orientação de profissionais no período";
+
     const goalsSection = (goalsRes.data || []).length > 0
       ? (goalsRes.data || []).map((g: any) => `- ${g.title} | Categoria: ${g.category || "geral"} | Progresso: ${g.progress ?? 0}%${g.target_date ? ` | Meta: ${g.target_date}` : ""}`).join("\n")
       : "Sem metas ativas";
@@ -651,6 +761,7 @@ Fonte: Strava (dados sincronizados)`;
       activeNutrition,
       activeDiagnoses,
       stravaActivities,
+      workoutLogs,
       age,
     });
 
@@ -666,7 +777,7 @@ Fonte: Strava (dados sincronizados)`;
 
     const userPrompt = `Paciente: ${patientName}, ${age !== null ? `${age} anos` : "idade não informada"}.
 Tipo sanguíneo: ${patientRes.data?.blood_type || "não informado"}
-Alergias: ${(patientRes.data?.allergies || []).length > 0 ? patientRes.data.allergies.join(", ") : "nenhuma registrada"}
+Alergias: ${(patientRes.data?.allergies || []).length > 0 ? (patientRes.data?.allergies || []).join(", ") : "nenhuma registrada"}
 Comorbidades: ${comorbidities}
 Medicamentos: ${medications}
 Dados do período ${periodStart.toLocaleDateString("pt-BR")} a ${today.toLocaleDateString("pt-BR")}:
@@ -711,6 +822,18 @@ ${supplementsSection}
 ATIVIDADE FÍSICA — DADOS DE TREINO${stravaActivities.length > 0 ? " (STRAVA DETALHADO)" : ""}:
 ${trainingSection}
 
+TREINOS REALIZADOS (WORKOUT LOGS — ÚLTIMOS 28 DIAS):
+${workoutLogsSection}
+
+DIÁRIO DE RECUPERAÇÃO (ÚLTIMOS 14 DIAS):
+${recoverySection}
+
+PRÓXIMAS PROVAS AGENDADAS:
+${raceEventsSection}
+
+ORIENTAÇÕES DOS PROFISSIONAIS DE SAÚDE (ÚLTIMOS 30 DIAS):
+${profRecsSection}
+
 METAS DE SAÚDE ATIVAS:
 ${goalsSection}
 
@@ -732,6 +855,10 @@ ${evidenceSection}`;
       hasNutrition: !!activeNutrition,
       hasTraining: !!activeTraining,
       stravaActivities: stravaActivities.length,
+      workoutLogs: workoutLogs.length,
+      recoveryLogs: recoveryLogs.length,
+      raceEvents: raceEvents.length,
+      profRecs: profRecs.length,
       supplements: supplements.length,
       goals: (goalsRes.data || []).length,
       patientGoals: patientGoals.length,
