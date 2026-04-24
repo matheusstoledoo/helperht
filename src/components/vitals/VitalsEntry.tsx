@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
@@ -123,6 +124,36 @@ export default function VitalsEntry({ patientId }: VitalsEntryProps) {
   const handleWeightDigit = (d: string) => { if (weightField === "int") { if (weightInt.length < 3) setWeightInt(weightInt + d); } else { if (weightDec.length < 1) setWeightDec(d); } };
   const handleWeightDelete = () => { if (weightField === "int") setWeightInt(weightInt.slice(0, -1)); else setWeightDec(weightDec.slice(0, -1)); };
   const toggleSymptom = (s: string) => setSelectedSymptoms(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+  const numericKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const allowedKeys = ["Backspace", "Delete", "Tab", "ArrowLeft", "ArrowRight", "Home", "End", "Enter"];
+    if (allowedKeys.includes(e.key) || ((e.ctrlKey || e.metaKey) && ["a", "c", "v", "x"].includes(e.key.toLowerCase()))) return;
+    if (!/[0-9.,]/.test(e.key)) e.preventDefault();
+  };
+  const handleIntegerInput = (
+    value: string,
+    setter: React.Dispatch<React.SetStateAction<string>>,
+    maxLength = 3,
+  ) => {
+    const sanitized = value.replace(/[^\d]/g, "").slice(0, maxLength);
+    setter(sanitized);
+  };
+  const handleDecimalInput = (
+    value: string,
+    setter: React.Dispatch<React.SetStateAction<string>>,
+    maxLength = 6,
+  ) => {
+    const sanitized = value.replace(/[^\d.,]/g, "").replace(/,/g, ".");
+    const parts = sanitized.split(".");
+    const normalized = parts.length <= 1 ? parts[0] : `${parts[0]}.${parts.slice(1).join("")}`;
+    setter(normalized.slice(0, maxLength));
+  };
+  const weightDisplayValue = `${weightInt || ""}${weightDec ? `,${weightDec}` : ""}`;
+  const handleWeightInput = (value: string) => {
+    const sanitized = value.replace(/[^\d.,]/g, "").replace(/,/g, ".");
+    const [intPart = "", decPart = ""] = sanitized.split(".");
+    setWeightInt(intPart.replace(/\D/g, "").slice(0, 3));
+    setWeightDec(decPart.replace(/\D/g, "").slice(0, 1));
+  };
 
   const saveRecord = async (type: string) => {
     setSaving(true);
@@ -176,6 +207,17 @@ export default function VitalsEntry({ patientId }: VitalsEntryProps) {
                   <p className="text-xs text-muted-foreground">{paLabels[i]}</p>
                   <p className="text-2xl font-bold text-foreground mt-1">{paFields[i] || "—"}</p>
                   <p className="text-xs text-muted-foreground">{paUnits[i]}</p>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={paFields[i]}
+                    onChange={(e) => handleIntegerInput(e.target.value, paSetters[i])}
+                    onFocus={(e) => e.target.select()}
+                    onKeyDown={numericKeyDown}
+                    className="mt-3 h-8 text-center"
+                    placeholder="Digite"
+                    onClick={(e) => e.stopPropagation()}
+                  />
                 </CardContent>
               </Card>
             ))}
@@ -204,6 +246,16 @@ export default function VitalsEntry({ patientId }: VitalsEntryProps) {
             <p className="text-4xl font-bold text-foreground mt-1">{glucose || "—"}</p>
             <p className="text-sm text-muted-foreground">mg/dL</p>
             {glucose && (() => { const b = getGlucoseBadge(parseInt(glucose), glucoseMoment); return <span className="inline-block mt-2 text-xs font-semibold px-3 py-1 rounded-full" style={{ backgroundColor: b.bg, color: b.color }}>{b.label}</span>; })()}
+            <Input
+              type="text"
+              inputMode="decimal"
+              value={glucose}
+              onChange={(e) => handleDecimalInput(e.target.value, setGlucose)}
+              onFocus={(e) => e.target.select()}
+              onKeyDown={numericKeyDown}
+              className="mt-3 h-9 text-center"
+              placeholder="Digite o valor"
+            />
           </CardContent></Card>
           <Numpad onDigit={handleGlucoseDigit} onDelete={handleGlucoseDelete} />
           <Button onClick={() => saveRecord("glicemia")} className="w-full h-12 rounded-xl text-base" style={{ backgroundColor: "#1E2D4E" }} disabled={saving || !glucose}><Save className="mr-2 h-4 w-4" /> Salvar Registro</Button>
@@ -219,6 +271,16 @@ export default function VitalsEntry({ patientId }: VitalsEntryProps) {
               <span className={`text-4xl font-bold cursor-pointer px-2 rounded-lg text-foreground ${weightField === "dec" ? "bg-primary/10 ring-2 ring-primary" : ""}`} onClick={() => setWeightField("dec")}>{weightDec || "0"}</span>
               <span className="text-lg text-muted-foreground ml-1">kg</span>
             </div>
+            <Input
+              type="text"
+              inputMode="decimal"
+              value={weightDisplayValue}
+              onChange={(e) => handleWeightInput(e.target.value)}
+              onFocus={(e) => e.target.select()}
+              onKeyDown={numericKeyDown}
+              className="mt-3 h-9 text-center"
+              placeholder="Digite o peso"
+            />
           </CardContent></Card>
           <Numpad onDigit={handleWeightDigit} onDelete={handleWeightDelete} />
           <Button onClick={() => saveRecord("peso")} className="w-full h-12 rounded-xl text-base" style={{ backgroundColor: "#1E2D4E" }} disabled={saving || !weightInt}><Save className="mr-2 h-4 w-4" /> Salvar Registro</Button>
