@@ -347,7 +347,7 @@ serve(async (req) => {
     // Step 2: all clinical data in parallel (including vitals_log and alerts)
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-    const [diagRes, treatRes, nutritionRes, trainingRes, examsRes, supplementsRes, goalsRes, patientGoalsRes, vitalsRes, alertsRes, consultationsRes] = await Promise.all([
+    const [diagRes, treatRes, nutritionRes, trainingRes, examsRes, supplementsRes, goalsRes, patientGoalsRes, vitalsRes, alertsRes, consultationsRes, workoutLogsRes, recoveryLogsRes, raceEventsRes, profRecsRes] = await Promise.all([
       supabase.from("diagnoses")
         .select("name, status, severity, icd_code, diagnosed_date, resolved_date, public_notes")
         .eq("patient_id", patientId),
@@ -404,7 +404,42 @@ serve(async (req) => {
         .eq("patient_id", patientId)
         .order("consultation_date", { ascending: false })
         .limit(1),
+      // Workout logs — últimos 56 dias
+      supabase.from("workout_logs")
+        .select("activity_date, activity_name, sport, duration_minutes, distance_km, avg_heart_rate, max_heart_rate, avg_pace_min_km, calories, elevation_gain_m, tss, srpe, perceived_effort, feeling_score, compliance_pct, notes, source")
+        .eq("user_id", user.id)
+        .gte("activity_date", new Date(Date.now() - 56 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+        .order("activity_date", { ascending: false })
+        .limit(50),
+      // Recovery logs — últimos 14 dias
+      supabase.from("recovery_logs")
+        .select("log_date, hrv_rmssd, resting_heart_rate, sleep_quality, sleep_hours, disposition_score, energy_score, muscle_score, joint_score, stress_score, free_notes")
+        .eq("user_id", user.id)
+        .gte("log_date", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+        .order("log_date", { ascending: false })
+        .limit(14),
+      // Race events — próximas provas
+      supabase.from("race_events")
+        .select("name, sport, event_date, distance_km, goal, status")
+        .eq("user_id", user.id)
+        .eq("status", "scheduled")
+        .gte("event_date", new Date().toISOString().split('T')[0])
+        .order("event_date", { ascending: true })
+        .limit(5),
+      // Professional recommendations — últimas 30 dias
+      supabase.from("professional_recommendations")
+        .select("specialty, dimension, recommendation, priority, created_at")
+        .eq("patient_id", patientId)
+        .eq("visible_to_patient", true)
+        .gte("created_at", thirtyDaysAgo)
+        .order("created_at", { ascending: false })
+        .limit(10),
     ]);
+
+    const workoutLogs = workoutLogsRes.data || [];
+    const recoveryLogs = recoveryLogsRes.data || [];
+    const raceEvents = raceEventsRes.data || [];
+    const profRecs = profRecsRes.data || [];
 
     // Separate active and resolved diagnoses
     const allDiagnoses = diagRes.data || [];
