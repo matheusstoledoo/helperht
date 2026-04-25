@@ -135,7 +135,7 @@ export default function ProfActivityAnalysis() {
           .eq("workout_log_id", id)
           .order("lap_index"),
         (supabase.from("workout_records" as any) as any)
-          .select("*")
+          .select("elapsed_seconds, heart_rate, speed_kmh, cadence, altitude_m, distance_km, lat, lng")
           .eq("workout_log_id", id)
           .order("elapsed_seconds"),
         supabase
