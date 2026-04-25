@@ -32,12 +32,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronLeft, FileText, MessageSquare } from "lucide-react";
+import { ChevronLeft, FileText, MessageSquare, MapPin } from "lucide-react";
 import { FullPageLoading } from "@/components/ui/loading-spinner";
 import { toast } from "sonner";
 import ActivityAnalysisCharts, {
   formatPace,
 } from "@/components/training/ActivityAnalysisCharts";
+import ActivityMap from "@/components/training/ActivityMap";
 
 const DIMENSION_OPTIONS: [string, string][] = [
   ["carga_treino", "Carga de treino"],
