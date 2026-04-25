@@ -9,12 +9,13 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProfessionalProfileGate } from "@/components/auth/ProfessionalProfileGate";
 import { FullPageLoading } from "@/components/ui/loading-spinner";
 
-// Eager load landing + auth (first interaction)
+// Eager load landing + auth + patient dashboard (first interaction)
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import CompletarPerfil from "./pages/CompletarPerfil";
+import PatientDashboardMain from "./pages/PatientDashboardMain";
 
 // Lazy load everything else
 const Dashboard = lazy(() => import("./pages/Dashboard"));
