@@ -523,13 +523,19 @@ export default function PatientGoalsInsights() {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="w-full">
               <TabsTrigger value="resumo" className="flex-1 gap-1.5">
-                <Heart className="h-3.5 w-3.5" /> Resumo de saúde
+                <Heart className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Resumo de saúde</span>
+                <span className="sm:hidden">Resumo</span>
               </TabsTrigger>
               <TabsTrigger value="objetivos" className="flex-1 gap-1.5">
-                <Target className="h-3.5 w-3.5" /> Meus objetivos
+                <Target className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Meus objetivos</span>
+                <span className="sm:hidden">Objetivos</span>
               </TabsTrigger>
               <TabsTrigger value="insights" className="flex-1 gap-1.5">
-                <Sparkles className="h-3.5 w-3.5" /> Insights de IA
+                <Sparkles className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Insights de IA</span>
+                <span className="sm:hidden">Insights</span>
               </TabsTrigger>
             </TabsList>
 
