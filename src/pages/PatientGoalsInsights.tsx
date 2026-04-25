@@ -332,8 +332,32 @@ export default function PatientGoalsInsights() {
   }, [user, authLoading, navigate]);
 
   // ── Single edge function call powering Resumo + Insights ──
-  const fetchHealthData = useCallback(async () => {
-    if (!user) return;
+  // Cache em sessionStorage por usuário (10 min) para evitar refazer a chamada cara
+  // de IA toda vez que o usuário troca de aba ou volta à página.
+  const HEALTH_CACHE_TTL_MS = 10 * 60 * 1000;
+  const healthCacheKey = user ? `healthData:${user.id}` : null;
+
+  const fetchHealthData = useCallback(async (force = false) => {
+    if (!user || !healthCacheKey) return;
+
+    // Tenta servir do cache primeiro (a menos que force = true).
+    if (!force) {
+      try {
+        const raw = sessionStorage.getItem(healthCacheKey);
+        if (raw) {
+          const cached = JSON.parse(raw) as { data: HealthData; ts: number };
+          if (Date.now() - cached.ts < HEALTH_CACHE_TTL_MS) {
+            setHealthData(cached.data);
+            setHealthLoading(false);
+            setHealthError(null);
+            return;
+          }
+        }
+      } catch {
+        // cache inválido — ignora e refaz
+      }
+    }
+
     setHealthLoading(true);
     setHealthError(null);
     try {
@@ -341,6 +365,11 @@ export default function PatientGoalsInsights() {
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
       setHealthData(data as HealthData);
+      try {
+        sessionStorage.setItem(healthCacheKey, JSON.stringify({ data, ts: Date.now() }));
+      } catch {
+        // sessionStorage cheio ou indisponível — segue sem cache
+      }
     } catch (e: any) {
       const msg = e?.message || "Erro ao gerar análise de saúde.";
       setHealthError(typeof msg === "string" ? msg : "Erro ao gerar análise.");
@@ -348,7 +377,13 @@ export default function PatientGoalsInsights() {
     } finally {
       setHealthLoading(false);
     }
-  }, [user]);
+  }, [user, healthCacheKey]);
+
+  const invalidateHealthCache = useCallback(() => {
+    if (healthCacheKey) {
+      try { sessionStorage.removeItem(healthCacheKey); } catch { /* noop */ }
+    }
+  }, [healthCacheKey]);
 
   // ── Goals logic ──
   const fetchGoals = async () => {
@@ -366,12 +401,14 @@ export default function PatientGoalsInsights() {
     setGoalsLoading(false);
   };
 
+  // Disparar fetches apenas quando o ID do usuário mudar (não a cada render).
   useEffect(() => {
     if (user) {
       fetchGoals();
       fetchHealthData();
     }
-  }, [user, fetchHealthData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const buildBaselineSnapshot = async (): Promise<Record<string, any>> => {
     if (!user || !patientId) return {};
