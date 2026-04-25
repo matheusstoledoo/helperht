@@ -431,7 +431,7 @@ const saveLapsAndRecords = async (
       await (supabase.from('workout_laps' as any) as any).insert(laps);
     }
 
-    // Salvar records com downsampling a cada 10 segundos
+    // Salvar records com downsampling a cada 10 segundos (5s quando há GPS)
     const allRecords: any[] = [];
     (session.laps || []).forEach((lap: any) => {
       (lap.records || []).forEach((r: any) => {
@@ -439,9 +439,22 @@ const saveLapsAndRecords = async (
       });
     });
 
-    const sampled = allRecords.filter(
-      (r: any) => r.elapsed_time !== undefined && r.elapsed_time % 10 === 0
-    );
+    // Coordenadas FIT vêm em semicírculos — converter para graus decimais
+    const semicirclesToDegrees = (val: number): number =>
+      val * (180 / Math.pow(2, 31));
+
+    // Preferir records com GPS quando disponíveis
+    const hasGps = allRecords.some((r: any) => r.position_lat != null);
+    const sampled = hasGps
+      ? allRecords.filter(
+          (r: any) =>
+            r.position_lat != null &&
+            r.elapsed_time !== undefined &&
+            r.elapsed_time % 5 === 0
+        )
+      : allRecords.filter(
+          (r: any) => r.elapsed_time !== undefined && r.elapsed_time % 10 === 0
+        );
     const recordsToSave = sampled.length >= 10 ? sampled : allRecords;
 
     const records = recordsToSave.map((r: any) => ({
@@ -454,6 +467,14 @@ const saveLapsAndRecords = async (
       cadence: r.cadence ? r.cadence * 2 : null,
       altitude_m: r.altitude ? Math.round(r.altitude * 10) / 10 : null,
       distance_km: r.distance ? Math.round(r.distance * 1000) / 1000 : null,
+      lat:
+        r.position_lat != null
+          ? Math.round(semicirclesToDegrees(r.position_lat) * 1000000) / 1000000
+          : null,
+      lng:
+        r.position_long != null
+          ? Math.round(semicirclesToDegrees(r.position_long) * 1000000) / 1000000
+          : null,
     }));
 
     const batchSize = 500;
