@@ -32,7 +32,7 @@ const ProfessionalSettings = lazy(() => import("./pages/ProfessionalSettings"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const AdminProfessionals = lazy(() => import("./pages/AdminProfessionals"));
 const AdminPatients = lazy(() => import("./pages/AdminPatients"));
-const PatientDashboardMain = lazy(() => import("./pages/PatientDashboardMain"));
+
 const PatientProfessionals = lazy(() => import("./pages/PatientProfessionals"));
 const PatientProfessionalView = lazy(() => import("./pages/PatientProfessionalView"));
 const PatientDiagnosesView = lazy(() => import("./pages/PatientDiagnosesView"));
