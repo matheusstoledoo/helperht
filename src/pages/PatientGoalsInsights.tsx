@@ -453,7 +453,8 @@ export default function PatientGoalsInsights() {
       resetForm(); setShowModal(false);
       await fetchGoals();
       // Re-run unified analysis since the goal changed
-      fetchHealthData();
+      invalidateHealthCache();
+      fetchHealthData(true);
     } catch (e: any) { console.error(e); toast({ title: "Erro ao salvar", description: e.message, variant: "destructive" }); }
     finally { setSaving(false); }
   };
@@ -463,7 +464,8 @@ export default function PatientGoalsInsights() {
     if (!error) {
       toast({ title: "Objetivo arquivado" });
       await fetchGoals();
-      fetchHealthData();
+      invalidateHealthCache();
+      fetchHealthData(true);
     }
   };
 
