@@ -367,8 +367,6 @@ const Auth = () => {
                           <SelectItem value="nutricionista">Nutricionista</SelectItem>
                           <SelectItem value="educador físico">Educador físico</SelectItem>
                           <SelectItem value="psicólogo">Psicólogo</SelectItem>
-                          <SelectItem value="enfermeiro">Enfermeiro</SelectItem>
-                          <SelectItem value="farmacêutico">Farmacêutico</SelectItem>
                           <SelectItem value="outro">Outro</SelectItem>
                         </SelectContent>
                       </Select>
@@ -398,8 +396,6 @@ const Auth = () => {
                           : signupSpecialty === "nutricionista" ? "CRN"
                           : signupSpecialty === "educador físico" ? "CREF"
                           : signupSpecialty === "psicólogo" ? "CRP"
-                          : signupSpecialty === "enfermeiro" ? "COREN"
-                          : signupSpecialty === "farmacêutico" ? "CRF"
                           : "Número do conselho profissional (opcional)"}
                       </Label>
                       <Input
