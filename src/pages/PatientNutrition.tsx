@@ -536,6 +536,30 @@ export default function PatientNutrition() {
       {user && patientId && (
         <FloatingUploadButton patientId={patientId} userId={user.id} userRole="patient" userName={userName} categoryHint="prescricao_nutricional" />
       )}
+
+      <AlertDialog open={!!mealToDelete} onOpenChange={(open) => !open && setMealToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir refeição</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a refeição "{mealToDelete?.name}"? Esta ação não pode ser desfeita e os registros de hoje associados a ela serão removidos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingMeal}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteMeal();
+              }}
+              disabled={deletingMeal}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingMeal ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PatientLayout>
   );
 }
