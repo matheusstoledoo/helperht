@@ -540,7 +540,7 @@ export default function PatientGoalsInsights() {
                   <CardContent className="p-8 text-center space-y-3">
                     <AlertTriangle className="h-10 w-10 mx-auto text-amber-500" />
                     <p className="text-sm text-muted-foreground">{healthError}</p>
-                    <Button onClick={fetchHealthData} variant="outline" className="gap-2">
+                    <Button onClick={() => { invalidateHealthCache(); fetchHealthData(true); }} variant="outline" className="gap-2">
                       <RefreshCw className="h-4 w-4" /> Tentar novamente
                     </Button>
                   </CardContent>
@@ -622,7 +622,7 @@ export default function PatientGoalsInsights() {
                     </Card>
                   )}
 
-                  <Button variant="outline" onClick={fetchHealthData} disabled={healthLoading} className="w-full gap-2">
+                  <Button variant="outline" onClick={() => { invalidateHealthCache(); fetchHealthData(true); }} disabled={healthLoading} className="w-full gap-2">
                     {healthLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                     Reanalisar
                   </Button>
@@ -632,7 +632,7 @@ export default function PatientGoalsInsights() {
                   <CardContent className="p-8 text-center space-y-3">
                     <Sparkles className="h-10 w-10 mx-auto text-muted-foreground/50" />
                     <p className="text-sm text-muted-foreground">Sem dados disponíveis ainda.</p>
-                    <Button onClick={fetchHealthData} variant="outline" className="gap-2">
+                    <Button onClick={() => { invalidateHealthCache(); fetchHealthData(true); }} variant="outline" className="gap-2">
                       <Sparkles className="h-4 w-4" /> Gerar análise
                     </Button>
                   </CardContent>
@@ -733,7 +733,7 @@ export default function PatientGoalsInsights() {
                   <CardContent className="p-8 text-center space-y-3">
                     <AlertTriangle className="h-10 w-10 mx-auto text-amber-500" />
                     <p className="text-sm text-muted-foreground">{healthError}</p>
-                    <Button onClick={fetchHealthData} variant="outline" className="gap-2">
+                    <Button onClick={() => { invalidateHealthCache(); fetchHealthData(true); }} variant="outline" className="gap-2">
                       <RefreshCw className="h-4 w-4" /> Tentar novamente
                     </Button>
                   </CardContent>
@@ -763,7 +763,7 @@ export default function PatientGoalsInsights() {
                       </Card>
                     ))}
                   </div>
-                  <Button variant="outline" onClick={fetchHealthData} disabled={healthLoading} className="w-full gap-2">
+                  <Button variant="outline" onClick={() => { invalidateHealthCache(); fetchHealthData(true); }} disabled={healthLoading} className="w-full gap-2">
                     {healthLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                     Gerar novos insights
                   </Button>
@@ -776,7 +776,7 @@ export default function PatientGoalsInsights() {
                   <CardContent className="p-8 text-center space-y-3">
                     <Sparkles className="h-10 w-10 mx-auto text-muted-foreground/50" />
                     <p className="text-sm text-muted-foreground">Nenhum insight disponível ainda.</p>
-                    <Button onClick={fetchHealthData} variant="outline" className="gap-2">
+                    <Button onClick={() => { invalidateHealthCache(); fetchHealthData(true); }} variant="outline" className="gap-2">
                       <Sparkles className="h-4 w-4" /> Gerar insights
                     </Button>
                   </CardContent>
