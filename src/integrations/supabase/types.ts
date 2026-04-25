@@ -3864,6 +3864,8 @@ export type Database = {
           elapsed_seconds: number
           heart_rate: number | null
           id: string
+          lat: number | null
+          lng: number | null
           patient_id: string | null
           speed_kmh: number | null
           user_id: string | null
@@ -3877,6 +3879,8 @@ export type Database = {
           elapsed_seconds: number
           heart_rate?: number | null
           id?: string
+          lat?: number | null
+          lng?: number | null
           patient_id?: string | null
           speed_kmh?: number | null
           user_id?: string | null
@@ -3890,6 +3894,8 @@ export type Database = {
           elapsed_seconds?: number
           heart_rate?: number | null
           id?: string
+          lat?: number | null
+          lng?: number | null
           patient_id?: string | null
           speed_kmh?: number | null
           user_id?: string | null
