@@ -9,12 +9,13 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProfessionalProfileGate } from "@/components/auth/ProfessionalProfileGate";
 import { FullPageLoading } from "@/components/ui/loading-spinner";
 
-// Eager load landing + auth (first interaction)
+// Eager load landing + auth + patient dashboard (first interaction)
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import CompletarPerfil from "./pages/CompletarPerfil";
+import PatientDashboardMain from "./pages/PatientDashboardMain";
 
 // Lazy load everything else
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -31,7 +32,7 @@ const ProfessionalSettings = lazy(() => import("./pages/ProfessionalSettings"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const AdminProfessionals = lazy(() => import("./pages/AdminProfessionals"));
 const AdminPatients = lazy(() => import("./pages/AdminPatients"));
-const PatientDashboardMain = lazy(() => import("./pages/PatientDashboardMain"));
+
 const PatientProfessionals = lazy(() => import("./pages/PatientProfessionals"));
 const PatientProfessionalView = lazy(() => import("./pages/PatientProfessionalView"));
 const PatientDiagnosesView = lazy(() => import("./pages/PatientDiagnosesView"));
