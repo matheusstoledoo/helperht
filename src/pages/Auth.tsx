@@ -163,37 +163,55 @@ const Auth = () => {
         return;
       }
 
-      const { error } = await signUp(
-        signupEmail.trim().toLowerCase(),
-        signupPassword,
-        signupName,
-        'professional',
-        signupCpf
-      );
+      const cleanEmail = signupEmail.trim().toLowerCase();
 
-      if (error) {
+      // Criar via edge function (admin API garante email_confirmed e
+      // sincronização entre auth.users, public.users e user_roles).
+      const { data: createData, error: createError } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: cleanEmail,
+          password: signupPassword,
+          name: signupName,
+          role: 'professional',
+          cpf: signupCpf.replace(/[^\d]/g, ''),
+        },
+      });
+
+      if (createError || !createData?.success) {
+        const msg = createData?.error === 'email_exists'
+          ? 'Este email já está cadastrado. Faça login.'
+          : (createData?.message || createError?.message || 'Não foi possível criar a conta.');
         toast({
           title: "Erro ao cadastrar",
-          description: error.message?.includes("already registered")
-            ? "Este email já está cadastrado. Faça login."
-            : error.message,
+          description: msg,
           variant: "destructive",
         });
         return;
       }
 
-      const { data: { user: newUser } } = await supabase.auth.getUser();
-      if (newUser) {
+      const newUserId: string | undefined = createData.userId;
+
+      // Completar perfil do profissional (especialidade, conselho)
+      if (newUserId) {
         await supabase
           .from('users')
           .update({
-            role: 'professional',
             specialty: signupSpecialty,
             subspecialty: signupSubspecialty.trim() || null,
             council_number: signupCouncilNumber.trim() || null,
             onboarding_completed: true,
           } as any)
-          .eq('id', newUser.id);
+          .eq('id', newUserId);
+      }
+
+      // Login automático
+      const { error: signInError } = await signIn(cleanEmail, signupPassword);
+      if (signInError) {
+        toast({
+          title: "Conta criada",
+          description: "Faça login com seu e-mail e senha.",
+        });
+        return;
       }
 
       toast({
@@ -207,6 +225,12 @@ const Auth = () => {
         toast({
           title: "Erro de validação",
           description: error.errors[0].message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro inesperado",
+          description: error instanceof Error ? error.message : "Tente novamente.",
           variant: "destructive",
         });
       }
