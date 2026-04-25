@@ -15,7 +15,19 @@ import {
   ChevronDown,
   ChevronUp,
   Pill,
+  Trash2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 import PatientLayout from "@/components/patient/PatientLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -69,6 +81,9 @@ export default function PatientNutrition() {
   const [mealLogs, setMealLogs] = useState<any[]>([]);
   const [nutritionRecs, setNutritionRecs] = useState<any[]>([]);
   const [togglingMeal, setTogglingMeal] = useState<string | null>(null);
+  const [mealToDelete, setMealToDelete] = useState<{ planId: string; index: number; name: string } | null>(null);
+  const [deletingMeal, setDeletingMeal] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (authLoading) return;
@@ -158,6 +173,49 @@ export default function PatientNutrition() {
     return mealLogs.some(
       (l) => l.nutrition_plan_id === planId && l.meal_index === mealIndex && l.log_date === today
     );
+  };
+
+  const handleDeleteMeal = async () => {
+    if (!mealToDelete) return;
+    setDeletingMeal(true);
+    const plan = plans.find((p) => p.id === mealToDelete.planId);
+    if (!plan) {
+      setDeletingMeal(false);
+      setMealToDelete(null);
+      return;
+    }
+    const currentMeals: Meal[] = Array.isArray(plan.meals) ? plan.meals : [];
+    const updatedMeals = currentMeals.filter((_, i) => i !== mealToDelete.index);
+
+    const { error } = await supabase
+      .from("nutrition_plans")
+      .update({ meals: updatedMeals as any })
+      .eq("id", mealToDelete.planId);
+
+    if (error) {
+      toast({ title: "Erro ao excluir refeição", description: error.message, variant: "destructive" });
+      setDeletingMeal(false);
+      return;
+    }
+
+    await supabase
+      .from("meal_logs")
+      .delete()
+      .eq("nutrition_plan_id", mealToDelete.planId)
+      .eq("meal_index", mealToDelete.index);
+
+    setPlans((prev) =>
+      prev.map((p) => (p.id === mealToDelete.planId ? { ...p, meals: updatedMeals } : p))
+    );
+    setMealLogs((prev) =>
+      prev.filter(
+        (l) => !(l.nutrition_plan_id === mealToDelete.planId && l.meal_index === mealToDelete.index)
+      )
+    );
+
+    toast({ title: "Refeição excluída com sucesso!" });
+    setDeletingMeal(false);
+    setMealToDelete(null);
   };
 
   const renderMacros = (plan: NutritionPlan) => {
@@ -267,7 +325,24 @@ export default function PatientNutrition() {
                       )}
                     </div>
                   </div>
-                  {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMealToDelete({
+                          planId: plan.id,
+                          index: i,
+                          name: meal.name || `Refeição ${i + 1}`,
+                        });
+                      }}
+                      className="h-7 w-7 rounded-md flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors"
+                      aria-label="Excluir refeição"
+                      type="button"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                    {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </div>
                 </button>
                 {expanded && meal.foods && meal.foods.length > 0 && (
                   <div className="px-3 pb-3 pt-0">
@@ -461,6 +536,30 @@ export default function PatientNutrition() {
       {user && patientId && (
         <FloatingUploadButton patientId={patientId} userId={user.id} userRole="patient" userName={userName} categoryHint="prescricao_nutricional" />
       )}
+
+      <AlertDialog open={!!mealToDelete} onOpenChange={(open) => !open && setMealToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir refeição</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a refeição "{mealToDelete?.name}"? Esta ação não pode ser desfeita e os registros de hoje associados a ela serão removidos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingMeal}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteMeal();
+              }}
+              disabled={deletingMeal}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingMeal ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PatientLayout>
   );
 }
