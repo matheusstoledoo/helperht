@@ -175,6 +175,49 @@ export default function PatientNutrition() {
     );
   };
 
+  const handleDeleteMeal = async () => {
+    if (!mealToDelete) return;
+    setDeletingMeal(true);
+    const plan = plans.find((p) => p.id === mealToDelete.planId);
+    if (!plan) {
+      setDeletingMeal(false);
+      setMealToDelete(null);
+      return;
+    }
+    const currentMeals: Meal[] = Array.isArray(plan.meals) ? plan.meals : [];
+    const updatedMeals = currentMeals.filter((_, i) => i !== mealToDelete.index);
+
+    const { error } = await supabase
+      .from("nutrition_plans")
+      .update({ meals: updatedMeals as any })
+      .eq("id", mealToDelete.planId);
+
+    if (error) {
+      toast({ title: "Erro ao excluir refeição", description: error.message, variant: "destructive" });
+      setDeletingMeal(false);
+      return;
+    }
+
+    await supabase
+      .from("meal_logs")
+      .delete()
+      .eq("nutrition_plan_id", mealToDelete.planId)
+      .eq("meal_index", mealToDelete.index);
+
+    setPlans((prev) =>
+      prev.map((p) => (p.id === mealToDelete.planId ? { ...p, meals: updatedMeals } : p))
+    );
+    setMealLogs((prev) =>
+      prev.filter(
+        (l) => !(l.nutrition_plan_id === mealToDelete.planId && l.meal_index === mealToDelete.index)
+      )
+    );
+
+    toast({ title: "Refeição excluída com sucesso!" });
+    setDeletingMeal(false);
+    setMealToDelete(null);
+  };
+
   const renderMacros = (plan: NutritionPlan) => {
     if (!plan.total_calories && !plan.protein_grams && !plan.carbs_grams && !plan.fat_grams) return null;
     const macros = [
