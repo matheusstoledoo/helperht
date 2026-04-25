@@ -278,6 +278,24 @@ export default function PatientTraining() {
             </TabsList>
 
             <TabsContent value="treinos">
+              {hasGarminWithoutGps && (
+                <div className="flex justify-end mb-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleBackfillGps}
+                    disabled={backfillingGps}
+                    className="text-xs text-muted-foreground"
+                  >
+                    {backfillingGps ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <MapPin className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    Extrair GPS de atividades anteriores
+                  </Button>
+                </div>
+              )}
               <TrainingHub userId={user.id} patientId={patientId} />
             </TabsContent>
 
