@@ -9,13 +9,17 @@ import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, MapPin } from "lucide-react";
 import ActivityAnalysisCharts, {
   formatPace,
 } from "@/components/training/ActivityAnalysisCharts";
+import ActivityMap from "@/components/training/ActivityMap";
 
 export default function PatientActivityAnalysis() {
   const { id } = useParams<{ id: string }>();
