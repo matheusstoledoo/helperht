@@ -396,8 +396,6 @@ const Auth = () => {
                           : signupSpecialty === "nutricionista" ? "CRN"
                           : signupSpecialty === "educador físico" ? "CREF"
                           : signupSpecialty === "psicólogo" ? "CRP"
-                          : signupSpecialty === "enfermeiro" ? "COREN"
-                          : signupSpecialty === "farmacêutico" ? "CRF"
                           : "Número do conselho profissional (opcional)"}
                       </Label>
                       <Input
