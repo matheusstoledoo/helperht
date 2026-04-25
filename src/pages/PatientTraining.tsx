@@ -29,7 +29,8 @@ import PatientLayout from "@/components/patient/PatientLayout";
 import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageSquare, Plus, Star, Trophy } from "lucide-react";
+import { Loader2, MapPin, MessageSquare, Plus, Star, Trophy } from "lucide-react";
+import { toast } from "sonner";
 
 export default function PatientTraining() {
   const { user, loading: authLoading } = useAuth();
@@ -64,6 +65,8 @@ export default function PatientTraining() {
   const [recNotes, setRecNotes] = useState("");
   const [savingRecovery, setSavingRecovery] = useState(false);
   const [savingRace, setSavingRace] = useState(false);
+  const [hasGarminWithoutGps, setHasGarminWithoutGps] = useState(false);
+  const [backfillingGps, setBackfillingGps] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
