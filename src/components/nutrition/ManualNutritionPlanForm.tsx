@@ -79,6 +79,10 @@ export default function ManualNutritionPlanForm({ userId, patientId, onSaved, on
     setMeals(prev => prev.filter((_, i) => i !== idx));
   };
 
+  const removeMeal = (idx: number) => {
+    setMeals(prev => prev.filter((_, i) => i !== idx));
+  };
+
   const updateFood = (mIdx: number, fIdx: number, text: string) => {
     setMeals(prev => prev.map((m, mi) => mi === mIdx ? {
       ...m, foods: m.foods.map((f, fi) => fi === fIdx ? { text } : f),
