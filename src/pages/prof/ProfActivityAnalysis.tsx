@@ -32,12 +32,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronLeft, FileText, MessageSquare } from "lucide-react";
+import { ChevronLeft, FileText, MessageSquare, MapPin } from "lucide-react";
 import { FullPageLoading } from "@/components/ui/loading-spinner";
 import { toast } from "sonner";
 import ActivityAnalysisCharts, {
   formatPace,
 } from "@/components/training/ActivityAnalysisCharts";
+import ActivityMap from "@/components/training/ActivityMap";
 
 const DIMENSION_OPTIONS: [string, string][] = [
   ["carga_treino", "Carga de treino"],
@@ -134,7 +135,7 @@ export default function ProfActivityAnalysis() {
           .eq("workout_log_id", id)
           .order("lap_index"),
         (supabase.from("workout_records" as any) as any)
-          .select("*")
+          .select("elapsed_seconds, heart_rate, speed_kmh, cadence, altitude_m, distance_km, lat, lng")
           .eq("workout_log_id", id)
           .order("elapsed_seconds"),
         supabase
@@ -395,6 +396,26 @@ export default function ProfActivityAnalysis() {
                   </p>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Mapa do percurso */}
+        {records.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary" />
+                Percurso
+                {records.filter((r) => r.lat).length > 0 && (
+                  <Badge variant="outline" className="text-xs ml-auto">
+                    {records.filter((r) => r.lat).length} pontos GPS
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ActivityMap records={records} />
             </CardContent>
           </Card>
         )}

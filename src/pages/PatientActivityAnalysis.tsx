@@ -9,13 +9,17 @@ import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, MapPin } from "lucide-react";
 import ActivityAnalysisCharts, {
   formatPace,
 } from "@/components/training/ActivityAnalysisCharts";
+import ActivityMap from "@/components/training/ActivityMap";
 
 export default function PatientActivityAnalysis() {
   const { id } = useParams<{ id: string }>();
@@ -39,7 +43,7 @@ export default function PatientActivityAnalysis() {
           .eq("workout_log_id", id)
           .order("lap_index"),
         (supabase.from("workout_records" as any) as any)
-          .select("*")
+          .select("elapsed_seconds, heart_rate, speed_kmh, cadence, altitude_m, distance_km, lat, lng")
           .eq("workout_log_id", id)
           .order("elapsed_seconds"),
       ]);
@@ -166,6 +170,26 @@ export default function PatientActivityAnalysis() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Mapa do percurso */}
+        {records.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary" />
+                Percurso
+                {records.filter((r) => r.lat).length > 0 && (
+                  <Badge variant="outline" className="text-xs ml-auto">
+                    {records.filter((r) => r.lat).length} pontos GPS
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ActivityMap records={records} />
+            </CardContent>
+          </Card>
+        )}
 
         <ActivityAnalysisCharts laps={laps} records={records} />
       </div>
