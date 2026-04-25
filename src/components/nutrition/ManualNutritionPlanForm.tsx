@@ -214,8 +214,14 @@ export default function ManualNutritionPlanForm({ userId, patientId, onSaved, on
                 {meal.expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </button>
               {meals.length > 1 && (
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeMeal(mIdx)}>
-                  <X className="h-3 w-3" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => removeMeal(mIdx)}
+                  type="button"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               )}
             </div>
