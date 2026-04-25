@@ -107,11 +107,55 @@ export default function PatientTraining() {
       setRecommendations(recsRes.data || []);
       const todayLog = (rLogsRes.data || []).find((r: any) => r.log_date === today);
       setTodayRecovery(todayLog || null);
+
+      // Verificar se há logs Garmin sem GPS
+      const { data: garminLogs } = await supabase
+        .from("workout_logs")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("source", "garmin")
+        .limit(50);
+
+      if (garminLogs && garminLogs.length > 0) {
+        const logIds = garminLogs.map((l: any) => l.id);
+        const { data: recordsWithGps } = await (supabase.from("workout_records") as any)
+          .select("workout_log_id")
+          .in("workout_log_id", logIds)
+          .not("lat", "is", null)
+          .limit(1);
+        setHasGarminWithoutGps(!recordsWithGps || recordsWithGps.length < garminLogs.length);
+      }
+
       setLoading(false);
     };
 
     fetchData();
   }, [user, authLoading]);
+
+  const handleBackfillGps = async () => {
+    setBackfillingGps(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/backfill-gps-records`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session?.access_token}`,
+          },
+        }
+      );
+      const data = await res.json();
+      const updated = data.results?.filter((r: any) => r.status === "atualizado").length || 0;
+      toast.success(`GPS extraído de ${updated} atividade${updated !== 1 ? "s" : ""}`);
+      if (updated > 0) setHasGarminWithoutGps(false);
+    } catch {
+      toast.error("Erro ao extrair GPS");
+    } finally {
+      setBackfillingGps(false);
+    }
+  };
 
   const handleSaveRace = async () => {
     if (!raceName || !raceSport || !raceDate || !user) return;
