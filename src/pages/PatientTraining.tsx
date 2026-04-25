@@ -29,7 +29,8 @@ import PatientLayout from "@/components/patient/PatientLayout";
 import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageSquare, Plus, Star, Trophy } from "lucide-react";
+import { Loader2, MapPin, MessageSquare, Plus, Star, Trophy } from "lucide-react";
+import { toast } from "sonner";
 
 export default function PatientTraining() {
   const { user, loading: authLoading } = useAuth();
@@ -64,6 +65,8 @@ export default function PatientTraining() {
   const [recNotes, setRecNotes] = useState("");
   const [savingRecovery, setSavingRecovery] = useState(false);
   const [savingRace, setSavingRace] = useState(false);
+  const [hasGarminWithoutGps, setHasGarminWithoutGps] = useState(false);
+  const [backfillingGps, setBackfillingGps] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -104,11 +107,55 @@ export default function PatientTraining() {
       setRecommendations(recsRes.data || []);
       const todayLog = (rLogsRes.data || []).find((r: any) => r.log_date === today);
       setTodayRecovery(todayLog || null);
+
+      // Verificar se há logs Garmin sem GPS
+      const { data: garminLogs } = await supabase
+        .from("workout_logs")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("source", "garmin")
+        .limit(50);
+
+      if (garminLogs && garminLogs.length > 0) {
+        const logIds = garminLogs.map((l: any) => l.id);
+        const { data: recordsWithGps } = await (supabase.from("workout_records") as any)
+          .select("workout_log_id")
+          .in("workout_log_id", logIds)
+          .not("lat", "is", null)
+          .limit(1);
+        setHasGarminWithoutGps(!recordsWithGps || recordsWithGps.length < garminLogs.length);
+      }
+
       setLoading(false);
     };
 
     fetchData();
   }, [user, authLoading]);
+
+  const handleBackfillGps = async () => {
+    setBackfillingGps(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/backfill-gps-records`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session?.access_token}`,
+          },
+        }
+      );
+      const data = await res.json();
+      const updated = data.results?.filter((r: any) => r.status === "atualizado").length || 0;
+      toast.success(`GPS extraído de ${updated} atividade${updated !== 1 ? "s" : ""}`);
+      if (updated > 0) setHasGarminWithoutGps(false);
+    } catch {
+      toast.error("Erro ao extrair GPS");
+    } finally {
+      setBackfillingGps(false);
+    }
+  };
 
   const handleSaveRace = async () => {
     if (!raceName || !raceSport || !raceDate || !user) return;
@@ -231,6 +278,24 @@ export default function PatientTraining() {
             </TabsList>
 
             <TabsContent value="treinos">
+              {hasGarminWithoutGps && (
+                <div className="flex justify-end mb-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleBackfillGps}
+                    disabled={backfillingGps}
+                    className="text-xs text-muted-foreground"
+                  >
+                    {backfillingGps ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <MapPin className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    Extrair GPS de atividades anteriores
+                  </Button>
+                </div>
+              )}
               <TrainingHub userId={user.id} patientId={patientId} />
             </TabsContent>
 
