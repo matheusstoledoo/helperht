@@ -367,8 +367,6 @@ const Auth = () => {
                           <SelectItem value="nutricionista">Nutricionista</SelectItem>
                           <SelectItem value="educador físico">Educador físico</SelectItem>
                           <SelectItem value="psicólogo">Psicólogo</SelectItem>
-                          <SelectItem value="enfermeiro">Enfermeiro</SelectItem>
-                          <SelectItem value="farmacêutico">Farmacêutico</SelectItem>
                           <SelectItem value="outro">Outro</SelectItem>
                         </SelectContent>
                       </Select>
