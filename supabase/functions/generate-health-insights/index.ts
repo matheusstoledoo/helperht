@@ -327,27 +327,35 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) throw new Error("Unauthorized");
 
-    // Step 1: get patient profile + user info + lab results
-    const [patientRes, userRes, labRes] = await Promise.all([
-      supabase.from("patients").select("id, allergies, blood_type, birthdate").eq("user_id", user.id).maybeSingle(),
+    // Resolve patientId first (needed by most queries). Single small query.
+    const patientPreRes = await supabase
+      .from("patients")
+      .select("id, allergies, blood_type, birthdate")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const patientId = patientPreRes?.data?.id || "00000000-0000-0000-0000-000000000000";
+    const birthdate = patientPreRes?.data?.birthdate;
+    const age = birthdate ? Math.floor((Date.now() - new Date(birthdate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null;
+    const isGeriatricProfile = age !== null && age >= 50;
+
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    // All remaining queries in a single parallel wave (was 3 sequential waves before).
+    // Note: kbRes uses overlaps with all goal types — same effective filter as before since the
+    // patient_goals scope is already restricted by patient_id; we filter relevant ones in memory.
+    const [
+      userRes, labRes,
+      diagRes, treatRes, nutritionRes, trainingRes, examsRes, supplementsRes,
+      goalsRes, patientGoalsRes, vitalsRes, alertsRes, consultationsRes,
+      workoutLogsRes, recoveryLogsRes, raceEventsRes, profRecsRes,
+    ] = await Promise.all([
       supabase.from("users").select("name").eq("id", user.id).maybeSingle(),
       supabase.from("lab_results")
         .select("marker_name, value, unit, status, collection_date, reference_min, reference_max, marker_category")
         .eq("user_id", user.id)
         .order("collection_date", { ascending: false })
         .limit(50),
-    ]);
-
-    const patientId = patientRes?.data?.id || "00000000-0000-0000-0000-000000000000";
-    const patientName = userRes?.data?.name || "Paciente";
-    const birthdate = patientRes?.data?.birthdate;
-    const age = birthdate ? Math.floor((Date.now() - new Date(birthdate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null;
-    const isGeriatricProfile = age !== null && age >= 50;
-
-    // Step 2: all clinical data in parallel (including vitals_log and alerts)
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-
-    const [diagRes, treatRes, nutritionRes, trainingRes, examsRes, supplementsRes, goalsRes, patientGoalsRes, vitalsRes, alertsRes, consultationsRes, workoutLogsRes, recoveryLogsRes, raceEventsRes, profRecsRes] = await Promise.all([
       supabase.from("diagnoses")
         .select("name, status, severity, icd_code, diagnosed_date, resolved_date, public_notes")
         .eq("patient_id", patientId),
@@ -384,41 +392,35 @@ serve(async (req) => {
         .eq("patient_id", patientId)
         .in("status", ["ativo", "pausado"])
         .limit(10),
-      // Vital signs - last 30 days
       supabase.from("vital_signs")
         .select("type, systolic, diastolic, heart_rate, glucose, glucose_moment, weight, symptoms, wellbeing, recorded_at, created_at")
         .eq("patient_id", patientId)
         .gte("created_at", thirtyDaysAgo)
         .order("created_at", { ascending: false })
         .limit(100),
-      // Alerts from last 30 days
       supabase.from("vitals_alerts")
         .select("alert_type, severity, message, acknowledged, created_at")
         .eq("patient_id", patientId)
         .gte("created_at", thirtyDaysAgo)
         .order("created_at", { ascending: false })
         .limit(50),
-      // Last consultation
       supabase.from("consultations")
         .select("consultation_date, chief_complaint, assessment, plan, notes")
         .eq("patient_id", patientId)
         .order("consultation_date", { ascending: false })
         .limit(1),
-      // Workout logs — últimos 56 dias
       supabase.from("workout_logs")
         .select("activity_date, activity_name, sport, duration_minutes, distance_km, avg_heart_rate, max_heart_rate, avg_pace_min_km, calories, elevation_gain_m, tss, srpe, perceived_effort, feeling_score, compliance_pct, notes, source")
         .eq("user_id", user.id)
         .gte("activity_date", new Date(Date.now() - 56 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
         .order("activity_date", { ascending: false })
         .limit(50),
-      // Recovery logs — últimos 14 dias
       supabase.from("recovery_logs")
         .select("log_date, hrv_rmssd, resting_heart_rate, sleep_quality, sleep_hours, disposition_score, energy_score, muscle_score, joint_score, stress_score, free_notes")
         .eq("user_id", user.id)
         .gte("log_date", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
         .order("log_date", { ascending: false })
         .limit(14),
-      // Race events — próximas provas
       supabase.from("race_events")
         .select("name, sport, event_date, distance_km, goal, status")
         .eq("user_id", user.id)
@@ -426,7 +428,6 @@ serve(async (req) => {
         .gte("event_date", new Date().toISOString().split('T')[0])
         .order("event_date", { ascending: true })
         .limit(5),
-      // Professional recommendations — últimas 30 dias
       supabase.from("professional_recommendations")
         .select("specialty, dimension, recommendation, priority, created_at")
         .eq("patient_id", patientId)
@@ -435,6 +436,10 @@ serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(10),
     ]);
+
+    // Reattach patient/user data to keep downstream code unchanged
+    const patientRes = patientPreRes;
+    const patientName = userRes?.data?.name || "Paciente";
 
     const workoutLogs = workoutLogsRes.data || [];
     const recoveryLogs = recoveryLogsRes.data || [];
@@ -451,7 +456,8 @@ serve(async (req) => {
     const activeTreatments = allTreatments.filter((t: any) => t.status === "active");
     const pastTreatments = allTreatments.filter((t: any) => t.status !== "active").slice(0, 10);
 
-    // Knowledge base query based on active patient goals
+    // Knowledge base query based on active patient goals (now runs in its own micro-wave
+    // because it depends on patientGoalsRes, but happens after one fast paralelized fetch).
     const activePatientGoalsForKb = (patientGoalsRes.data || []).filter((g: any) => g.status === "ativo");
     const activeGoalTypes: string[] = activePatientGoalsForKb.length > 0
       ? Array.from(new Set(activePatientGoalsForKb.map((g: any) => g.goal)))
@@ -464,7 +470,6 @@ serve(async (req) => {
       .overlaps("goal_relevance", activeGoalTypes)
       .order("evidence_level", { ascending: true })
       .limit(12);
-
     const evidenceSection = (kbRes.data && kbRes.data.length > 0)
       ? kbRes.data.map((k: any) =>
           `[${k.evidence_level}] ${k.title} (${k.source_name}, ${k.published_year})\n` +

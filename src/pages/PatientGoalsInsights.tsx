@@ -332,8 +332,32 @@ export default function PatientGoalsInsights() {
   }, [user, authLoading, navigate]);
 
   // ── Single edge function call powering Resumo + Insights ──
-  const fetchHealthData = useCallback(async () => {
-    if (!user) return;
+  // Cache em sessionStorage por usuário (10 min) para evitar refazer a chamada cara
+  // de IA toda vez que o usuário troca de aba ou volta à página.
+  const HEALTH_CACHE_TTL_MS = 10 * 60 * 1000;
+  const healthCacheKey = user ? `healthData:${user.id}` : null;
+
+  const fetchHealthData = useCallback(async (force = false) => {
+    if (!user || !healthCacheKey) return;
+
+    // Tenta servir do cache primeiro (a menos que force = true).
+    if (!force) {
+      try {
+        const raw = sessionStorage.getItem(healthCacheKey);
+        if (raw) {
+          const cached = JSON.parse(raw) as { data: HealthData; ts: number };
+          if (Date.now() - cached.ts < HEALTH_CACHE_TTL_MS) {
+            setHealthData(cached.data);
+            setHealthLoading(false);
+            setHealthError(null);
+            return;
+          }
+        }
+      } catch {
+        // cache inválido — ignora e refaz
+      }
+    }
+
     setHealthLoading(true);
     setHealthError(null);
     try {
@@ -341,6 +365,11 @@ export default function PatientGoalsInsights() {
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
       setHealthData(data as HealthData);
+      try {
+        sessionStorage.setItem(healthCacheKey, JSON.stringify({ data, ts: Date.now() }));
+      } catch {
+        // sessionStorage cheio ou indisponível — segue sem cache
+      }
     } catch (e: any) {
       const msg = e?.message || "Erro ao gerar análise de saúde.";
       setHealthError(typeof msg === "string" ? msg : "Erro ao gerar análise.");
@@ -348,7 +377,13 @@ export default function PatientGoalsInsights() {
     } finally {
       setHealthLoading(false);
     }
-  }, [user]);
+  }, [user, healthCacheKey]);
+
+  const invalidateHealthCache = useCallback(() => {
+    if (healthCacheKey) {
+      try { sessionStorage.removeItem(healthCacheKey); } catch { /* noop */ }
+    }
+  }, [healthCacheKey]);
 
   // ── Goals logic ──
   const fetchGoals = async () => {
@@ -366,12 +401,14 @@ export default function PatientGoalsInsights() {
     setGoalsLoading(false);
   };
 
+  // Disparar fetches apenas quando o ID do usuário mudar (não a cada render).
   useEffect(() => {
     if (user) {
       fetchGoals();
       fetchHealthData();
     }
-  }, [user, fetchHealthData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const buildBaselineSnapshot = async (): Promise<Record<string, any>> => {
     if (!user || !patientId) return {};
@@ -416,7 +453,8 @@ export default function PatientGoalsInsights() {
       resetForm(); setShowModal(false);
       await fetchGoals();
       // Re-run unified analysis since the goal changed
-      fetchHealthData();
+      invalidateHealthCache();
+      fetchHealthData(true);
     } catch (e: any) { console.error(e); toast({ title: "Erro ao salvar", description: e.message, variant: "destructive" }); }
     finally { setSaving(false); }
   };
@@ -426,7 +464,8 @@ export default function PatientGoalsInsights() {
     if (!error) {
       toast({ title: "Objetivo arquivado" });
       await fetchGoals();
-      fetchHealthData();
+      invalidateHealthCache();
+      fetchHealthData(true);
     }
   };
 
@@ -503,7 +542,7 @@ export default function PatientGoalsInsights() {
                   <CardContent className="p-8 text-center space-y-3">
                     <AlertTriangle className="h-10 w-10 mx-auto text-amber-500" />
                     <p className="text-sm text-muted-foreground">{healthError}</p>
-                    <Button onClick={fetchHealthData} variant="outline" className="gap-2">
+                    <Button onClick={() => { invalidateHealthCache(); fetchHealthData(true); }} variant="outline" className="gap-2">
                       <RefreshCw className="h-4 w-4" /> Tentar novamente
                     </Button>
                   </CardContent>
@@ -585,7 +624,7 @@ export default function PatientGoalsInsights() {
                     </Card>
                   )}
 
-                  <Button variant="outline" onClick={fetchHealthData} disabled={healthLoading} className="w-full gap-2">
+                  <Button variant="outline" onClick={() => { invalidateHealthCache(); fetchHealthData(true); }} disabled={healthLoading} className="w-full gap-2">
                     {healthLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                     Reanalisar
                   </Button>
@@ -595,7 +634,7 @@ export default function PatientGoalsInsights() {
                   <CardContent className="p-8 text-center space-y-3">
                     <Sparkles className="h-10 w-10 mx-auto text-muted-foreground/50" />
                     <p className="text-sm text-muted-foreground">Sem dados disponíveis ainda.</p>
-                    <Button onClick={fetchHealthData} variant="outline" className="gap-2">
+                    <Button onClick={() => { invalidateHealthCache(); fetchHealthData(true); }} variant="outline" className="gap-2">
                       <Sparkles className="h-4 w-4" /> Gerar análise
                     </Button>
                   </CardContent>
@@ -696,7 +735,7 @@ export default function PatientGoalsInsights() {
                   <CardContent className="p-8 text-center space-y-3">
                     <AlertTriangle className="h-10 w-10 mx-auto text-amber-500" />
                     <p className="text-sm text-muted-foreground">{healthError}</p>
-                    <Button onClick={fetchHealthData} variant="outline" className="gap-2">
+                    <Button onClick={() => { invalidateHealthCache(); fetchHealthData(true); }} variant="outline" className="gap-2">
                       <RefreshCw className="h-4 w-4" /> Tentar novamente
                     </Button>
                   </CardContent>
@@ -726,7 +765,7 @@ export default function PatientGoalsInsights() {
                       </Card>
                     ))}
                   </div>
-                  <Button variant="outline" onClick={fetchHealthData} disabled={healthLoading} className="w-full gap-2">
+                  <Button variant="outline" onClick={() => { invalidateHealthCache(); fetchHealthData(true); }} disabled={healthLoading} className="w-full gap-2">
                     {healthLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                     Gerar novos insights
                   </Button>
@@ -739,7 +778,7 @@ export default function PatientGoalsInsights() {
                   <CardContent className="p-8 text-center space-y-3">
                     <Sparkles className="h-10 w-10 mx-auto text-muted-foreground/50" />
                     <p className="text-sm text-muted-foreground">Nenhum insight disponível ainda.</p>
-                    <Button onClick={fetchHealthData} variant="outline" className="gap-2">
+                    <Button onClick={() => { invalidateHealthCache(); fetchHealthData(true); }} variant="outline" className="gap-2">
                       <Sparkles className="h-4 w-4" /> Gerar insights
                     </Button>
                   </CardContent>
