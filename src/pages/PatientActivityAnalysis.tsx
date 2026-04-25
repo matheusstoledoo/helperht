@@ -171,6 +171,26 @@ export default function PatientActivityAnalysis() {
           </CardContent>
         </Card>
 
+        {/* Mapa do percurso */}
+        {records.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-primary" />
+                Percurso
+                {records.filter((r) => r.lat).length > 0 && (
+                  <Badge variant="outline" className="text-xs ml-auto">
+                    {records.filter((r) => r.lat).length} pontos GPS
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ActivityMap records={records} />
+            </CardContent>
+          </Card>
+        )}
+
         <ActivityAnalysisCharts laps={laps} records={records} />
       </div>
     </PatientLayout>
