@@ -325,7 +325,24 @@ export default function PatientNutrition() {
                       )}
                     </div>
                   </div>
-                  {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMealToDelete({
+                          planId: plan.id,
+                          index: i,
+                          name: meal.name || `Refeição ${i + 1}`,
+                        });
+                      }}
+                      className="h-7 w-7 rounded-md flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors"
+                      aria-label="Excluir refeição"
+                      type="button"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                    {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </div>
                 </button>
                 {expanded && meal.foods && meal.foods.length > 0 && (
                   <div className="px-3 pb-3 pt-0">
