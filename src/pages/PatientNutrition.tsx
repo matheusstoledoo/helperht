@@ -81,6 +81,9 @@ export default function PatientNutrition() {
   const [mealLogs, setMealLogs] = useState<any[]>([]);
   const [nutritionRecs, setNutritionRecs] = useState<any[]>([]);
   const [togglingMeal, setTogglingMeal] = useState<string | null>(null);
+  const [mealToDelete, setMealToDelete] = useState<{ planId: string; index: number; name: string } | null>(null);
+  const [deletingMeal, setDeletingMeal] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (authLoading) return;
