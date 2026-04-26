@@ -164,7 +164,44 @@ REGRAS CRÍTICAS:
 - Se o valor de referência estiver no formato "70 - 99", separe em reference_min e reference_max
 - Se não houver dados para uma seção, retorne arrays vazios ou null — nunca omita a chave
 - Para documentos em inglês, traduza os nomes dos marcadores para português
-- O campo raw_text_summary deve ter no máximo 200 caracteres`;
+- O campo raw_text_summary deve ter no máximo 200 caracteres
+- Para os marcadores abaixo, use SEMPRE estes intervalos de referência baseados em diretrizes internacionais (AHA, ESC, SBD, SBC) quando o documento não especificar:
+
+  HbA1c: reference_min: 0, reference_max: 5.6 (%, ADA 2024 — normal <5.7%)
+  Glicose jejum: reference_min: 70, reference_max: 99 (mg/dL)
+  LDL: reference_min: 0, reference_max: 130 (mg/dL — risco intermediário)
+  HDL homem: reference_min: 40, reference_max: 60 (mg/dL)
+  HDL mulher: reference_min: 50, reference_max: 60 (mg/dL)
+  Colesterol Total: reference_min: 0, reference_max: 200 (mg/dL)
+  Triglicerídeos: reference_min: 0, reference_max: 150 (mg/dL)
+  PCR ultrassensível: reference_min: 0, reference_max: 1.0 (mg/L — baixo risco cardiovascular)
+  Vitamina D: reference_min: 30, reference_max: 100 (ng/mL, Endocrine Society)
+  TSH: reference_min: 0.4, reference_max: 4.0 (mUI/L)
+  T4 Livre: reference_min: 0.8, reference_max: 1.8 (ng/dL)
+  Hemoglobina homem: reference_min: 13.5, reference_max: 17.5 (g/dL)
+  Hemoglobina mulher: reference_min: 12.0, reference_max: 16.0 (g/dL)
+  Ferritina homem: reference_min: 30, reference_max: 400 (ng/mL)
+  Ferritina mulher: reference_min: 13, reference_max: 150 (ng/mL)
+  Creatinina homem: reference_min: 0.7, reference_max: 1.2 (mg/dL)
+  Creatinina mulher: reference_min: 0.5, reference_max: 1.0 (mg/dL)
+  Ureia: reference_min: 15, reference_max: 45 (mg/dL)
+  Ácido Úrico homem: reference_min: 3.5, reference_max: 7.2 (mg/dL)
+  Ácido Úrico mulher: reference_min: 2.6, reference_max: 6.0 (mg/dL)
+  AST (TGO): reference_min: 0, reference_max: 40 (U/L)
+  ALT (TGP): reference_min: 0, reference_max: 41 (U/L)
+  GGT: reference_min: 0, reference_max: 61 (U/L)
+  Plaquetas: reference_min: 150000, reference_max: 400000 (/mm³)
+  Leucócitos: reference_min: 4000, reference_max: 11000 (/mm³)
+  Hemácias homem: reference_min: 4.5, reference_max: 5.9 (milhões/mm³)
+  Hemácias mulher: reference_min: 4.0, reference_max: 5.2 (milhões/mm³)
+  Insulina jejum: reference_min: 2, reference_max: 25 (uUI/mL)
+  Cortisol matinal: reference_min: 6.2, reference_max: 19.4 (mcg/dL)
+  Testosterona total homem: reference_min: 300, reference_max: 1000 (ng/dL)
+  Vitamina B12: reference_min: 200, reference_max: 900 (pg/mL)
+  Ácido Fólico: reference_min: 3.1, reference_max: 20.5 (ng/mL)
+
+- NUNCA use valores placeholder como 999999, 0 como máximo, ou intervalos que não fazem sentido clínico
+- Se o sexo do paciente não for conhecido, use os intervalos masculinos como padrão`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
