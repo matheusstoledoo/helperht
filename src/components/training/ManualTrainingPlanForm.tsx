@@ -195,7 +195,7 @@ export default function ManualTrainingPlanForm({ userId, patientId, onSaved, onC
           <div className="flex items-center justify-between">
             <h3 className="text-base font-medium flex items-center gap-2">
               <Dumbbell className="h-4 w-4 text-primary" />
-              Novo Plano de Treino
+              {isEditing ? "Editar Plano de Treino" : "Novo Plano de Treino"}
             </h3>
             <Button variant="ghost" size="sm" onClick={onCancel}>
               <X className="h-4 w-4" />
