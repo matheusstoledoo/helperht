@@ -630,8 +630,8 @@ export default function TrainingPeaksImport({
             let failed = 0;
             for (const fitFile of fitFiles) {
               try {
-                const parsed = await parseGarminFit(fitFile);
                 await saveFitToStorage(fitFile);
+                const parsed = await parseGarminFit(fitFile);
                 allParsed.push(...parsed);
               } catch (err) {
                 console.warn(`Falha ao processar ${fitFile.name}:`, err);
