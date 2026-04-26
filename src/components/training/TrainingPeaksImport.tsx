@@ -684,9 +684,48 @@ export default function TrainingPeaksImport({
     const hasFitData = selected.some((r) => r._fitData);
 
     let hadError = false;
+    let skipped = 0;
+
+    // Deduplicação: pular linhas que já existem (mesma data + esporte + fonte)
+    const uniqueSelected: typeof selected = [];
+    for (const row of selected) {
+      if (!row.activity_date) {
+        uniqueSelected.push(row);
+        continue;
+      }
+      const sport = row.sport || "outro";
+      const { data: existing } = await supabase
+        .from("workout_logs")
+        .select("id, source")
+        .eq("user_id", userId)
+        .eq("activity_date", row.activity_date)
+        .eq("sport", sport)
+        .maybeSingle();
+
+      if (existing && existing.source === source) {
+        skipped++;
+        continue;
+      }
+      if (existing) {
+        // Existe de fonte diferente — manter ambas (TP tem TSS, Garmin tem FC/GPS)
+        skipped++;
+        continue;
+      }
+      uniqueSelected.push(row);
+    }
+
+    if (uniqueSelected.length === 0) {
+      setImporting(false);
+      if (skipped > 0) {
+        toast.info(
+          `${skipped} atividade${skipped > 1 ? 's' : ''} já existente${skipped > 1 ? 's' : ''} — ignorada${skipped > 1 ? 's' : ''}`
+        );
+      }
+      return;
+    }
 
     if (hasFitData) {
-      for (const row of selected) {
+      for (const row of uniqueSelected) {
         const { selected: _s, _fitData, ...rest } = row;
         const rowToInsert = {
           ...rest,
@@ -708,7 +747,7 @@ export default function TrainingPeaksImport({
         }
       }
     } else {
-      const payload = selected.map(({ selected: _s, _fitData, ...rest }) => ({
+      const payload = uniqueSelected.map(({ selected: _s, _fitData, ...rest }) => ({
         ...rest,
         user_id: userId,
         patient_id: patientId,
@@ -723,8 +762,13 @@ export default function TrainingPeaksImport({
       toast.error("Erro ao importar algumas atividades");
       return;
     }
+    if (skipped > 0) {
+      toast.info(
+        `${skipped} atividade${skipped > 1 ? 's' : ''} já existente${skipped > 1 ? 's' : ''} — ignorada${skipped > 1 ? 's' : ''}`
+      );
+    }
     toast.success(
-      `${selected.length} atividade${selected.length > 1 ? 's' : ''} importada${selected.length > 1 ? 's' : ''} com sucesso`
+      `${uniqueSelected.length} atividade${uniqueSelected.length > 1 ? 's' : ''} importada${uniqueSelected.length > 1 ? 's' : ''} com sucesso`
     );
     setRows([]);
     onImported();
