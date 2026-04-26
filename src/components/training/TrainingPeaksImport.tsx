@@ -660,6 +660,7 @@ export default function TrainingPeaksImport({
       return;
     }
     toast.success("Importações anteriores removidas com sucesso");
+    setRows([]);
     onImported();
   };
 

@@ -1208,6 +1208,8 @@ export default function TrainingHub({ userId, patientId }: TrainingHubProps) {
                           return;
                         }
                         toast.success("Importações anteriores removidas");
+                        setParsedRows([]);
+                        await fetchData();
                       }}
                       className="text-xs text-destructive/70 hover:text-destructive hover:bg-destructive/5"
                     >
