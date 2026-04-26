@@ -414,12 +414,42 @@ const PatientDiagnosesView = () => {
                     <div className="absolute left-4 top-4 w-4 h-4 rounded-full bg-primary border-2 border-background shadow-sm" />
 
                     <Collapsible open={isExpanded} onOpenChange={() => toggleExpanded(diagnosis.id)}>
-                      <Card className="hover:shadow-md transition-shadow">
+                      <Card className="group hover:shadow-md transition-shadow relative">
+                        {/* Delete button — only for self-registered, appears on hover */}
+                        {!diagnosis.consultation_id && (
+                          <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                  onClick={(e) => e.stopPropagation()}
+                                  aria-label="Excluir diagnóstico"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Confirmar exclusão?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    O diagnóstico "{diagnosis.name}" será removido. Essa ação não pode ser desfeita.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDelete(diagnosis.id)}>Excluir</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        )}
                         <CardContent className="p-4">
                           <CollapsibleTrigger asChild>
                             <div className="cursor-pointer">
                               {/* Diagnosis name - highlighted */}
-                              <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-start justify-between mb-3 pr-8">
                                 <div className="flex items-center gap-2">
                                   <ClipboardList className="h-5 w-5 text-primary" />
                                   <h3 className="font-bold text-lg text-foreground">
@@ -454,31 +484,6 @@ const PatientDiagnosesView = () => {
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                   <User className="h-4 w-4" />
                                   <span>{diagnosis.professional_name}</span>
-                                </div>
-                              )}
-                              {/* Delete button - only for self-registered (no consultation) */}
-                              {!diagnosis.consultation_id && (
-                                <div className="mt-2">
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-7 px-2 gap-1">
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                        Excluir
-                                      </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Excluir diagnóstico?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          Essa ação não pode ser desfeita. O diagnóstico "{diagnosis.name}" será removido.
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleDelete(diagnosis.id)}>Excluir</AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
                                 </div>
                               )}
                             </div>
