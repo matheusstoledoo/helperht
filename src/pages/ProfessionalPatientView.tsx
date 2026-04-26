@@ -618,7 +618,7 @@ const ProfessionalPatientView = () => {
               {/* 8. Objetivos & Insights */}
               <Card
                 className="cursor-pointer hover:bg-accent/50 transition-colors"
-                onClick={() => navigate(`${basePath}/objetivos`)}
+                onClick={() => navigate(`${basePath}/resumo`)}
               >
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
