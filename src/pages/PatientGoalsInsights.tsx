@@ -324,6 +324,7 @@ export default function PatientGoalsInsights() {
   // ── Unified health data state (single source for Resumo + Insights) ──
   const [healthData, setHealthData] = useState<HealthData | null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
+  const [healthRefreshing, setHealthRefreshing] = useState(false);
   const [healthError, setHealthError] = useState<string | null>(null);
   const [showScoreDialog, setShowScoreDialog] = useState(false);
 
@@ -332,34 +333,45 @@ export default function PatientGoalsInsights() {
   }, [user, authLoading, navigate]);
 
   // ── Single edge function call powering Resumo + Insights ──
-  // Cache em sessionStorage por usuário (10 min) para evitar refazer a chamada cara
+  // Cache em sessionStorage por usuário (30 min) para evitar refazer a chamada cara
   // de IA toda vez que o usuário troca de aba ou volta à página.
-  const HEALTH_CACHE_TTL_MS = 10 * 60 * 1000;
+  const HEALTH_CACHE_TTL_MS = 30 * 60 * 1000;
   const healthCacheKey = user ? `healthData:${user.id}` : null;
 
   const fetchHealthData = useCallback(async (force = false) => {
     if (!user || !healthCacheKey) return;
 
-    // Tenta servir do cache primeiro (a menos que force = true).
-    if (!force) {
-      try {
-        const raw = sessionStorage.getItem(healthCacheKey);
-        if (raw) {
-          const cached = JSON.parse(raw) as { data: HealthData; ts: number };
-          if (Date.now() - cached.ts < HEALTH_CACHE_TTL_MS) {
-            setHealthData(cached.data);
-            setHealthLoading(false);
-            setHealthError(null);
-            return;
-          }
+    // Tentar cache primeiro
+    let cachedData: HealthData | null = null;
+    try {
+      const raw = sessionStorage.getItem(healthCacheKey);
+      if (raw) {
+        const cached = JSON.parse(raw) as { data: HealthData; ts: number };
+        if (!force && Date.now() - cached.ts < HEALTH_CACHE_TTL_MS) {
+          // Cache válido — exibir imediatamente e não chamar API
+          setHealthData(cached.data);
+          setHealthLoading(false);
+          setHealthError(null);
+          return;
         }
-      } catch {
-        // cache inválido — ignora e refaz
+        // Cache expirado mas existe — exibir dados antigos enquanto revalida
+        cachedData = cached.data;
       }
+    } catch {
+      // cache inválido
     }
 
-    setHealthLoading(true);
+    // Se temos dados antigos, exibir enquanto carrega novos (sem skeleton)
+    if (cachedData && !force) {
+      setHealthData(cachedData);
+      setHealthLoading(false);
+      setHealthRefreshing(true);
+    } else {
+      setHealthLoading(true);
+    }
+
     setHealthError(null);
+
     try {
       const { data, error } = await supabase.functions.invoke("generate-health-insights");
       if (error) throw error;
@@ -371,11 +383,15 @@ export default function PatientGoalsInsights() {
         // sessionStorage cheio ou indisponível — segue sem cache
       }
     } catch (e: any) {
-      const msg = e?.message || "Erro ao gerar análise de saúde.";
-      setHealthError(typeof msg === "string" ? msg : "Erro ao gerar análise.");
-      sonnerToast.error(typeof msg === "string" ? msg : "Erro ao gerar análise.");
+      // Se falhou mas temos dados antigos, manter os dados antigos sem mostrar erro
+      if (!cachedData) {
+        const msg = e?.message || "Erro ao gerar análise de saúde.";
+        setHealthError(typeof msg === "string" ? msg : "Erro ao gerar análise.");
+        sonnerToast.error(typeof msg === "string" ? msg : "Erro ao gerar análise.");
+      }
     } finally {
       setHealthLoading(false);
+      setHealthRefreshing(false);
     }
   }, [user, healthCacheKey]);
 
@@ -399,16 +415,33 @@ export default function PatientGoalsInsights() {
       .order("created_at", { ascending: false });
     if (!error && data) setGoals(data as unknown as PatientGoal[]);
     setGoalsLoading(false);
+
+    // Pré-carregar health data em background se não houver cache
+    if (healthCacheKey) {
+      try {
+        const raw = sessionStorage.getItem(healthCacheKey);
+        if (!raw) {
+          fetchHealthData();
+        }
+      } catch { /* noop */ }
+    }
   };
 
-  // Disparar fetches apenas quando o ID do usuário mudar (não a cada render).
+  // Goals carrega automaticamente — é rápido
   useEffect(() => {
     if (user) {
       fetchGoals();
-      fetchHealthData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  // Carregar health data apenas quando o usuário acessa as abas relevantes
+  useEffect(() => {
+    if (user && (activeTab === "resumo" || activeTab === "insights")) {
+      fetchHealthData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, activeTab]);
 
   const buildBaselineSnapshot = async (): Promise<Record<string, any>> => {
     if (!user || !patientId) return {};
@@ -541,6 +574,12 @@ export default function PatientGoalsInsights() {
 
             {/* ═══ TAB: RESUMO DE SAÚDE ═══ */}
             <TabsContent value="resumo" className="space-y-4 mt-4">
+              {healthRefreshing && healthData && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Atualizando análise em segundo plano...
+                </div>
+              )}
               {healthLoading ? (
                 <HealthLoadingSkeleton />
               ) : healthError && !healthData ? (
@@ -734,6 +773,12 @@ export default function PatientGoalsInsights() {
 
             {/* ═══ TAB: INSIGHTS ═══ */}
             <TabsContent value="insights" className="space-y-4 mt-4">
+              {healthRefreshing && healthData && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Atualizando análise em segundo plano...
+                </div>
+              )}
               {healthLoading ? (
                 <HealthLoadingSkeleton />
               ) : healthError && !healthData ? (
