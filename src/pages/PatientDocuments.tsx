@@ -782,6 +782,7 @@ const PatientDocuments = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Filters */}
