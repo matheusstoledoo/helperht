@@ -344,6 +344,8 @@ export default function TrainingHub({ userId, patientId }: TrainingHubProps) {
   const [plans, setPlans] = useState<any[]>([]);
   const [workoutLogs, setWorkoutLogs] = useState<any[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<any | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showImportSheet, setShowImportSheet] = useState(false);
   const [timePeriod, setTimePeriod] = useState<"4s" | "1m" | "3m">("4s");
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
@@ -674,6 +676,17 @@ export default function TrainingHub({ userId, patientId }: TrainingHubProps) {
               <Skeleton className="h-10 w-full" />
             </CardContent>
           </Card>
+        ) : editingPlan ? (
+          <ManualTrainingPlanForm
+            userId={userId}
+            patientId={patientId}
+            editingPlan={editingPlan}
+            onSaved={async () => {
+              setEditingPlan(null);
+              await fetchData();
+            }}
+            onCancel={() => setEditingPlan(null)}
+          />
         ) : showCreateForm ? (
           <ManualTrainingPlanForm
             userId={userId}
@@ -712,9 +725,20 @@ export default function TrainingHub({ userId, patientId }: TrainingHubProps) {
                     </div>
                     {activePlan.observations && <p className="text-sm text-muted-foreground">{activePlan.observations}</p>}
                   </div>
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
                     <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => setShowSessions((prev) => !prev)}>
                       {showSessions ? "Ocultar sessões" : "Ver sessões"}
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setEditingPlan(activePlan)}>
+                      Editar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => setShowDeleteConfirm(true)}
+                    >
+                      Excluir
                     </Button>
                   </div>
                 </div>
@@ -726,6 +750,43 @@ export default function TrainingHub({ userId, patientId }: TrainingHubProps) {
                 )}
               </CardContent>
             </Card>
+            {showDeleteConfirm && (
+              <Card className="border-destructive/30 bg-destructive/5">
+                <CardContent className="p-4">
+                  <p className="text-sm font-medium text-destructive mb-3">
+                    Tem certeza que deseja excluir o plano ativo?
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={async () => {
+                        const { error } = await supabase
+                          .from("training_plans")
+                          .delete()
+                          .eq("id", activePlan.id);
+                        setShowDeleteConfirm(false);
+                        if (error) {
+                          toast.error("Erro ao excluir plano");
+                          return;
+                        }
+                        await fetchData();
+                        toast.success("Plano excluído");
+                      }}
+                    >
+                      Confirmar exclusão
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowDeleteConfirm(false)}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             {showSessions && renderSessions(activePlan)}
           </div>
         ) : (

@@ -14,6 +14,7 @@ interface ManualTrainingPlanFormProps {
   patientId: string | null;
   onSaved: () => void;
   onCancel: () => void;
+  editingPlan?: any;
 }
 
 interface ExerciseInput {
@@ -68,11 +69,38 @@ const emptySession = (index: number): SessionInput => ({
   expanded: true,
 });
 
-export default function ManualTrainingPlanForm({ userId, patientId, onSaved, onCancel }: ManualTrainingPlanFormProps) {
-  const [sport, setSport] = useState("musculacao");
-  const [frequency, setFrequency] = useState("");
-  const [observations, setObservations] = useState("");
-  const [sessions, setSessions] = useState<SessionInput[]>([emptySession(0)]);
+export default function ManualTrainingPlanForm({ userId, patientId, onSaved, onCancel, editingPlan }: ManualTrainingPlanFormProps) {
+  const isEditing = !!editingPlan;
+
+  const initialSessions: SessionInput[] = (() => {
+    const raw = Array.isArray(editingPlan?.sessions) ? editingPlan.sessions : [];
+    if (raw.length === 0) return [emptySession(0)];
+    return raw.map((s: any, idx: number) => ({
+      name: s?.name ?? `Treino ${String.fromCharCode(65 + idx)}`,
+      day: s?.day ?? "",
+      duration: s?.duration ? String(s.duration) : "",
+      intensity: s?.intensity ?? "",
+      notes: s?.notes ?? "",
+      exercises: Array.isArray(s?.exercises) && s.exercises.length > 0
+        ? s.exercises.map((e: any) => ({
+            name: e?.name ?? "",
+            sets: e?.sets != null ? String(e.sets) : "",
+            reps: e?.reps != null ? String(e.reps) : "",
+            load: e?.load != null ? String(e.load) : "",
+            rest: e?.rest != null ? String(e.rest) : "",
+            notes: e?.notes ?? "",
+          }))
+        : [emptyExercise()],
+      expanded: false,
+    }));
+  })();
+
+  const [sport, setSport] = useState<string>(editingPlan?.sport ?? "musculacao");
+  const [frequency, setFrequency] = useState<string>(
+    editingPlan?.frequency_per_week ? String(editingPlan.frequency_per_week) : ""
+  );
+  const [observations, setObservations] = useState<string>(editingPlan?.observations ?? "");
+  const [sessions, setSessions] = useState<SessionInput[]>(initialSessions);
   const [saving, setSaving] = useState(false);
 
   const updateSession = (idx: number, patch: Partial<SessionInput>) => {
@@ -130,23 +158,33 @@ export default function ManualTrainingPlanForm({ userId, patientId, onSaved, onC
       })),
     }));
 
-    const { error } = await supabase.from("training_plans").insert({
-      user_id: userId,
-      patient_id: patientId,
-      sport,
-      frequency_per_week: frequency ? parseInt(frequency) : null,
-      observations: observations.trim() || null,
-      sessions: sessionsPayload,
-      status: "active",
-      start_date: new Date().toISOString().slice(0, 10),
-    });
+    const { error } = isEditing
+      ? await supabase
+          .from("training_plans")
+          .update({
+            sport,
+            frequency_per_week: frequency ? parseInt(frequency) : null,
+            observations: observations.trim() || null,
+            sessions: sessionsPayload,
+          })
+          .eq("id", editingPlan.id)
+      : await supabase.from("training_plans").insert({
+          user_id: userId,
+          patient_id: patientId,
+          sport,
+          frequency_per_week: frequency ? parseInt(frequency) : null,
+          observations: observations.trim() || null,
+          sessions: sessionsPayload,
+          status: "active",
+          start_date: new Date().toISOString().slice(0, 10),
+        });
 
     setSaving(false);
     if (error) {
-      toast.error("Erro ao salvar plano de treino");
+      toast.error(isEditing ? "Erro ao atualizar plano de treino" : "Erro ao salvar plano de treino");
       return;
     }
-    toast.success("Plano de treino criado! 💪");
+    toast.success(isEditing ? "Plano atualizado! 💪" : "Plano de treino criado! 💪");
     onSaved();
   };
 
@@ -157,7 +195,7 @@ export default function ManualTrainingPlanForm({ userId, patientId, onSaved, onC
           <div className="flex items-center justify-between">
             <h3 className="text-base font-medium flex items-center gap-2">
               <Dumbbell className="h-4 w-4 text-primary" />
-              Novo Plano de Treino
+              {isEditing ? "Editar Plano de Treino" : "Novo Plano de Treino"}
             </h3>
             <Button variant="ghost" size="sm" onClick={onCancel}>
               <X className="h-4 w-4" />
@@ -271,7 +309,7 @@ export default function ManualTrainingPlanForm({ userId, patientId, onSaved, onC
       </Button>
 
       <Button onClick={handleSave} disabled={saving} className="w-full">
-        {saving ? "Salvando..." : "Criar plano de treino"}
+        {saving ? "Salvando..." : isEditing ? "Salvar alterações" : "Criar plano de treino"}
       </Button>
     </div>
   );
