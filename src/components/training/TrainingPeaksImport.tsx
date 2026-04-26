@@ -542,7 +542,8 @@ export default function TrainingPeaksImport({
   // Salvar o arquivo .FIT original no storage para backfill futuro (GPS, laps, records)
   const saveFitToStorage = async (file: File) => {
     try {
-      const fileName = `fit/${userId}/${Date.now()}_${file.name}`;
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fileName = `fit/${userId}/${Date.now()}_${safeName}`;
       const arrayBuffer = await file.arrayBuffer();
       const { error } = await supabase.storage
         .from('patient-documents')
@@ -629,8 +630,8 @@ export default function TrainingPeaksImport({
             let failed = 0;
             for (const fitFile of fitFiles) {
               try {
-                const parsed = await parseGarminFit(fitFile);
                 await saveFitToStorage(fitFile);
+                const parsed = await parseGarminFit(fitFile);
                 allParsed.push(...parsed);
               } catch (err) {
                 console.warn(`Falha ao processar ${fitFile.name}:`, err);
