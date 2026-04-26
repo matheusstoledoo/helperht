@@ -23,6 +23,8 @@ import {
   Clock,
   Dumbbell,
   Flame,
+  Loader2,
+  MapPin,
   Plus,
   TrendingUp,
 } from "lucide-react";
@@ -32,6 +34,9 @@ import ManualTrainingPlanForm from "./ManualTrainingPlanForm";
 interface TrainingHubProps {
   userId: string;
   patientId: string | null;
+  onBackfillGps?: () => void | Promise<void>;
+  backfillingGps?: boolean;
+  hasGarminWithoutGps?: boolean;
 }
 
 interface TrainingPlan {
@@ -338,7 +343,7 @@ const parseGarminFit = (file: File): Promise<ParsedRow[]> => {
   });
 };
 
-export default function TrainingHub({ userId, patientId }: TrainingHubProps) {
+export default function TrainingHub({ userId, patientId, onBackfillGps, backfillingGps, hasGarminWithoutGps }: TrainingHubProps) {
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [plans, setPlans] = useState<any[]>([]);
@@ -850,32 +855,36 @@ export default function TrainingHub({ userId, patientId }: TrainingHubProps) {
           </Card>
         ) : (
           <div className="space-y-2">
-            {getWeeks().map((week) => {
-              const weekLogs = workoutLogs.filter((l) => {
-                const d = parseISO(l.activity_date);
-                return d >= week.start && d <= new Date(week.end.getTime() + 86399999);
-              });
-              const isExpanded = expandedWeeks.has(week.key);
-              const totalKm = weekLogs.reduce((s, l) => s + (l.distance_km || 0), 0);
-              const totalTss = weekLogs.reduce((s, l) => s + (l.tss || 0), 0);
-              const totalSrpe = weekLogs.reduce((s, l) => s + (l.srpe || 0), 0);
-              const sportCounts: Record<string, number> = {};
-              weekLogs.forEach((l) => {
-                const sp = l.sport || "outro";
-                sportCounts[sp] = (sportCounts[sp] || 0) + 1;
-              });
-              const weekLabel = `Sem ${format(week.start, "dd/MM", { locale: ptBR })} – ${format(week.end, "dd/MM", { locale: ptBR })}`;
+            {(() => {
+              const weeksWithData = getWeeks()
+                .map((week) => {
+                  const weekLogs = workoutLogs.filter((l) => {
+                    const d = parseISO(l.activity_date);
+                    return d >= week.start && d <= new Date(week.end.getTime() + 86399999);
+                  });
+                  return { week, weekLogs };
+                })
+                .filter(({ weekLogs }) => weekLogs.length > 0);
 
-              if (weekLogs.length === 0) {
+              if (weeksWithData.length === 0) {
                 return (
-                  <Card key={week.key} className="bg-muted/20">
-                    <CardContent className="p-3 flex items-center justify-between">
-                      <span className="text-sm font-medium text-muted-foreground">{weekLabel}</span>
-                      <span className="text-xs text-muted-foreground italic">Sem treinos</span>
-                    </CardContent>
-                  </Card>
+                  <div className="text-center py-8 text-muted-foreground text-sm">
+                    Nenhuma atividade registrada neste período
+                  </div>
                 );
               }
+
+              return weeksWithData.map(({ week, weekLogs }) => {
+                const isExpanded = expandedWeeks.has(week.key);
+                const totalKm = weekLogs.reduce((s, l) => s + (l.distance_km || 0), 0);
+                const totalTss = weekLogs.reduce((s, l) => s + (l.tss || 0), 0);
+                const totalSrpe = weekLogs.reduce((s, l) => s + (l.srpe || 0), 0);
+                const sportCounts: Record<string, number> = {};
+                weekLogs.forEach((l) => {
+                  const sp = l.sport || "outro";
+                  sportCounts[sp] = (sportCounts[sp] || 0) + 1;
+                });
+                const weekLabel = `Sem ${format(week.start, "dd/MM", { locale: ptBR })} – ${format(week.end, "dd/MM", { locale: ptBR })}`;
 
               return (
                 <Card key={week.key}>
@@ -1043,7 +1052,8 @@ export default function TrainingHub({ userId, patientId }: TrainingHubProps) {
                   )}
                 </Card>
               );
-            })}
+            });
+            })()}
           </div>
         )}
       </section>
@@ -1121,6 +1131,27 @@ export default function TrainingHub({ userId, patientId }: TrainingHubProps) {
                     <p className="text-sm text-muted-foreground">Preencher dados do treino</p>
                   </div>
                 </button>
+
+                {hasGarminWithoutGps && onBackfillGps && (
+                  <div className="border-t pt-3 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => onBackfillGps()}
+                      disabled={backfillingGps}
+                      className="w-full text-xs text-muted-foreground hover:text-foreground text-center py-2 flex items-center justify-center gap-1 disabled:opacity-50"
+                    >
+                      {backfillingGps ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin" /> Extraindo GPS...
+                        </>
+                      ) : (
+                        <>
+                          <MapPin className="h-3 w-3" /> Extrair GPS de atividades anteriores
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             ) : importTab === "manual" ? (
               <div className="space-y-4">
