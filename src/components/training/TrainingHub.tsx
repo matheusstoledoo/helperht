@@ -343,7 +343,7 @@ const parseGarminFit = (file: File): Promise<ParsedRow[]> => {
   });
 };
 
-export default function TrainingHub({ userId, patientId }: TrainingHubProps) {
+export default function TrainingHub({ userId, patientId, onBackfillGps, backfillingGps, hasGarminWithoutGps }: TrainingHubProps) {
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [plans, setPlans] = useState<any[]>([]);
