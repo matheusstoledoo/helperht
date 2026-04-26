@@ -489,7 +489,29 @@ const saveLapsAndRecords = async (
   }
 };
 
-export default function TrainingPeaksImport({
+// Extrai arquivos .csv e .fit de um ZIP
+const extractFromZip = async (
+  file: File
+): Promise<{ csvFiles: File[]; fitFiles: File[] }> => {
+  const zip = new JSZip();
+  const contents = await zip.loadAsync(file);
+  const csvFiles: File[] = [];
+  const fitFiles: File[] = [];
+
+  for (const [name, entry] of Object.entries(contents.files)) {
+    if ((entry as any).dir) continue;
+    const lower = name.toLowerCase();
+    const arrayBuffer = await (entry as any).async("arraybuffer");
+    const baseName = name.split("/").pop() || name;
+    const extracted = new File([arrayBuffer], baseName, {
+      type: "application/octet-stream",
+    });
+    if (lower.endsWith(".csv")) csvFiles.push(extracted);
+    if (lower.endsWith(".fit")) fitFiles.push(extracted);
+  }
+
+  return { csvFiles, fitFiles };
+};
   userId,
   patientId,
   onImported,
