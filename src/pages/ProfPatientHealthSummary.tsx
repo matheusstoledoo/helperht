@@ -140,6 +140,21 @@ export default function ProfPatientHealthSummary() {
         newInsights.push({ type: "attention", title: `${abnormal.length} marcador${abnormal.length > 1 ? "es" : ""} fora da faixa`, description: abnormal.map(m => m.marker_name).join(", ") });
       }
 
+      // Buscar score de saúde do documento mais recente com analise_completa
+      const { data: docWithAnalysis } = await supabase
+        .from("documents")
+        .select("analise_completa")
+        .eq("patient_id", id)
+        .not("analise_completa", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const ac = (docWithAnalysis?.analise_completa as any) || null;
+      setScore(typeof ac?.score === "number" ? ac.score : null);
+      setScoreLabel(ac?.score_label || null);
+      setScoreSummary(ac?.resumo_geral || null);
+
       setInsights(newInsights);
       setLoading(false);
     };
