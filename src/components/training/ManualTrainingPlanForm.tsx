@@ -14,6 +14,7 @@ interface ManualTrainingPlanFormProps {
   patientId: string | null;
   onSaved: () => void;
   onCancel: () => void;
+  editingPlan?: any;
 }
 
 interface ExerciseInput {
