@@ -514,12 +514,33 @@ export default function TrainingPeaksImport({
   const [mNotes, setMNotes] = useState("");
   const [savingManual, setSavingManual] = useState(false);
 
+  // Salvar o arquivo .FIT original no storage para backfill futuro (GPS, laps, records)
+  const saveFitToStorage = async (file: File) => {
+    try {
+      const fileName = `fit/${userId}/${Date.now()}_${file.name}`;
+      const arrayBuffer = await file.arrayBuffer();
+      const { error } = await supabase.storage
+        .from('patient-documents')
+        .upload(fileName, arrayBuffer, {
+          contentType: 'application/octet-stream',
+          upsert: false,
+        });
+      if (error) console.warn('FIT storage upload failed:', error);
+      return fileName;
+    } catch (err) {
+      console.warn('FIT storage upload exception:', err);
+      return null;
+    }
+  };
+
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const isFit = file.name.toLowerCase().endsWith('.fit');
 
     if (isFit) {
+      // Salvar arquivo original no storage antes do parse
+      await saveFitToStorage(file);
       try {
         const parsed = await parseGarminFit(file);
         setRows(parsed);
