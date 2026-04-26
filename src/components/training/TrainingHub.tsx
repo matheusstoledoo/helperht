@@ -1126,6 +1126,27 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
                     <p className="text-sm text-muted-foreground">Preencher dados do treino</p>
                   </div>
                 </button>
+
+                {hasGarminWithoutGps && onBackfillGps && (
+                  <div className="border-t pt-3 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => onBackfillGps()}
+                      disabled={backfillingGps}
+                      className="w-full text-xs text-muted-foreground hover:text-foreground text-center py-2 flex items-center justify-center gap-1 disabled:opacity-50"
+                    >
+                      {backfillingGps ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin" /> Extraindo GPS...
+                        </>
+                      ) : (
+                        <>
+                          <MapPin className="h-3 w-3" /> Extrair GPS de atividades anteriores
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             ) : importTab === "manual" ? (
               <div className="space-y-4">
