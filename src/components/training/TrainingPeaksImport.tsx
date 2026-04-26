@@ -663,6 +663,7 @@ export default function TrainingPeaksImport({
     setRows([]);
     onImported();
   };
+
   const handleManualSave = async () => {
     if (!mDate) {
       toast.error("Data é obrigatória");
