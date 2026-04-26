@@ -212,9 +212,9 @@ export const LabMarkerChart = ({ markerName, dataPoints }: LabMarkerChartProps) 
         </LineChart>
       </ResponsiveContainer>
 
-      {refMin != null && refMax != null && (
+      {validRefMin !== null && validRefMax !== null && (
         <p className="text-xs text-muted-foreground text-center">
-          Faixa de referência: {refMin} – {refMax} {unit}
+          Faixa de referência: {validRefMin} – {validRefMax} {unit}
         </p>
       )}
     </div>
