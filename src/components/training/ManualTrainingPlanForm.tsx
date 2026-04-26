@@ -309,7 +309,7 @@ export default function ManualTrainingPlanForm({ userId, patientId, onSaved, onC
       </Button>
 
       <Button onClick={handleSave} disabled={saving} className="w-full">
-        {saving ? "Salvando..." : "Criar plano de treino"}
+        {saving ? "Salvando..." : isEditing ? "Salvar alterações" : "Criar plano de treino"}
       </Button>
     </div>
   );
