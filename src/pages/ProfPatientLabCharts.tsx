@@ -47,12 +47,33 @@ export default function ProfPatientLabCharts() {
     if (!id || !user || (!isProfessional && !isAdmin)) return;
     const fetchData = async () => {
       setLoading(true);
-      const [patientRes, labRes] = await Promise.all([
-        supabase.from("patients").select("user_id, users(name)").eq("id", id).maybeSingle(),
-        supabase.from("lab_results").select("*").eq("patient_id", id).order("collection_date", { ascending: true }),
-      ]);
+      const patientRes = await supabase
+        .from("patients")
+        .select("user_id, users(name)")
+        .eq("id", id)
+        .maybeSingle();
       if (patientRes.data?.users) setPatientName((patientRes.data.users as any).name || "Paciente");
-      setResults(labRes.data || []);
+      const patientUserId = (patientRes.data as any)?.user_id;
+
+      let labData = (
+        await supabase
+          .from("lab_results")
+          .select("*")
+          .eq("patient_id", id)
+          .order("collection_date", { ascending: true })
+      ).data || [];
+
+      if (labData.length === 0 && patientUserId) {
+        labData = (
+          await supabase
+            .from("lab_results")
+            .select("*")
+            .eq("user_id", patientUserId)
+            .order("collection_date", { ascending: true })
+        ).data || [];
+      }
+
+      setResults(labData as any);
       setLoading(false);
     };
     fetchData();
