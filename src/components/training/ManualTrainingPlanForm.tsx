@@ -69,11 +69,38 @@ const emptySession = (index: number): SessionInput => ({
   expanded: true,
 });
 
-export default function ManualTrainingPlanForm({ userId, patientId, onSaved, onCancel }: ManualTrainingPlanFormProps) {
-  const [sport, setSport] = useState("musculacao");
-  const [frequency, setFrequency] = useState("");
-  const [observations, setObservations] = useState("");
-  const [sessions, setSessions] = useState<SessionInput[]>([emptySession(0)]);
+export default function ManualTrainingPlanForm({ userId, patientId, onSaved, onCancel, editingPlan }: ManualTrainingPlanFormProps) {
+  const isEditing = !!editingPlan;
+
+  const initialSessions: SessionInput[] = (() => {
+    const raw = Array.isArray(editingPlan?.sessions) ? editingPlan.sessions : [];
+    if (raw.length === 0) return [emptySession(0)];
+    return raw.map((s: any, idx: number) => ({
+      name: s?.name ?? `Treino ${String.fromCharCode(65 + idx)}`,
+      day: s?.day ?? "",
+      duration: s?.duration ? String(s.duration) : "",
+      intensity: s?.intensity ?? "",
+      notes: s?.notes ?? "",
+      exercises: Array.isArray(s?.exercises) && s.exercises.length > 0
+        ? s.exercises.map((e: any) => ({
+            name: e?.name ?? "",
+            sets: e?.sets != null ? String(e.sets) : "",
+            reps: e?.reps != null ? String(e.reps) : "",
+            load: e?.load != null ? String(e.load) : "",
+            rest: e?.rest != null ? String(e.rest) : "",
+            notes: e?.notes ?? "",
+          }))
+        : [emptyExercise()],
+      expanded: false,
+    }));
+  })();
+
+  const [sport, setSport] = useState<string>(editingPlan?.sport ?? "musculacao");
+  const [frequency, setFrequency] = useState<string>(
+    editingPlan?.frequency_per_week ? String(editingPlan.frequency_per_week) : ""
+  );
+  const [observations, setObservations] = useState<string>(editingPlan?.observations ?? "");
+  const [sessions, setSessions] = useState<SessionInput[]>(initialSessions);
   const [saving, setSaving] = useState(false);
 
   const updateSession = (idx: number, patch: Partial<SessionInput>) => {
