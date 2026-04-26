@@ -40,6 +40,9 @@ export default function ProfPatientHealthSummary() {
   const [allergies, setAllergies] = useState<string[] | null>(null);
   const [bloodType, setBloodType] = useState<string | null>(null);
   const [patientName, setPatientName] = useState("");
+  const [score, setScore] = useState<number | null>(null);
+  const [scoreLabel, setScoreLabel] = useState<string | null>(null);
+  const [scoreSummary, setScoreSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
