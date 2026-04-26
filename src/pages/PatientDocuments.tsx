@@ -269,20 +269,31 @@ const PatientDocuments = () => {
       // Fetch patient data
       const { data: patientData } = await supabase
         .from("patients")
-        .select("id, users (id, name)")
+        .select("id, user_id, users (id, name)")
         .eq("id", id)
         .maybeSingle();
 
       setPatient(patientData);
+      const patientUserId = (patientData as any)?.user_id;
 
       // Fetch documents
-      const { data: documentsData, error } = await supabase
+      let { data: documentsData, error } = await supabase
         .from("documents")
         .select("*")
         .eq("patient_id", id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
+
+      // Fallback por user_id se não retornou dados
+      if ((!documentsData || documentsData.length === 0) && patientUserId) {
+        const fb = await supabase
+          .from("documents")
+          .select("*")
+          .eq("uploaded_by", patientUserId)
+          .order("created_at", { ascending: false });
+        if (fb.data && fb.data.length > 0) documentsData = fb.data;
+      }
 
       // Use mock data if no real documents exist
       if (!documentsData || documentsData.length === 0) {
