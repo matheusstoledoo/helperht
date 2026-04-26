@@ -54,15 +54,38 @@ export default function ProfPatientHealthSummary() {
     if (!id || !user || (!isProfessional && !isAdmin)) return;
     const fetchData = async () => {
       setLoading(true);
-      const [patientRes, labRes] = await Promise.all([
-        supabase.from("patients").select("id, allergies, blood_type, user_id, users(name)").eq("id", id).maybeSingle(),
-        supabase.from("lab_results").select("marker_name, value, unit, status, collection_date").eq("patient_id", id).order("collection_date", { ascending: false }).limit(200),
-      ]);
+      const patientRes = await supabase
+        .from("patients")
+        .select("id, allergies, blood_type, user_id, users(name)")
+        .eq("id", id)
+        .maybeSingle();
 
       if (patientRes.data) {
         setAllergies(patientRes.data.allergies);
         setBloodType(patientRes.data.blood_type);
         setPatientName((patientRes.data.users as any)?.name || "Paciente");
+      }
+
+      const patientUserId = (patientRes.data as any)?.user_id;
+
+      let labData = (
+        await supabase
+          .from("lab_results")
+          .select("marker_name, value, unit, status, collection_date")
+          .eq("patient_id", id)
+          .order("collection_date", { ascending: false })
+          .limit(200)
+      ).data || [];
+
+      if (labData.length === 0 && patientUserId) {
+        labData = (
+          await supabase
+            .from("lab_results")
+            .select("marker_name, value, unit, status, collection_date")
+            .eq("user_id", patientUserId)
+            .order("collection_date", { ascending: false })
+            .limit(200)
+        ).data || [];
       }
 
       const labs = (labRes.data || []) as any[];
