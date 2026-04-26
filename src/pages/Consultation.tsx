@@ -934,7 +934,7 @@ const Consultation = () => {
                                 <span className="text-xs text-muted-foreground">{t.dosage}</span>
                               )}
                               {t.frequency && (
-                                <span className="text-xs text-muted-foreground">• {t.frequency}</span>
+                                <span className="text-xs text-muted-foreground">• {formatFrequency(t.frequency)}</span>
                               )}
                             </div>
                             <Button
