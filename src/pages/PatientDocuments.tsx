@@ -677,6 +677,15 @@ const PatientDocuments = () => {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <h1 className="text-3xl font-bold text-foreground">Documentos do paciente</h1>
 
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/prof/paciente/${id}/graficos-exames`)}
+            >
+              <FlaskConical className="w-4 h-4 mr-2" />
+              Gráficos de Exames
+            </Button>
+
           {/* Upload Button */}
           <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
             <DialogTrigger asChild>
