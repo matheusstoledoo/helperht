@@ -88,7 +88,7 @@ export default function ProfPatientHealthSummary() {
         ).data || [];
       }
 
-      const labs = (labRes.data || []) as any[];
+      const labs = labData as any[];
       const grouped: Record<string, any[]> = {};
       for (const r of labs) {
         if (!grouped[r.marker_name]) grouped[r.marker_name] = [];
