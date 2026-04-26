@@ -23,6 +23,8 @@ import {
   Clock,
   Dumbbell,
   Flame,
+  Loader2,
+  MapPin,
   Plus,
   TrendingUp,
 } from "lucide-react";
@@ -32,6 +34,9 @@ import ManualTrainingPlanForm from "./ManualTrainingPlanForm";
 interface TrainingHubProps {
   userId: string;
   patientId: string | null;
+  onBackfillGps?: () => void | Promise<void>;
+  backfillingGps?: boolean;
+  hasGarminWithoutGps?: boolean;
 }
 
 interface TrainingPlan {
