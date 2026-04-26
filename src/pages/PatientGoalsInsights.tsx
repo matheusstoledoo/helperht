@@ -773,6 +773,12 @@ export default function PatientGoalsInsights() {
 
             {/* ═══ TAB: INSIGHTS ═══ */}
             <TabsContent value="insights" className="space-y-4 mt-4">
+              {healthRefreshing && healthData && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Atualizando análise em segundo plano...
+                </div>
+              )}
               {healthLoading ? (
                 <HealthLoadingSkeleton />
               ) : healthError && !healthData ? (
