@@ -155,6 +155,8 @@ const ProfessionalPatientView = () => {
 
         setConsultations(consultationData || []);
 
+        const patientUserId = (patientData as any)?.user_id;
+
         const [diagnosesRes, treatmentsRes, examsRes, documentsRes, goalsRes, nutritionRes, trainingRes, labRes, vitalsRes] = await Promise.all([
           supabase.from("diagnoses").select("id", { count: "exact" }).eq("patient_id", id).eq("status", "active"),
           supabase.from("treatments").select("id", { count: "exact" }).eq("patient_id", id).eq("status", "active"),
@@ -167,13 +169,27 @@ const ProfessionalPatientView = () => {
           supabase.from("vital_signs").select("*").eq("patient_id", id).eq("type", "pressao").order("recorded_at", { ascending: false }).limit(1).maybeSingle(),
         ]);
 
+        // Fallback por user_id quando patient_id não retorna dados
+        let labCount = labRes.count || 0;
+        let docCount = documentsRes.count || 0;
+        if (patientUserId) {
+          if (labCount === 0) {
+            const fb = await supabase.from("lab_results").select("id", { count: "exact" }).eq("user_id", patientUserId);
+            labCount = fb.count || 0;
+          }
+          if (docCount === 0) {
+            const fb = await supabase.from("documents").select("id", { count: "exact" }).eq("uploaded_by", patientUserId);
+            docCount = fb.count || 0;
+          }
+        }
+
         setDiagnosisCount(diagnosesRes.count || 0);
         setTreatmentCount(treatmentsRes.count || 0);
-        setExamDocumentCount((examsRes.count || 0) + (documentsRes.count || 0));
+        setExamDocumentCount((examsRes.count || 0) + docCount);
         setGoalCount(goalsRes.count || 0);
         setNutritionCount(nutritionRes.count || 0);
         setTrainingCount(trainingRes.count || 0);
-        setLabResultCount(labRes.count || 0);
+        setLabResultCount(labCount);
         if (vitalsRes.data && vitalsRes.data.systolic) {
           setLastVitals(`Último: ${vitalsRes.data.systolic}/${vitalsRes.data.diastolic} mmHg · ${format(new Date(vitalsRes.data.recorded_at), "dd/MM/yyyy", { locale: ptBR })}`);
         }
