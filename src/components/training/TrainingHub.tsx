@@ -1052,7 +1052,8 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
                   )}
                 </Card>
               );
-            })}
+            });
+            })()}
           </div>
         )}
       </section>
