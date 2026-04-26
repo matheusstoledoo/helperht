@@ -120,17 +120,22 @@ export const LabMarkerChart = ({ markerName, dataPoints }: LabMarkerChartProps) 
     latestValue != null && refMin != null && refMax != null &&
     (latestValue < refMin || latestValue > refMax);
 
+  // Usar apenas valores reais dos dados para calcular o domínio
   const allValues = sortedData.map((d) => d.value!);
   const dataMin = Math.min(...allValues);
   const dataMax = Math.max(...allValues);
-  const rangeMin = refMin != null ? Math.min(dataMin, refMin) : dataMin;
-  const rangeMax = refMax != null ? Math.max(dataMax, refMax) : dataMax;
 
-  // FIX 2: padding mínimo de 10% do valor para evitar domínio negativo em marcadores sempre positivos
+  // Só usar referências se forem valores razoáveis (não placeholders como 999999)
+  const validRefMin = refMin !== null && refMin >= 0 && refMin < 100000 ? refMin : null;
+  const validRefMax = refMax !== null && refMax >= 0 && refMax < 100000 ? refMax : null;
+
+  const rangeMin = validRefMin !== null ? Math.min(dataMin, validRefMin) : dataMin;
+  const rangeMax = validRefMax !== null ? Math.max(dataMax, validRefMax) : dataMax;
+
   const range = rangeMax - rangeMin;
-  const padding = range > 0 ? range * 0.2 : rangeMax * 0.15 || 5;
-  const yMin = Math.max(0, rangeMin - padding) // nunca negativo
-  const yMax = rangeMax + padding
+  const padding = range > 0 ? range * 0.25 : rangeMax * 0.2 || 5;
+  const yMin = Math.max(0, rangeMin - padding);
+  const yMax = rangeMax + padding;
 
   return (
     <div className="helper-card p-4 space-y-3">
