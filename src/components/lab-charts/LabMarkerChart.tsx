@@ -181,9 +181,9 @@ export const LabMarkerChart = ({ markerName, dataPoints }: LabMarkerChartProps) 
       <ResponsiveContainer width="100%" height={180}>
         <LineChart data={sortedData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-          {refMin != null && refMax != null && (
+          {validRefMin !== null && validRefMax !== null && (
             <ReferenceArea
-              y1={refMin} y2={refMax}
+              y1={validRefMin} y2={validRefMax}
               fill="hsl(142 76% 36% / 0.08)"
               stroke="none"
             />
