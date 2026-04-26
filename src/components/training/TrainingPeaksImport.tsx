@@ -512,6 +512,8 @@ const extractFromZip = async (
 
   return { csvFiles, fitFiles };
 };
+
+export default function TrainingPeaksImport({
   userId,
   patientId,
   onImported,
