@@ -1126,6 +1126,35 @@ export default function TrainingHub({ userId, patientId }: TrainingHubProps) {
                   </div>
                 </div>
 
+                {importTab === "trainingpeaks" && (
+                  <div className="flex justify-center">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        const ok = window.confirm(
+                          "Deseja realmente excluir todas as atividades importadas anteriormente do Training Peaks? Esta ação não pode ser desfeita."
+                        );
+                        if (!ok) return;
+                        const { error } = await supabase
+                          .from("workout_logs")
+                          .delete()
+                          .eq("user_id", userId)
+                          .eq("source", "training_peaks");
+                        if (error) {
+                          toast.error("Erro ao limpar importações anteriores");
+                          return;
+                        }
+                        toast.success("Importações anteriores removidas");
+                      }}
+                      className="text-xs text-destructive/70 hover:text-destructive hover:bg-destructive/5"
+                    >
+                      Limpar atividades importadas anteriormente
+                    </Button>
+                  </div>
+                )}
+
                 {parsingFile && <Skeleton className="h-24 w-full" />}
 
                 {!parsingFile && parsedRows.length > 0 && (
