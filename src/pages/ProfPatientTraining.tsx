@@ -152,25 +152,72 @@ export default function ProfPatientTraining() {
     const fetchData = async () => {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0];
+      const wLogsDateFilter = subDays(new Date(), 56).toISOString().split('T')[0];
+      const rLogsDateFilter = subDays(new Date(), 14).toISOString().split('T')[0];
       const [patientRes, plansRes, wLogsRes, rLogsRes, racesRes, profRes] = await Promise.all([
         supabase.from("patients").select("user_id, users(name)").eq("id", id).maybeSingle(),
         supabase.from("training_plans").select("*").eq("patient_id", id).order("created_at", { ascending: false }),
         supabase.from("workout_logs").select("*").eq("patient_id", id)
-          .gte("activity_date", subDays(new Date(), 56).toISOString().split('T')[0])
+          .gte("activity_date", wLogsDateFilter)
           .order("activity_date", { ascending: true }),
         supabase.from("recovery_logs").select("*").eq("patient_id", id)
-          .gte("log_date", subDays(new Date(), 14).toISOString().split('T')[0])
+          .gte("log_date", rLogsDateFilter)
           .order("log_date", { ascending: true }),
         supabase.from("race_events").select("*").eq("patient_id", id)
           .gte("event_date", today)
           .order("event_date", { ascending: true }),
         supabase.from("users").select("specialty, panel_view_mode").eq("id", user!.id).maybeSingle(),
       ]);
+
+      console.log('wLogs fetch result:', {
+        data: wLogsRes.data,
+        error: wLogsRes.error,
+        patient_id: id,
+        date_filter: wLogsDateFilter,
+      });
+
       if (patientRes.data?.users) setPatientName((patientRes.data.users as any).name || "Paciente");
       if (plansRes.data) setPlans(plansRes.data as unknown as TrainingPlan[]);
-      setWLogs(wLogsRes.data || []);
-      setRLogs(rLogsRes.data || []);
-      setRaces(racesRes.data || []);
+
+      const patientUserId = (patientRes.data as any)?.user_id as string | undefined;
+
+      // Fallback: se patient_id não retornar dados, tentar por user_id
+      let wLogsData = wLogsRes.data || [];
+      if (wLogsData.length === 0 && patientUserId) {
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from("workout_logs")
+          .select("*")
+          .eq("user_id", patientUserId)
+          .gte("activity_date", wLogsDateFilter)
+          .order("activity_date", { ascending: true });
+        console.log('wLogs fallback (user_id):', { data: fallbackData, error: fallbackError, user_id: patientUserId });
+        wLogsData = fallbackData || [];
+      }
+      setWLogs(wLogsData);
+
+      let rLogsData = rLogsRes.data || [];
+      if (rLogsData.length === 0 && patientUserId) {
+        const { data: fallbackData } = await supabase
+          .from("recovery_logs")
+          .select("*")
+          .eq("user_id", patientUserId)
+          .gte("log_date", rLogsDateFilter)
+          .order("log_date", { ascending: true });
+        rLogsData = fallbackData || [];
+      }
+      setRLogs(rLogsData);
+
+      let racesData = racesRes.data || [];
+      if (racesData.length === 0 && patientUserId) {
+        const { data: fallbackData } = await supabase
+          .from("race_events")
+          .select("*")
+          .eq("user_id", patientUserId)
+          .gte("event_date", today)
+          .order("event_date", { ascending: true });
+        racesData = fallbackData || [];
+      }
+      setRaces(racesData);
 
       const specialty = (profRes.data as any)?.specialty || '';
       setProfSpecialty(specialty);
