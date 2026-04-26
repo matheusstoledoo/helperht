@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import Papa from "papaparse";
 import FitParser from "fit-file-parser";
+import JSZip from "jszip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
