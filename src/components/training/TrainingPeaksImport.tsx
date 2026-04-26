@@ -558,9 +558,7 @@ export default function TrainingPeaksImport({
     }
   };
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const processSingleFile = async (file: File) => {
     const isFit = file.name.toLowerCase().endsWith('.fit');
 
     if (isFit) {
@@ -577,7 +575,6 @@ export default function TrainingPeaksImport({
       } catch (err) {
         toast.error("Erro ao ler arquivo .FIT. Verifique se o arquivo não está corrompido.");
       }
-      if (fileRef.current) fileRef.current.value = "";
       return;
     }
 
@@ -599,6 +596,70 @@ export default function TrainingPeaksImport({
       },
       error: () => toast.error("Erro ao processar o arquivo CSV"),
     });
+  };
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Detecção de ZIP — extrai antes de prosseguir com a lógica existente
+    if (file.name.toLowerCase().endsWith('.zip')) {
+      try {
+        const { csvFiles, fitFiles } = await extractFromZip(file);
+
+        if (importSource === 'trainingpeaks') {
+          if (csvFiles.length === 0) {
+            toast.error("Nenhum arquivo CSV encontrado no ZIP");
+            if (fileRef.current) fileRef.current.value = "";
+            return;
+          }
+          await processSingleFile(csvFiles[0]);
+        } else {
+          // Garmin: priorizar .FIT, processar todos em lote
+          if (fitFiles.length === 0 && csvFiles.length === 0) {
+            toast.error("Nenhum arquivo .FIT ou .CSV encontrado no ZIP");
+            if (fileRef.current) fileRef.current.value = "";
+            return;
+          }
+          if (fitFiles.length > 0) {
+            toast.info(
+              `Processando ${fitFiles.length} arquivo${fitFiles.length > 1 ? 's' : ''} .FIT...`
+            );
+            const allParsed: ParsedRow[] = [];
+            let failed = 0;
+            for (const fitFile of fitFiles) {
+              try {
+                const parsed = await parseGarminFit(fitFile);
+                await saveFitToStorage(fitFile);
+                allParsed.push(...parsed);
+              } catch (err) {
+                console.warn(`Falha ao processar ${fitFile.name}:`, err);
+                failed++;
+              }
+            }
+            if (failed > 0) {
+              toast.warning(`${allParsed.length} processados, ${failed} falharam`);
+            }
+            if (allParsed.length > 0) {
+              setRows(allParsed);
+              toast.success(
+                `${allParsed.length} atividade${allParsed.length > 1 ? 's' : ''} carregada${allParsed.length > 1 ? 's' : ''}`
+              );
+            }
+          } else {
+            // Sem .FIT no ZIP, cair para o primeiro CSV
+            await processSingleFile(csvFiles[0]);
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao ler ZIP:', err);
+        toast.error("Erro ao ler arquivo ZIP");
+      }
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+
+    await processSingleFile(file);
     if (fileRef.current) fileRef.current.value = "";
   };
 
