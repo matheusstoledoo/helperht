@@ -158,23 +158,33 @@ export default function ManualTrainingPlanForm({ userId, patientId, onSaved, onC
       })),
     }));
 
-    const { error } = await supabase.from("training_plans").insert({
-      user_id: userId,
-      patient_id: patientId,
-      sport,
-      frequency_per_week: frequency ? parseInt(frequency) : null,
-      observations: observations.trim() || null,
-      sessions: sessionsPayload,
-      status: "active",
-      start_date: new Date().toISOString().slice(0, 10),
-    });
+    const { error } = isEditing
+      ? await supabase
+          .from("training_plans")
+          .update({
+            sport,
+            frequency_per_week: frequency ? parseInt(frequency) : null,
+            observations: observations.trim() || null,
+            sessions: sessionsPayload,
+          })
+          .eq("id", editingPlan.id)
+      : await supabase.from("training_plans").insert({
+          user_id: userId,
+          patient_id: patientId,
+          sport,
+          frequency_per_week: frequency ? parseInt(frequency) : null,
+          observations: observations.trim() || null,
+          sessions: sessionsPayload,
+          status: "active",
+          start_date: new Date().toISOString().slice(0, 10),
+        });
 
     setSaving(false);
     if (error) {
-      toast.error("Erro ao salvar plano de treino");
+      toast.error(isEditing ? "Erro ao atualizar plano de treino" : "Erro ao salvar plano de treino");
       return;
     }
-    toast.success("Plano de treino criado! 💪");
+    toast.success(isEditing ? "Plano atualizado! 💪" : "Plano de treino criado! 💪");
     onSaved();
   };
 
