@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatFrequency } from "@/lib/utils";
 import { PatientTrailsSection } from "@/components/trails/PatientTrailsSection";
 import { PatientTrailResponsesTimeline } from "@/components/trails/PatientTrailResponsesTimeline";
 
@@ -363,7 +364,7 @@ const ProfessionalPatientView = () => {
                   </div>
                   <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-4 text-sm">
                     {t.dosage && <span><strong>Dosagem:</strong> {t.dosage}</span>}
-                    {t.frequency && <span><strong>Frequência:</strong> {t.frequency}</span>}
+                    {t.frequency && <span><strong>Frequência:</strong> {formatFrequency(t.frequency)}</span>}
                   </div>
                   {t.description && (
                     <div>
@@ -430,7 +431,7 @@ const ProfessionalPatientView = () => {
         {treatments.length > 0 && (
           <div>
             <span className="font-medium">Tratamentos: </span>
-            <span className="text-muted-foreground">{treatments.map(t => `${t.name}${t.dosage ? ` (${t.dosage})` : ""}`).join(", ")}</span>
+            <span className="text-muted-foreground">{treatments.map(t => `${t.name}${t.dosage ? ` (${t.dosage})` : ""}${t.frequency ? ` — ${formatFrequency(t.frequency)}` : ""}`).join(", ")}</span>
           </div>
         )}
         {consultation.plan && (
