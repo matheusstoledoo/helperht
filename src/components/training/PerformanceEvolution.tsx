@@ -582,13 +582,18 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
                         disabled={disabled}
                         onCheckedChange={() => toggleSelection(log.id)}
                       />
-                      <div className="flex-1 flex items-center justify-between gap-3 text-sm">
-                        <span className="font-medium">
-                          {format(parseISO(log.activity_date), "dd 'de' MMM yyyy", { locale: ptBR })}
-                        </span>
-                        <span className="text-muted-foreground text-xs">
+                      <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-3 text-sm">
+                        <div className="min-w-0 flex flex-col">
+                          <span className="font-medium truncate">
+                            {log.activity_name || log.sport || "Atividade"}
+                          </span>
+                          <span className="text-muted-foreground text-xs">
+                            {format(parseISO(log.activity_date), "dd 'de' MMM yyyy", { locale: ptBR })}
+                          </span>
+                        </div>
+                        <span className="text-muted-foreground text-xs sm:text-right shrink-0">
                           {log.distance_km ? `${log.distance_km} km` : ""}
-                          {log.duration_seconds ? ` · ${formatDuration(log.duration_seconds)}` : ""}
+                          {log.duration_seconds ? `${log.distance_km ? " · " : ""}${formatDuration(log.duration_seconds)}` : ""}
                           {log.avg_heart_rate ? ` · ${log.avg_heart_rate} bpm` : ""}
                         </span>
                       </div>

@@ -28,6 +28,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
+import { formatFrequency } from "@/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -934,7 +935,7 @@ const Consultation = () => {
                                 <span className="text-xs text-muted-foreground">{t.dosage}</span>
                               )}
                               {t.frequency && (
-                                <span className="text-xs text-muted-foreground">• {t.frequency}</span>
+                                <span className="text-xs text-muted-foreground">• {formatFrequency(t.frequency)}</span>
                               )}
                             </div>
                             <Button

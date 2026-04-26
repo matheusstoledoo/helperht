@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
   Users, 
@@ -10,8 +11,12 @@ import {
   Dumbbell,
   Target,
   Activity,
+  Clock,
 } from "lucide-react";
 import PatientLayout from "@/components/patient/PatientLayout";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { getGreeting } from "@/lib/utils";
 
 interface DashboardCard {
   id: string;
@@ -22,8 +27,35 @@ interface DashboardCard {
   color: string;
 }
 
+const RECENT_ACCESS_KEY = "pac_recent_access";
+
 export default function PatientDashboardMain() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [userName, setUserName] = useState<string>("");
+  const [recentIds, setRecentIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchName = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from("users")
+        .select("name")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (data?.name) setUserName(data.name);
+    };
+    fetchName();
+  }, [user]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(RECENT_ACCESS_KEY);
+      if (raw) setRecentIds(JSON.parse(raw));
+    } catch {
+      setRecentIds([]);
+    }
+  }, []);
 
   const dashboardCards: DashboardCard[] = [
     {
@@ -92,15 +124,44 @@ export default function PatientDashboardMain() {
     },
   ];
 
+  const trackAccess = (id: string) => {
+    try {
+      const next = [id, ...recentIds.filter((x) => x !== id)].slice(0, 3);
+      localStorage.setItem(RECENT_ACCESS_KEY, JSON.stringify(next));
+      setRecentIds(next);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleNavigate = (card: DashboardCard) => {
+    trackAccess(card.id);
+    navigate(card.route);
+  };
+
+  const recentCards = recentIds
+    .map((id) => dashboardCards.find((c) => c.id === id))
+    .filter((c): c is DashboardCard => Boolean(c));
+
   return (
     <PatientLayout title="" subtitle="" showHeader={true}>
-      <div className="p-4 sm:p-6">
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+        {/* Saudação personalizada */}
+        <div className="mb-5 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl font-semibold text-foreground">
+            {getGreeting(userName)}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            O que você gostaria de acessar hoje?
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {dashboardCards.map((card) => (
             <Card
               key={card.id}
               className="group cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02] hover:border-primary/50 active:scale-[0.98]"
-              onClick={() => navigate(card.route)}
+              onClick={() => handleNavigate(card)}
             >
               <CardContent className="p-4 sm:p-6">
                 <div className="flex items-start justify-between">
@@ -121,6 +182,35 @@ export default function PatientDashboardMain() {
             </Card>
           ))}
         </div>
+
+        {/* Acesso rápido — últimos 3 itens acessados */}
+        {recentCards.length > 0 && (
+          <div className="mt-8 sm:mt-10">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                Acesso rápido
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {recentCards.map((card) => (
+                <button
+                  key={`recent-${card.id}`}
+                  onClick={() => handleNavigate(card)}
+                  className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 hover:border-primary/40 transition-colors text-left"
+                >
+                  <div className={`p-2 rounded-lg ${card.color} shrink-0`}>
+                    <div className="[&>svg]:h-5 [&>svg]:w-5">{card.icon}</div>
+                  </div>
+                  <span className="text-sm font-medium text-foreground truncate">
+                    {card.title}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto shrink-0" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
     </PatientLayout>

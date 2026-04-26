@@ -221,6 +221,8 @@ export default function ProfPatientTraining() {
 
       const specialty = (profRes.data as any)?.specialty || '';
       setProfSpecialty(specialty);
+
+      // Painéis prioritários por especialidade
       const defaultOpen: Record<string, number[]> = {
         'médico': [1, 3, 4],
         'fisioterapeuta': [1, 2, 3],
@@ -228,7 +230,35 @@ export default function ProfPatientTraining() {
         'nutricionista': [4, 1, 7],
         'psicólogo': [5, 4, 2],
       };
-      setOpenPanels(new Set(defaultOpen[specialty] || [1, 2, 3, 4, 5, 6, 7]));
+      const specialtyFocus = new Set(defaultOpen[specialty] || []);
+
+      // Conjuntos de "tem dados" por painel
+      const hasW = (wLogsData?.length || 0) > 0;
+      const hasR = (rLogsData?.length || 0) > 0;
+      const hasRaces = (racesData?.length || 0) > 0;
+      const dataByPanel: Record<number, boolean> = {
+        1: hasW,
+        2: hasR,
+        3: hasR,
+        4: hasR,
+        5: hasR,
+        6: hasRaces,
+        7: hasW,
+      };
+
+      // Auto-colapsar: abrir painéis com dados OU que estejam no foco da especialidade.
+      // Painéis sem dados e fora do foco ficam recolhidos por padrão.
+      const allPanels = [1, 2, 3, 4, 5, 6, 7];
+      const fallback = defaultOpen[specialty] || allPanels;
+      const opened = allPanels.filter((n) => {
+        if (specialtyFocus.has(n)) return true;
+        if (dataByPanel[n]) {
+          // Se há foco definido, manter conservador: abre apenas painéis com dados que são prioritários ou padrão
+          return specialty ? fallback.includes(n) || dataByPanel[n] : true;
+        }
+        return false;
+      });
+      setOpenPanels(new Set(opened.length > 0 ? opened : fallback));
       setLoading(false);
     };
     fetchData();
