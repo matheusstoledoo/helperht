@@ -38,6 +38,7 @@ import {
   Heart,
   FlaskConical,
   Activity,
+  Target,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -491,58 +492,11 @@ const ProfessionalPatientView = () => {
       {/* Main Content */}
       <main className="p-4 sm:p-6">
         <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
-          {/* Shortcuts */}
+          {/* Shortcuts — ordenados por relevância clínica */}
           <div>
             <h3 className="text-lg font-semibold mb-3 sm:mb-4">Atalhos</h3>
             <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-              <Card
-                className="cursor-pointer hover:bg-accent/50 transition-colors"
-                onClick={() => navigate(`${basePath}/diagnosticos`)}
-              >
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-primary shrink-0" />
-                    <div>
-                      <p className="font-medium text-sm">Diagnósticos</p>
-                      <p className="text-xs text-muted-foreground">{diagnosisCount} ativos</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                </CardContent>
-              </Card>
-
-              <Card
-                className="cursor-pointer hover:bg-accent/50 transition-colors"
-                onClick={() => navigate(`${basePath}/tratamentos`)}
-              >
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Pill className="h-5 w-5 text-primary shrink-0" />
-                    <div>
-                      <p className="font-medium text-sm">Tratamentos</p>
-                      <p className="text-xs text-muted-foreground">{treatmentCount} ativos</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                </CardContent>
-              </Card>
-
-              <Card
-                className="cursor-pointer hover:bg-accent/50 transition-colors"
-                onClick={() => navigate(`${basePath}/documentos`)}
-              >
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <TestTube className="h-5 w-5 text-primary shrink-0" />
-                    <div>
-                      <p className="font-medium text-sm">Exames/Documentos</p>
-                      <p className="text-xs text-muted-foreground">{examDocumentCount} registrados</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                </CardContent>
-              </Card>
-
+              {/* 1. Resumo de Saúde */}
               <Card
                 className="cursor-pointer hover:bg-accent/50 transition-colors"
                 onClick={() => navigate(`${basePath}/resumo`)}
@@ -559,22 +513,75 @@ const ProfessionalPatientView = () => {
                 </CardContent>
               </Card>
 
+              {/* 2. Diagnósticos */}
               <Card
                 className="cursor-pointer hover:bg-accent/50 transition-colors"
-                onClick={() => navigate(`${basePath}/nutricao`)}
+                onClick={() => navigate(`${basePath}/diagnosticos`)}
               >
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Apple className="h-5 w-5 text-primary shrink-0" />
+                    <FileText className="h-5 w-5 text-primary shrink-0" />
                     <div>
-                      <p className="font-medium text-sm">Nutrição</p>
-                      <p className="text-xs text-muted-foreground">{nutritionCount} plano{nutritionCount !== 1 ? "s" : ""}</p>
+                      <p className="font-medium text-sm">Diagnósticos</p>
+                      <p className="text-xs text-muted-foreground">{diagnosisCount} ativos</p>
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                 </CardContent>
               </Card>
 
+              {/* 3. Tratamentos */}
+              <Card
+                className="cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() => navigate(`${basePath}/tratamentos`)}
+              >
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Pill className="h-5 w-5 text-primary shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">Tratamentos</p>
+                      <p className="text-xs text-muted-foreground">{treatmentCount} ativos</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                </CardContent>
+              </Card>
+
+              {/* 4. Exames / Documentos */}
+              <Card
+                className="cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() => navigate(`${basePath}/documentos`)}
+              >
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <TestTube className="h-5 w-5 text-primary shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">Exames/Documentos</p>
+                      <p className="text-xs text-muted-foreground">{examDocumentCount} registrados</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                </CardContent>
+              </Card>
+
+              {/* 5. Sinais Vitais */}
+              <Card
+                className="cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() => navigate(`${basePath}/sinais-vitais`)}
+              >
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Activity className="h-5 w-5 text-primary shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">Sinais Vitais</p>
+                      <p className="text-xs text-muted-foreground">{lastVitals}</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                </CardContent>
+              </Card>
+
+              {/* 6. Treinos */}
               <Card
                 className="cursor-pointer hover:bg-accent/50 transition-colors"
                 onClick={() => navigate(`${basePath}/treinos`)}
@@ -591,16 +598,34 @@ const ProfessionalPatientView = () => {
                 </CardContent>
               </Card>
 
+              {/* 7. Nutrição */}
               <Card
                 className="cursor-pointer hover:bg-accent/50 transition-colors"
-                onClick={() => navigate(`${basePath}/sinais-vitais`)}
+                onClick={() => navigate(`${basePath}/nutricao`)}
               >
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Activity className="h-5 w-5 text-primary shrink-0" />
+                    <Apple className="h-5 w-5 text-primary shrink-0" />
                     <div>
-                      <p className="font-medium text-sm">Sinais Vitais</p>
-                      <p className="text-xs text-muted-foreground">{lastVitals}</p>
+                      <p className="font-medium text-sm">Nutrição</p>
+                      <p className="text-xs text-muted-foreground">{nutritionCount} plano{nutritionCount !== 1 ? "s" : ""}</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                </CardContent>
+              </Card>
+
+              {/* 8. Objetivos & Insights */}
+              <Card
+                className="cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() => navigate(`${basePath}/objetivos`)}
+              >
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Target className="h-5 w-5 text-primary shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">Objetivos & Insights</p>
+                      <p className="text-xs text-muted-foreground">{goalCount} ativo{goalCount !== 1 ? "s" : ""}</p>
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
