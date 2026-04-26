@@ -203,6 +203,41 @@ export default function ProfPatientHealthSummary() {
           </div>
         )}
 
+        {score !== null && (
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-6">
+                <div className="relative h-24 w-24 shrink-0">
+                  <svg viewBox="0 0 36 36" className="h-24 w-24 -rotate-90">
+                    <circle cx="18" cy="18" r="15.9" fill="none"
+                      stroke="hsl(var(--muted))" strokeWidth="3" />
+                    <circle cx="18" cy="18" r="15.9" fill="none"
+                      stroke={score >= 70 ? "#1D9E75" : score >= 55 ? "#EF9F27" : "#E24B4A"}
+                      strokeWidth="3"
+                      strokeDasharray={`${score} ${100 - score}`}
+                      strokeLinecap="round" />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-2xl font-bold text-foreground">{score}</span>
+                    <span className="text-xs text-muted-foreground">/ 100</span>
+                  </div>
+                </div>
+                <div>
+                  {scoreLabel && (
+                    <p className="text-lg font-semibold"
+                      style={{ color: score >= 70 ? "#1D9E75" : score >= 55 ? "#EF9F27" : "#E24B4A" }}>
+                      {scoreLabel}
+                    </p>
+                  )}
+                  {scoreSummary && (
+                    <p className="text-sm text-muted-foreground mt-1 max-w-md">{scoreSummary}</p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {insights.length > 0 && (
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
