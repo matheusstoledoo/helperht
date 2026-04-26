@@ -40,6 +40,9 @@ export default function ProfPatientHealthSummary() {
   const [allergies, setAllergies] = useState<string[] | null>(null);
   const [bloodType, setBloodType] = useState<string | null>(null);
   const [patientName, setPatientName] = useState("");
+  const [score, setScore] = useState<number | null>(null);
+  const [scoreLabel, setScoreLabel] = useState<string | null>(null);
+  const [scoreSummary, setScoreSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -137,6 +140,21 @@ export default function ProfPatientHealthSummary() {
         newInsights.push({ type: "attention", title: `${abnormal.length} marcador${abnormal.length > 1 ? "es" : ""} fora da faixa`, description: abnormal.map(m => m.marker_name).join(", ") });
       }
 
+      // Buscar score de saúde do documento mais recente com analise_completa
+      const { data: docWithAnalysis } = await supabase
+        .from("documents")
+        .select("analise_completa")
+        .eq("patient_id", id)
+        .not("analise_completa", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const ac = (docWithAnalysis?.analise_completa as any) || null;
+      setScore(typeof ac?.score === "number" ? ac.score : null);
+      setScoreLabel(ac?.score_label || null);
+      setScoreSummary(ac?.resumo_geral || null);
+
       setInsights(newInsights);
       setLoading(false);
     };
@@ -183,6 +201,41 @@ export default function ProfPatientHealthSummary() {
             {bloodType && <Badge variant="outline" className="gap-1"><Heart className="h-3 w-3 text-destructive" /> {bloodType}</Badge>}
             {allergies?.map((a, i) => <Badge key={i} variant="destructive" className="text-xs">{a}</Badge>)}
           </div>
+        )}
+
+        {score !== null && (
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center gap-6">
+                <div className="relative h-24 w-24 shrink-0">
+                  <svg viewBox="0 0 36 36" className="h-24 w-24 -rotate-90">
+                    <circle cx="18" cy="18" r="15.9" fill="none"
+                      stroke="hsl(var(--muted))" strokeWidth="3" />
+                    <circle cx="18" cy="18" r="15.9" fill="none"
+                      stroke={score >= 70 ? "#1D9E75" : score >= 55 ? "#EF9F27" : "#E24B4A"}
+                      strokeWidth="3"
+                      strokeDasharray={`${score} ${100 - score}`}
+                      strokeLinecap="round" />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-2xl font-bold text-foreground">{score}</span>
+                    <span className="text-xs text-muted-foreground">/ 100</span>
+                  </div>
+                </div>
+                <div>
+                  {scoreLabel && (
+                    <p className="text-lg font-semibold"
+                      style={{ color: score >= 70 ? "#1D9E75" : score >= 55 ? "#EF9F27" : "#E24B4A" }}>
+                      {scoreLabel}
+                    </p>
+                  )}
+                  {scoreSummary && (
+                    <p className="text-sm text-muted-foreground mt-1 max-w-md">{scoreSummary}</p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {insights.length > 0 && (
