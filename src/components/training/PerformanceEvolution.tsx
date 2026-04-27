@@ -621,7 +621,7 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
                   <TrendBadge trend={paceTrend} />
                 </div>
                 <ResponsiveContainer width="100%" height={140}>
-                  <LineChart data={weeklyData}>
+                  <ComposedChart data={weeklyData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                     <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                     <YAxis
@@ -631,9 +631,34 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
                       tickFormatter={(v) => formatPace(v)}
                     />
                     <Tooltip
-                      formatter={(value: any) =>
-                        typeof value === "number" ? formatPace(value) : value
-                      }
+                      content={({ active, payload, label }: any) => {
+                        if (!active || !payload?.length) return null;
+                        const d = payload[0]?.payload || {};
+                        if (d.avgPace == null) return null;
+                        return (
+                          <div className="rounded-md border bg-background px-3 py-2 text-xs shadow-sm">
+                            <div className="font-medium mb-1">{label}</div>
+                            <div>
+                              Média: <strong>{formatPace(d.avgPace)}</strong>
+                              {d.paceMin != null && d.paceMax != null && (
+                                <span className="text-muted-foreground">
+                                  {"  |  "}Mín: {formatPace(d.paceMin)} · Máx: {formatPace(d.paceMax)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="paceBand"
+                      stroke="none"
+                      fill="hsl(var(--primary))"
+                      fillOpacity={0.12}
+                      activeDot={false}
+                      legendType="none"
+                      isAnimationActive={false}
                     />
                     <Line
                       type="monotone"
@@ -644,7 +669,7 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
                       name="Pace"
                       connectNulls
                     />
-                  </LineChart>
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
 
@@ -655,11 +680,40 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
                   <TrendBadge trend={hrTrend} />
                 </div>
                 <ResponsiveContainer width="100%" height={140}>
-                  <LineChart data={weeklyData}>
+                  <ComposedChart data={weeklyData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                     <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} domain={hrDomain} />
-                    <Tooltip />
+                    <Tooltip
+                      content={({ active, payload, label }: any) => {
+                        if (!active || !payload?.length) return null;
+                        const d = payload[0]?.payload || {};
+                        if (d.avgHr == null) return null;
+                        return (
+                          <div className="rounded-md border bg-background px-3 py-2 text-xs shadow-sm">
+                            <div className="font-medium mb-1">{label}</div>
+                            <div>
+                              Média: <strong>{d.avgHr} bpm</strong>
+                              {d.fcMin != null && d.fcMax != null && (
+                                <span className="text-muted-foreground">
+                                  {"  |  "}Mín: {d.fcMin} · Máx: {d.fcMax}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="fcBand"
+                      stroke="none"
+                      fill="hsl(var(--primary))"
+                      fillOpacity={0.12}
+                      activeDot={false}
+                      legendType="none"
+                      isAnimationActive={false}
+                    />
                     <Line
                       type="monotone"
                       dataKey="avgHr"
@@ -669,7 +723,7 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
                       name="FC média"
                       connectNulls
                     />
-                  </LineChart>
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
             </>
