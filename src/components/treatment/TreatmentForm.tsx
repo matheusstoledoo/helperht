@@ -9,6 +9,7 @@ import { Loader2, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useTreatmentExplanation } from "@/hooks/useTreatmentExplanation";
+import { markDataUpdated } from "@/lib/healthDataEvents";
 
 interface TreatmentFormProps {
   open: boolean;
@@ -87,6 +88,7 @@ export const TreatmentForm = ({ open, onOpenChange, patientId, existingTreatment
         toast.success("Tratamento adicionado com sucesso");
       }
 
+      markDataUpdated();
       onOpenChange(false);
       // Reset form
       setName("");

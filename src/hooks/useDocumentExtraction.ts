@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { markDataUpdated } from "@/lib/healthDataEvents";
 
 export interface ExtractedData {
   suggested_category: string;
@@ -256,6 +257,7 @@ export function useDocumentExtraction() {
         });
       }
 
+      markDataUpdated();
       toast.success("Documento processado e dados salvos com sucesso! 🎉");
       return true;
     } catch (error: any) {

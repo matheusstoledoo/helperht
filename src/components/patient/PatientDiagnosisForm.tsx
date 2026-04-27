@@ -15,6 +15,7 @@ import {
 import { Plus, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { markDataUpdated } from "@/lib/healthDataEvents";
 
 interface Props {
   patientId: string;
@@ -50,6 +51,7 @@ export function PatientDiagnosisForm({ patientId, onCreated }: Props) {
       return;
     }
     toast.success("Diagnóstico cadastrado!");
+    markDataUpdated();
     setName("");
     setIcdCode("");
     setDate(new Date().toISOString().split("T")[0]);

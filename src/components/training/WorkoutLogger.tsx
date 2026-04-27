@@ -14,6 +14,7 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import StravaImport from "./StravaImport";
 import { Separator } from "@/components/ui/separator";
+import { markDataUpdated } from "@/lib/healthDataEvents";
 
 interface WorkoutLoggerProps {
   userId: string;
@@ -91,6 +92,7 @@ export default function WorkoutLogger({ userId, patientId }: WorkoutLoggerProps)
       toast.error("Erro ao salvar treino");
       return;
     }
+    markDataUpdated();
     toast.success("Treino registrado! 💪");
     setWorkoutType("musculacao");
     setDuration("");

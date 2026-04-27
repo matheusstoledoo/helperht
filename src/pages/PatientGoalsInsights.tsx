@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { markDataUpdated, markAnalysisGenerated, getLastAnalysis, getLastAnalysisTimestamp, getLastDataUpdate, formatRelativeTime } from "@/lib/healthDataEvents";
 
 // ── Goal types & config ──
 
@@ -327,6 +328,9 @@ export default function PatientGoalsInsights() {
   const [healthRefreshing, setHealthRefreshing] = useState(false);
   const [healthError, setHealthError] = useState<string | null>(null);
   const [showScoreDialog, setShowScoreDialog] = useState(false);
+  const [analysisTs, setAnalysisTs] = useState<number | null>(null);
+  const [hasNewerData, setHasNewerData] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
@@ -377,11 +381,14 @@ export default function PatientGoalsInsights() {
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
       setHealthData(data as HealthData);
+      const now = Date.now();
+      setAnalysisTs(now);
+      setHasNewerData(false);
+      setBannerDismissed(false);
       try {
-        sessionStorage.setItem(healthCacheKey, JSON.stringify({ data, ts: Date.now() }));
-      } catch {
-        // sessionStorage cheio ou indisponível — segue sem cache
-      }
+        sessionStorage.setItem(healthCacheKey, JSON.stringify({ data, ts: now }));
+      } catch { /* noop */ }
+      if (user) markAnalysisGenerated(user.id, data);
     } catch (e: any) {
       // Se falhou mas temos dados antigos, manter os dados antigos sem mostrar erro
       if (!cachedData) {
@@ -435,6 +442,22 @@ export default function PatientGoalsInsights() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  // Bootstrap from localStorage to avoid loading screen on next open
+  useEffect(() => {
+    if (!user) return;
+    const last = getLastAnalysis<HealthData>(user.id);
+    if (last) {
+      setHealthData(last.data);
+      setAnalysisTs(last.ts);
+      setHealthLoading(false);
+    }
+    const lastDataTs = getLastDataUpdate();
+    const lastAnalysisTs = getLastAnalysisTimestamp(user.id);
+    if (lastDataTs && (!lastAnalysisTs || lastDataTs > lastAnalysisTs)) {
+      setHasNewerData(true);
+    }
+  }, [user?.id]);
+
   // Carregar health data apenas quando o usuário acessa as abas relevantes
   useEffect(() => {
     if (user && (activeTab === "resumo" || activeTab === "insights")) {
@@ -442,6 +465,21 @@ export default function PatientGoalsInsights() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, activeTab]);
+
+  // Re-check freshness on tab focus
+  useEffect(() => {
+    const onFocus = () => {
+      if (!user) return;
+      const lastDataTs = getLastDataUpdate();
+      const lastAnalysisTs = getLastAnalysisTimestamp(user.id);
+      if (lastDataTs && (!lastAnalysisTs || lastDataTs > lastAnalysisTs)) {
+        setHasNewerData(true);
+        setBannerDismissed(false);
+      }
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [user?.id]);
 
   const buildBaselineSnapshot = async (): Promise<Record<string, any>> => {
     if (!user || !patientId) return {};
@@ -485,6 +523,7 @@ export default function PatientGoalsInsights() {
       toast({ title: editingId ? "Objetivo atualizado!" : "Objetivo criado!", description: "Reanalisando seus dados..." });
       resetForm(); setShowModal(false);
       await fetchGoals();
+      markDataUpdated();
       // Re-run unified analysis since the goal changed
       invalidateHealthCache();
       fetchHealthData(true);
@@ -574,6 +613,22 @@ export default function PatientGoalsInsights() {
 
             {/* ═══ TAB: RESUMO DE SAÚDE ═══ */}
             <TabsContent value="resumo" className="space-y-4 mt-4">
+              {hasNewerData && !bannerDismissed && healthData && !healthRefreshing && (
+                <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
+                  <CardContent className="p-3 flex items-center justify-between gap-3 flex-wrap">
+                    <p className="text-sm text-amber-900 dark:text-amber-200 flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 shrink-0" />
+                      Você registrou novos dados desde o último resumo. Atualizar agora?
+                    </p>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setBannerDismissed(true)}>Ignorar</Button>
+                      <Button size="sm" onClick={() => { invalidateHealthCache(); fetchHealthData(true); }} className="gap-1">
+                        <RefreshCw className="h-3.5 w-3.5" /> Atualizar
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
               {healthRefreshing && healthData && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
                   <Loader2 className="h-3 w-3 animate-spin" />

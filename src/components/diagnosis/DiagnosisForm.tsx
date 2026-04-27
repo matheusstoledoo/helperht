@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useDiagnosisExplanation } from "@/hooks/useDiagnosisExplanation";
 import { CidCombobox } from "./CidCombobox";
 import { CidEntry } from "@/hooks/useCidSearch";
+import { markDataUpdated } from "@/lib/healthDataEvents";
 
 interface DiagnosisFormProps {
   open: boolean;
@@ -111,6 +112,7 @@ export const DiagnosisForm = ({ open, onOpenChange, patientId, existingDiagnosis
         toast.success("Diagnóstico adicionado com sucesso");
       }
 
+      markDataUpdated();
       onOpenChange(false);
       // Reset form
       setName("");
