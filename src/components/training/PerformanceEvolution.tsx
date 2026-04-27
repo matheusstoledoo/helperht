@@ -103,6 +103,36 @@ const movingAverage = (values: (number | null)[], window: number): (number | nul
   });
 };
 
+// Linear regression sobre os últimos N pontos não-nulos.
+// Retorna um array do mesmo tamanho de `values`, com a reta de tendência projetada
+// apenas nas posições dos N últimos pontos não-nulos (demais posições = null).
+const trendLineLastN = (values: (number | null)[], n: number): (number | null)[] => {
+  const result: (number | null)[] = values.map(() => null);
+  const indexed = values
+    .map((v, i) => ({ v, i }))
+    .filter((p): p is { v: number; i: number } => p.v != null);
+  if (indexed.length < 2) return result;
+  const lastN = indexed.slice(-n);
+  if (lastN.length < 2) return result;
+
+  const xs = lastN.map((p) => p.i);
+  const ys = lastN.map((p) => p.v);
+  const count = xs.length;
+  const sumX = xs.reduce((a, b) => a + b, 0);
+  const sumY = ys.reduce((a, b) => a + b, 0);
+  const sumXY = xs.reduce((s, x, idx) => s + x * ys[idx], 0);
+  const sumXX = xs.reduce((s, x) => s + x * x, 0);
+  const denom = count * sumXX - sumX * sumX;
+  if (denom === 0) return result;
+  const slope = (count * sumXY - sumX * sumY) / denom;
+  const intercept = (sumY - slope * sumX) / count;
+
+  for (const p of lastN) {
+    result[p.i] = Math.round((slope * p.i + intercept) * 100) / 100;
+  }
+  return result;
+};
+
 const COMPARE_COLORS = ["#378ADD", "#E24B4A", "#27500A", "#D85A30"];
 
 export default function PerformanceEvolution({ userId, patientId }: PerformanceEvolutionProps) {
@@ -180,14 +210,46 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
           (s, l) => s + (Number(l.tss) || Number(l.srpe) || 0),
           0
         );
-        const kmTotal = weekLogs.reduce((s, l) => s + (Number(l.distance_km) || 0), 0);
-        const hrLogs = weekLogs.filter((l) => l.avg_heart_rate);
-        const avgHr = hrLogs.length
-          ? hrLogs.reduce((s, l) => s + Number(l.avg_heart_rate), 0) / hrLogs.length
-          : null;
-        const paceLogs = weekLogs.filter(
-          (l) => Number(l.avg_speed_kmh) > 0 || Number(l.avg_pace_min_km) > 0
-        );
+
+        // Volume semanal — apenas atividades com distance_km > 0
+        const kmTotal = weekLogs
+          .filter((l) => Number(l.distance_km) > 0)
+          .reduce((s, l) => s + Number(l.distance_km), 0);
+
+        // FC média semanal — exclui musculação/força, valida faixa fisiológica,
+        // e pondera pela duração do treino quando disponível.
+        const hrLogs = weekLogs.filter((l) => {
+          const sportLower = String(l.sport || "").toLowerCase();
+          if (sportLower === "musculacao" || sportLower === "forca" || sportLower === "força") return false;
+          const hr = Number(l.avg_heart_rate);
+          return hr > 0 && hr < 220;
+        });
+        const hrWeightSum = hrLogs.reduce((s, l) => s + (Number(l.duration_minutes) || 0), 0);
+        let avgHr: number | null = null;
+        if (hrLogs.length > 0) {
+          if (hrWeightSum > 0) {
+            avgHr =
+              hrLogs.reduce(
+                (s, l) => s + Number(l.avg_heart_rate) * (Number(l.duration_minutes) || 0),
+                0
+              ) / hrWeightSum;
+          } else {
+            avgHr =
+              hrLogs.reduce((s, l) => s + Number(l.avg_heart_rate), 0) / hrLogs.length;
+          }
+        }
+
+        // Pace médio semanal — exige distância > 0 e pace válido (< 20 min/km).
+        // Nunca inclui musculação/força ou treinos sem distância.
+        const paceLogs = weekLogs.filter((l) => {
+          const sportLower = String(l.sport || "").toLowerCase();
+          if (sportLower === "musculacao" || sportLower === "forca" || sportLower === "força") return false;
+          const dist = Number(l.distance_km);
+          const pace =
+            Number(l.avg_pace_min_km) ||
+            (Number(l.avg_speed_kmh) > 0 ? 60 / Number(l.avg_speed_kmh) : 0);
+          return dist > 0 && pace > 0 && pace < 20;
+        });
         const avgPace = paceLogs.length
           ? paceLogs.reduce(
               (s, l) =>
@@ -197,6 +259,7 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
               0
             ) / paceLogs.length
           : null;
+
         return {
           label: format(parseISO(key), "dd/MM"),
           tss: Math.round(tssTotal),
@@ -209,10 +272,10 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
       });
   }, [logs]);
 
-  // Add trend lines (3-week moving average)
+  // Add trend lines (linear regression sobre os últimos 4 pontos).
   const weeklyDataWithTrend = useMemo(() => {
-    const tssTrend = movingAverage(weeklyData.map((w) => w.tss), 3);
-    const kmTrend = movingAverage(weeklyData.map((w) => w.km), 3);
+    const tssTrend = trendLineLastN(weeklyData.map((w) => w.tss), 4);
+    const kmTrend = trendLineLastN(weeklyData.map((w) => w.km), 4);
     return weeklyData.map((w, i) => ({
       ...w,
       tssTrend: tssTrend[i],
