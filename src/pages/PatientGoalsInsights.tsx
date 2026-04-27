@@ -460,20 +460,49 @@ export default function PatientGoalsInsights() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  // Bootstrap from localStorage to avoid loading screen on next open
+  // Bootstrap from localStorage AND patient_insights table to avoid loading on next open
   useEffect(() => {
     if (!user) return;
-    const last = getLastAnalysis<HealthData>(user.id);
-    if (last) {
-      setHealthData(last.data);
-      setAnalysisTs(last.ts);
-      setHealthLoading(false);
-    }
-    const lastDataTs = getLastDataUpdate();
-    const lastAnalysisTs = getLastAnalysisTimestamp(user.id);
-    if (lastDataTs && (!lastAnalysisTs || lastDataTs > lastAnalysisTs)) {
-      setHasNewerData(true);
-    }
+    let cancelled = false;
+    (async () => {
+      // 1) localStorage (instantâneo)
+      const last = getLastAnalysis<HealthData>(user.id);
+      if (last && !cancelled) {
+        setHealthData(last.data);
+        setAnalysisTs(last.ts);
+        setHealthLoading(false);
+      }
+      // 2) Banco — busca o registro mais recente em patient_insights
+      try {
+        const { data: cachedInsight } = await supabase
+          .from("patient_insights")
+          .select("content, created_at")
+          .eq("patient_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (!cancelled && cachedInsight?.content) {
+          const dbTs = new Date(cachedInsight.created_at).getTime();
+          // Só sobrescreve se for mais recente que o que temos do localStorage
+          if (!last || dbTs > last.ts) {
+            try {
+              const parsed = JSON.parse(cachedInsight.content) as HealthData;
+              setHealthData(parsed);
+              setAnalysisTs(dbTs);
+              setHealthLoading(false);
+            } catch { /* conteúdo não é JSON — ignorar */ }
+          }
+        }
+      } catch { /* RLS/rede — ignorar, fluxo normal segue via fetchHealthData */ }
+
+      // 3) Verifica se houve dados novos desde o último insight
+      const lastDataTs = getLastDataUpdate();
+      const lastAnalysisTs = getLastAnalysisTimestamp(user.id);
+      if (!cancelled && lastDataTs && (!lastAnalysisTs || lastDataTs > lastAnalysisTs)) {
+        setHasNewerData(true);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [user?.id]);
 
   // Carregar health data apenas quando o usuário acessa as abas relevantes
