@@ -56,20 +56,46 @@ async function callClaude(
   systemPrompt: string,
   attempt = 1
 ): Promise<any> {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "claude-opus-4-6",
-      max_tokens: 4000,
-      system: systemPrompt,
-      messages,
-    }),
+  const model = "claude-opus-4-6";
+  const bodyStr = JSON.stringify({
+    model,
+    max_tokens: 4000,
+    system: systemPrompt,
+    messages,
   });
+
+  console.log("chamando Claude API", {
+    model,
+    contentLength: bodyStr.length,
+    attempt,
+  });
+
+  // Timeout explícito de 90s para PDFs com múltiplas páginas
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 90000);
+
+  let response: Response;
+  try {
+    response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: bodyStr,
+    });
+  } catch (fetchErr: any) {
+    clearTimeout(timeoutId);
+    if (fetchErr?.name === "AbortError") {
+      throw new Error("Claude API timeout após 90 segundos");
+    }
+    throw fetchErr;
+  }
+  clearTimeout(timeoutId);
+
+  console.log("resposta Claude recebida", { status: response.status });
 
   if (!response.ok) {
     const err = await response.text();
@@ -211,6 +237,13 @@ serve(async (req) => {
   try {
     const { document_id, file_path, file_type, category_hint } = await req.json();
 
+    console.log("extract-document iniciado", {
+      documentId: document_id,
+      filePath: file_path,
+      fileType: file_type,
+      category: category_hint,
+    });
+
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
 
@@ -230,15 +263,19 @@ serve(async (req) => {
       .download(file_path);
 
     if (downloadError || !fileData) {
+      console.error("Erro ao baixar arquivo do storage:", {
+        filePath: file_path,
+        error: downloadError,
+      });
       await supabase
         .from("document_extractions")
         .update({
           extraction_status: "failed",
-          error_message: "Não foi possível acessar o arquivo no armazenamento.",
+          error_message: `Não foi possível acessar o arquivo no armazenamento: ${downloadError?.message ?? "arquivo não encontrado"}`,
         })
         .eq("document_id", document_id);
       return new Response(
-        JSON.stringify({ error: "Failed to download file" }),
+        JSON.stringify({ error: "Failed to download file", details: downloadError?.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -248,7 +285,12 @@ serve(async (req) => {
     const base64Data = base64Encode(arrayBuffer);
     const mimeType = file_type || "application/octet-stream";
 
-    console.log(`Arquivo: ${file_path}, tamanho: ${uint8Array.length} bytes, tipo: ${mimeType}`);
+    console.log("documento encontrado", {
+      filePath: file_path,
+      fileSize: uint8Array.length,
+      mimeType,
+      base64Length: base64Data.length,
+    });
 
     // Monta o conteúdo para o Claude conforme o tipo de arquivo
     let userContent: any[];
@@ -384,6 +426,8 @@ serve(async (req) => {
           };
         });
 
+      console.log("inserindo lab_results", { count: labRows.length });
+
       if (labRows.length > 0) {
         const { error: labError } = await supabase
           .from("lab_results")
@@ -470,8 +514,12 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
-  } catch (error) {
-    console.error("Extract document error:", error);
+  } catch (error: any) {
+    console.error("extract-document ERRO:", {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+    });
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
