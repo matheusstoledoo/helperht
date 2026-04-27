@@ -216,11 +216,12 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
           .filter((l) => Number(l.distance_km) > 0)
           .reduce((s, l) => s + Number(l.distance_km), 0);
 
-        // FC média semanal — exclui musculação/força, valida faixa fisiológica,
+        // FC média semanal — apenas esportes cardio, valida faixa fisiológica,
         // e pondera pela duração do treino quando disponível.
+        const cardioSports = ["corrida", "ciclismo", "natacao", "triatlo", "outro"];
         const hrLogs = weekLogs.filter((l) => {
           const sportLower = String(l.sport || "").toLowerCase();
-          if (sportLower === "musculacao" || sportLower === "forca" || sportLower === "força") return false;
+          if (!cardioSports.includes(sportLower)) return false;
           const hr = Number(l.avg_heart_rate);
           return hr > 0 && hr < 220;
         });
