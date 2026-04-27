@@ -83,6 +83,7 @@ export default function PatientNutrition() {
   const [togglingMeal, setTogglingMeal] = useState<string | null>(null);
   const [mealToDelete, setMealToDelete] = useState<{ planId: string; index: number; name: string } | null>(null);
   const [deletingMeal, setDeletingMeal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
