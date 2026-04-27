@@ -618,7 +618,7 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
                   <LineChart data={weeklyData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                     <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} domain={hrDomain} />
                     <Tooltip />
                     <Line
                       type="monotone"
