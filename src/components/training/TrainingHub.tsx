@@ -1259,7 +1259,7 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
                     <Input
                       ref={fileRef}
                       type="file"
-                      accept={importTab === "garmin" ? ".csv,.fit" : ".csv"}
+                      accept={importTab === "garmin" ? ".csv,.fit,.zip" : ".csv"}
                       onChange={(e) => handleFile(e.target.files?.[0])}
                       className="max-w-xs mx-auto"
                     />
