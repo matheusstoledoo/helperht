@@ -583,12 +583,12 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
           } else if (lowerName.endsWith(".fit.gz")) {
             try {
               // Descomprime o gzip para obter o .fit
-              const compressedBuffer = await zipEntry.async("uint8array");
+              const compressedBuffer = await zipEntry.async("arraybuffer");
               const ds = new DecompressionStream("gzip");
               const writer = ds.writable.getWriter();
               const reader = ds.readable.getReader();
 
-              writer.write(compressedBuffer as unknown as Uint8Array);
+              writer.write(new Uint8Array(compressedBuffer));
               writer.close();
 
               const chunks: Uint8Array[] = [];
