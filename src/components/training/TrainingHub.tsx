@@ -357,11 +357,20 @@ const parseGarminFit = (
           : new Date().toISOString().split("T")[0];
 
         const durationMin = s.total_timer_time ? Math.round(s.total_timer_time / 60) : null;
+        // total_distance já vem em km com lengthUnit: 'km' — não dividir por 1000
         const distanceKm = s.total_distance ? Math.round(s.total_distance * 100) / 100 : null;
-        const pace = distanceKm && durationMin ? Math.round((durationMin / distanceKm) * 100) / 100 : null;
+        const pace = distanceKm && durationMin && distanceKm > 0
+          ? Math.round((durationMin / distanceKm) * 100) / 100
+          : null;
+
+        // Nome real da atividade — usar workout name ou sport label, nunca "lap"
+        const workoutName = data.workout?.wkt_name || s.sport_profile_name || null;
+        const activityName = workoutName
+          ? String(workoutName)
+          : (SPORT_LABELS[sport] || "Atividade");
 
         const row: ParsedRow = {
-          activity_name: s.event ? `${SPORT_LABELS[sport] || "Atividade"} ${s.event}` : null,
+          activity_name: activityName,
           sport,
           activity_date: activityDate,
           duration_minutes: durationMin,
