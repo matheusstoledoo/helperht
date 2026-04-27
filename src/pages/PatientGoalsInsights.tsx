@@ -486,6 +486,7 @@ export default function PatientGoalsInsights() {
       toast({ title: editingId ? "Objetivo atualizado!" : "Objetivo criado!", description: "Reanalisando seus dados..." });
       resetForm(); setShowModal(false);
       await fetchGoals();
+      markDataUpdated();
       // Re-run unified analysis since the goal changed
       invalidateHealthCache();
       fetchHealthData(true);
