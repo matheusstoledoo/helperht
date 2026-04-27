@@ -257,6 +257,7 @@ export function useDocumentExtraction() {
         });
       }
 
+      markDataUpdated();
       toast.success("Documento processado e dados salvos com sucesso! 🎉");
       return true;
     } catch (error: any) {
