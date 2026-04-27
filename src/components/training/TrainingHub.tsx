@@ -754,14 +754,45 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
       source,
     }));
 
-    const { error } = await supabase.from("workout_logs").insert(payload as any);
-    setImportingRows(false);
+    const { data: insertedLogs, error } = await supabase
+      .from("workout_logs")
+      .insert(payload as any)
+      .select("id");
 
     if (error) {
+      setImportingRows(false);
       toast.error("Erro ao importar atividades");
       return;
     }
 
+    // Inserir GPS records vinculados, alinhando por índice insertedLogs ↔ gpsRecordsBySession
+    if (insertedLogs && insertedLogs.length > 0 && gpsRecordsBySession.length > 0) {
+      const allWorkoutRecords: any[] = [];
+      insertedLogs.forEach((log: any, idx: number) => {
+        const gpsForLog = gpsRecordsBySession[idx] || [];
+        gpsForLog.forEach((r) => {
+          allWorkoutRecords.push({
+            ...r,
+            workout_log_id: log.id,
+            user_id: userId,
+          });
+        });
+      });
+
+      if (allWorkoutRecords.length > 0) {
+        const chunkSize = 500;
+        for (let i = 0; i < allWorkoutRecords.length; i += chunkSize) {
+          const chunk = allWorkoutRecords.slice(i, i + chunkSize);
+          const { error: recError } = await (supabase.from("workout_records" as any) as any).insert(chunk);
+          if (recError) {
+            console.error("Erro ao inserir workout_records:", recError);
+          }
+        }
+      }
+    }
+
+    setImportingRows(false);
+    setGpsRecordsBySession([]);
     toast.success("Atividades importadas com sucesso");
     setShowImportSheet(false);
     await fetchData();
