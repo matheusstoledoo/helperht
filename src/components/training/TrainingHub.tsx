@@ -281,6 +281,11 @@ type ParsedGpsRecord = {
   distance_km: number | null;
 };
 
+interface FitResult {
+  row: ParsedRow;
+  gpsRecords: ParsedGpsRecord[];
+}
+
 const parseGarminFit = (
   file: File
 ): Promise<{ rows: ParsedRow[]; gpsRecords: ParsedGpsRecord[] }> => {
@@ -604,19 +609,17 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
       setParsingFile(true);
       try {
         const zip = await JSZip.loadAsync(file);
-        const allRows: ParsedRow[] = [];
-        // Alinhado por índice com allRows: cada entrada é o conjunto de GPS records
-        // do log correspondente (ou [] quando o arquivo origem não traz GPS).
-        const allGpsBySession: ParsedGpsRecord[][] = [];
+        // fitResults: 1 entrada por sessão de FIT/FIT.GZ, com GPS apenas na 1ª sessão de cada arquivo.
+        const fitResults: FitResult[] = [];
+        // csvRows: linhas de CSV (sem GPS).
+        const csvRows: ParsedRow[] = [];
 
         const pushFitResult = (
           result: { rows: ParsedRow[]; gpsRecords: ParsedGpsRecord[] }
         ) => {
-          // Quando o FIT tem múltiplas sessões, anexamos os mesmos gpsRecords à
-          // primeira e [] às demais (1 FIT = 1 fluxo GPS, normalmente 1 sessão).
+          // 1 FIT = 1 fluxo GPS; anexamos os mesmos gpsRecords à primeira sessão e [] às demais.
           result.rows.forEach((row, idx) => {
-            allRows.push(row);
-            allGpsBySession.push(idx === 0 ? result.gpsRecords : []);
+            fitResults.push({ row, gpsRecords: idx === 0 ? result.gpsRecords : [] });
           });
         };
 
@@ -624,16 +627,7 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
           if (zipEntry.dir) continue;
           const lowerName = filename.toLowerCase();
 
-          if (lowerName.endsWith(".fit")) {
-            const buffer = await zipEntry.async("arraybuffer");
-            const fitFile = new File([buffer], filename, { type: "application/octet-stream" });
-            try {
-              const parsed = await parseGarminFit(fitFile);
-              pushFitResult(parsed);
-            } catch {
-              // arquivo .fit inválido dentro do ZIP — ignorar e continuar
-            }
-          } else if (lowerName.endsWith(".fit.gz")) {
+          if (lowerName.endsWith(".fit.gz")) {
             try {
               // Descomprime o gzip para obter o .fit
               const compressedBuffer = await zipEntry.async("arraybuffer");
@@ -664,8 +658,17 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
               });
               const parsed = await parseGarminFit(fitFile);
               pushFitResult(parsed);
-            } catch {
-              // arquivo .fit.gz inválido — ignorar e continuar
+            } catch (err) {
+              console.warn(`[TrainingHub] Falha ao processar ${filename}:`, err);
+            }
+          } else if (lowerName.endsWith(".fit")) {
+            try {
+              const buffer = await zipEntry.async("arraybuffer");
+              const fitFile = new File([buffer], filename, { type: "application/octet-stream" });
+              const parsed = await parseGarminFit(fitFile);
+              pushFitResult(parsed);
+            } catch (err) {
+              console.warn(`[TrainingHub] Falha ao processar ${filename}:`, err);
             }
           } else if (lowerName.endsWith(".csv")) {
             const text = await zipEntry.async("string");
@@ -674,17 +677,33 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
               .filter((row) => Object.values(row).some((v) => v !== "" && v !== null))
               .map((row) => (importTab === "garmin" ? parseGarminRow(row) : parseTrainingPeaksRow(row)))
               .filter((row) => row.activity_date);
-            parsed.forEach((row) => {
-              allRows.push(row);
-              allGpsBySession.push([]);
-            });
+            csvRows.push(...parsed);
           }
         }
+
+        // Monta arrays alinhados por índice: parsedRows[i] ↔ gpsRecordsBySession[i]
+        const allRows: ParsedRow[] = [
+          ...fitResults.map((r) => r.row),
+          ...csvRows,
+        ];
+        const allGpsBySession: ParsedGpsRecord[][] = [
+          ...fitResults.map((r) => r.gpsRecords),
+          ...csvRows.map(() => []),
+        ];
+
+        const totalGpsPoints = fitResults.reduce((sum, r) => sum + r.gpsRecords.length, 0);
+        const filesWithGps = fitResults.filter((r) => r.gpsRecords.length > 0).length;
+        console.info(
+          `[TrainingHub] ZIP processado: ${allRows.length} atividades · ${fitResults.length} FIT · ${filesWithGps} com GPS · ${totalGpsPoints} pontos`
+        );
 
         if (allRows.length === 0) {
           toast.error("Nenhuma atividade encontrada no ZIP");
         } else {
-          toast.success(`${allRows.length} atividade${allRows.length === 1 ? "" : "s"} carregada${allRows.length === 1 ? "" : "s"} do ZIP`);
+          const gpsSuffix = totalGpsPoints > 0 ? ` · ${totalGpsPoints} pontos GPS` : "";
+          toast.success(
+            `${allRows.length} atividade${allRows.length === 1 ? "" : "s"} carregada${allRows.length === 1 ? "" : "s"} do ZIP${gpsSuffix}`
+          );
           setParsedRows(allRows);
           setGpsRecordsBySession(allGpsBySession);
         }
@@ -707,7 +726,8 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
         setParsedRows(parsed);
         // 1 FIT = 1 fluxo GPS; alinhamos com a primeira sessão.
         setGpsRecordsBySession(parsed.map((_, idx) => (idx === 0 ? gpsRecords : [])));
-        toast.success(`${parsed.length} atividade${parsed.length === 1 ? "" : "s"} carregada${parsed.length === 1 ? "" : "s"}`);
+        const gpsSuffix = gpsRecords.length > 0 ? ` · ${gpsRecords.length} pontos GPS` : "";
+        toast.success(`${parsed.length} atividade${parsed.length === 1 ? "" : "s"} carregada${parsed.length === 1 ? "" : "s"}${gpsSuffix}`);
       } else {
         Papa.parse(file, {
           header: true,
@@ -767,10 +787,13 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
     }
 
     // Inserir GPS records vinculados, alinhando por índice insertedLogs ↔ gpsRecordsBySession
+    let totalGpsInserted = 0;
+    let logsWithGps = 0;
     if (insertedLogs && insertedLogs.length > 0 && gpsRecordsBySession.length > 0) {
       const allWorkoutRecords: any[] = [];
       insertedLogs.forEach((log: any, idx: number) => {
         const gpsForLog = gpsRecordsBySession[idx] || [];
+        if (gpsForLog.length > 0) logsWithGps += 1;
         gpsForLog.forEach((r) => {
           allWorkoutRecords.push({
             ...r,
@@ -786,15 +809,21 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
           const chunk = allWorkoutRecords.slice(i, i + chunkSize);
           const { error: recError } = await (supabase.from("workout_records" as any) as any).insert(chunk);
           if (recError) {
-            console.error("Erro ao inserir workout_records:", recError);
+            console.error("[TrainingHub] Erro ao inserir workout_records:", recError);
+          } else {
+            totalGpsInserted += chunk.length;
           }
         }
       }
+      console.info(
+        `[TrainingHub] Importação concluída: ${insertedLogs.length} logs · ${logsWithGps} com GPS · ${totalGpsInserted} pontos inseridos`
+      );
     }
 
     setImportingRows(false);
     setGpsRecordsBySession([]);
-    toast.success("Atividades importadas com sucesso");
+    const gpsSuffix = totalGpsInserted > 0 ? ` (${logsWithGps} com GPS)` : "";
+    toast.success(`Atividades importadas com sucesso${gpsSuffix}`);
     setShowImportSheet(false);
     await fetchData();
   };
