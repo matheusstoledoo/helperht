@@ -613,6 +613,22 @@ export default function PatientGoalsInsights() {
 
             {/* ═══ TAB: RESUMO DE SAÚDE ═══ */}
             <TabsContent value="resumo" className="space-y-4 mt-4">
+              {hasNewerData && !bannerDismissed && healthData && !healthRefreshing && (
+                <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
+                  <CardContent className="p-3 flex items-center justify-between gap-3 flex-wrap">
+                    <p className="text-sm text-amber-900 dark:text-amber-200 flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 shrink-0" />
+                      Você registrou novos dados desde o último resumo. Atualizar agora?
+                    </p>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setBannerDismissed(true)}>Ignorar</Button>
+                      <Button size="sm" onClick={() => { invalidateHealthCache(); fetchHealthData(true); }} className="gap-1">
+                        <RefreshCw className="h-3.5 w-3.5" /> Atualizar
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
               {healthRefreshing && healthData && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
                   <Loader2 className="h-3 w-3 animate-spin" />
