@@ -24,6 +24,7 @@ import {
   ComposedChart,
   Line,
   LineChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -240,6 +241,13 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
           }
         }
 
+        // Min/Max FC da semana (apenas atividades cardio com FC válida)
+        const fcRawValues = hrLogs
+          .map((l) => Number(l.avg_heart_rate))
+          .filter((v) => v > 0);
+        const fcMin = fcRawValues.length > 0 ? Math.min(...fcRawValues) : null;
+        const fcMax = fcRawValues.length > 0 ? Math.max(...fcRawValues) : null;
+
         // Pace médio semanal — exige distância > 0 e pace válido (< 20 min/km).
         // Nunca inclui musculação/força ou treinos sem distância.
         const paceLogs = weekLogs.filter((l) => {
@@ -261,13 +269,39 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
             ) / paceLogs.length
           : null;
 
+        // Min/Max Pace da semana — apenas corrida com pace fisiológico (3 < pace < 10)
+        const paceRawValues = paceLogs
+          .filter((l) => String(l.sport || "").toLowerCase() === "corrida")
+          .map(
+            (l) =>
+              Number(l.avg_pace_min_km) ||
+              (Number(l.avg_speed_kmh) > 0 ? 60 / Number(l.avg_speed_kmh) : 0)
+          )
+          .filter((v) => v > 3 && v < 10);
+        const paceMin = paceRawValues.length > 0 ? Math.min(...paceRawValues) : null;
+        const paceMax = paceRawValues.length > 0 ? Math.max(...paceRawValues) : null;
+
+        const round2 = (v: number) => Math.round(v * 100) / 100;
+
         return {
           label: format(parseISO(key), "dd/MM"),
           tss: Math.round(tssTotal),
           km: Math.round(kmTotal * 10) / 10,
-          avgPace: avgPace ? Math.round(avgPace * 100) / 100 : null,
+          avgPace: avgPace ? round2(avgPace) : null,
           avgPaceLabel: avgPace ? formatPace(avgPace) : "—",
           avgHr: avgHr ? Math.round(avgHr) : null,
+          fcMin: fcMin != null ? Math.round(fcMin) : null,
+          fcMax: fcMax != null ? Math.round(fcMax) : null,
+          fcBand:
+            fcMin != null && fcMax != null
+              ? ([Math.round(fcMin), Math.round(fcMax)] as [number, number])
+              : null,
+          paceMin: paceMin != null ? round2(paceMin) : null,
+          paceMax: paceMax != null ? round2(paceMax) : null,
+          paceBand:
+            paceMin != null && paceMax != null
+              ? ([round2(paceMin), round2(paceMax)] as [number, number])
+              : null,
           count: weekLogs.length,
         };
       });
@@ -309,24 +343,30 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
     [weeklyData]
   );
 
-  // Domínio dinâmico do eixo Y para FC (margem de 15 bpm)
+  // Domínio dinâmico do eixo Y para FC (margem de 10 bpm, considera banda min/max)
   const hrDomain = useMemo<[number, number]>(() => {
-    const values = weeklyData
-      .map((w) => w.avgHr)
-      .filter((v): v is number => v != null && v > 0);
+    const values: number[] = [];
+    weeklyData.forEach((w) => {
+      if (w.avgHr != null && w.avgHr > 0) values.push(w.avgHr);
+      if (w.fcMin != null && w.fcMin > 0) values.push(w.fcMin);
+      if (w.fcMax != null && w.fcMax > 0) values.push(w.fcMax);
+    });
     if (values.length === 0) return [60, 200];
-    return [Math.floor(Math.min(...values) - 15), Math.ceil(Math.max(...values) + 15)];
+    return [Math.floor(Math.min(...values) - 10), Math.ceil(Math.max(...values) + 10)];
   }, [weeklyData]);
 
-  // Domínio dinâmico do eixo Y para Pace (margem de 0.5 min/km)
+  // Domínio dinâmico do eixo Y para Pace (margem de 0.5 min/km, considera banda min/max)
   const paceDomain = useMemo<[number, number]>(() => {
-    const values = weeklyData
-      .map((w) => w.avgPace)
-      .filter((v): v is number => v != null && v > 0);
+    const values: number[] = [];
+    weeklyData.forEach((w) => {
+      if (w.avgPace != null && w.avgPace > 0) values.push(w.avgPace);
+      if (w.paceMin != null && w.paceMin > 0) values.push(w.paceMin);
+      if (w.paceMax != null && w.paceMax > 0) values.push(w.paceMax);
+    });
     if (values.length === 0) return [2, 8];
     return [
-      Math.max(0, Math.min(...values) - 0.5),
-      Math.max(...values) + 0.5,
+      Math.max(0, Math.floor((Math.min(...values) - 0.5) * 10) / 10),
+      Math.ceil((Math.max(...values) + 0.5) * 10) / 10,
     ];
   }, [weeklyData]);
 
@@ -581,7 +621,7 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
                   <TrendBadge trend={paceTrend} />
                 </div>
                 <ResponsiveContainer width="100%" height={140}>
-                  <LineChart data={weeklyData}>
+                  <ComposedChart data={weeklyData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                     <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                     <YAxis
@@ -591,9 +631,34 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
                       tickFormatter={(v) => formatPace(v)}
                     />
                     <Tooltip
-                      formatter={(value: any) =>
-                        typeof value === "number" ? formatPace(value) : value
-                      }
+                      content={({ active, payload, label }: any) => {
+                        if (!active || !payload?.length) return null;
+                        const d = payload[0]?.payload || {};
+                        if (d.avgPace == null) return null;
+                        return (
+                          <div className="rounded-md border bg-background px-3 py-2 text-xs shadow-sm">
+                            <div className="font-medium mb-1">{label}</div>
+                            <div>
+                              Média: <strong>{formatPace(d.avgPace)}</strong>
+                              {d.paceMin != null && d.paceMax != null && (
+                                <span className="text-muted-foreground">
+                                  {"  |  "}Mín: {formatPace(d.paceMin)} · Máx: {formatPace(d.paceMax)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="paceBand"
+                      stroke="none"
+                      fill="hsl(var(--primary))"
+                      fillOpacity={0.12}
+                      activeDot={false}
+                      legendType="none"
+                      isAnimationActive={false}
                     />
                     <Line
                       type="monotone"
@@ -604,7 +669,7 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
                       name="Pace"
                       connectNulls
                     />
-                  </LineChart>
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
 
@@ -615,11 +680,40 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
                   <TrendBadge trend={hrTrend} />
                 </div>
                 <ResponsiveContainer width="100%" height={140}>
-                  <LineChart data={weeklyData}>
+                  <ComposedChart data={weeklyData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                     <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} domain={hrDomain} />
-                    <Tooltip />
+                    <Tooltip
+                      content={({ active, payload, label }: any) => {
+                        if (!active || !payload?.length) return null;
+                        const d = payload[0]?.payload || {};
+                        if (d.avgHr == null) return null;
+                        return (
+                          <div className="rounded-md border bg-background px-3 py-2 text-xs shadow-sm">
+                            <div className="font-medium mb-1">{label}</div>
+                            <div>
+                              Média: <strong>{d.avgHr} bpm</strong>
+                              {d.fcMin != null && d.fcMax != null && (
+                                <span className="text-muted-foreground">
+                                  {"  |  "}Mín: {d.fcMin} · Máx: {d.fcMax}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="fcBand"
+                      stroke="none"
+                      fill="hsl(var(--primary))"
+                      fillOpacity={0.12}
+                      activeDot={false}
+                      legendType="none"
+                      isAnimationActive={false}
+                    />
                     <Line
                       type="monotone"
                       dataKey="avgHr"
@@ -629,7 +723,7 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
                       name="FC média"
                       connectNulls
                     />
-                  </LineChart>
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
             </>
