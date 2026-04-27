@@ -144,6 +144,39 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
   const [comparisonLaps, setComparisonLaps] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);
   const [compareMetric, setCompareMetric] = useState<CompareMetric>("hr");
+  const [selectedGpsLog, setSelectedGpsLog] = useState<string | null>(null);
+  const [gpsRecords, setGpsRecords] = useState<any[]>([]);
+  const [loadingGps, setLoadingGps] = useState(false);
+
+  useEffect(() => {
+    if (!selectedGpsLog) { setGpsRecords([]); return; }
+    const fetchGps = async () => {
+      setLoadingGps(true);
+      const { data } = await supabase
+        .from('workout_records')
+        .select('elapsed_seconds, lat, lng, heart_rate, speed_kmh, cadence, altitude_m, distance_km')
+        .eq('workout_log_id', selectedGpsLog)
+        .order('elapsed_seconds', { ascending: true });
+      setGpsRecords(data || []);
+      setLoadingGps(false);
+    };
+    fetchGps();
+  }, [selectedGpsLog]);
+
+  const gpsChartData = useMemo(() => {
+    if (gpsRecords.length === 0) return [];
+    const total = gpsRecords.length;
+    const step = Math.max(1, Math.floor(total / 200));
+    return gpsRecords
+      .filter((_, i) => i % step === 0)
+      .map((r) => ({
+        dist: r.distance_km ? Math.round(r.distance_km * 100) / 100 : null,
+        hr: r.heart_rate ?? null,
+        pace: r.speed_kmh && r.speed_kmh > 0 ? Math.round((60 / r.speed_kmh) * 100) / 100 : null,
+        cadence: r.cadence ?? null,
+        alt: r.altitude_m ? Math.round(r.altitude_m) : null,
+      }));
+  }, [gpsRecords]);
 
   useEffect(() => {
     if (!userId) return;
@@ -1044,6 +1077,102 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
                 </p>
               )}
             </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Section 4 — GPS analysis per activity */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Análise de GPS por atividade</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Selecione uma atividade com GPS para visualizar a variação de FC, pace, cadência e altitude ao longo do percurso.
+          </p>
+
+          <Select value={selectedGpsLog ?? ""} onValueChange={(v) => setSelectedGpsLog(v || null)}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Selecione uma atividade com GPS..." />
+            </SelectTrigger>
+            <SelectContent>
+              {logs
+                .filter((l) => l.source === 'garmin')
+                .slice(0, 30)
+                .map((log) => (
+                  <SelectItem key={log.id} value={log.id}>
+                    {format(parseISO(log.activity_date), "dd/MM/yyyy", { locale: ptBR })} — {log.activity_name || log.sport} {log.distance_km ? `· ${log.distance_km} km` : ""}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+
+          {loadingGps && <Skeleton className="h-48 w-full" />}
+
+          {!loadingGps && selectedGpsLog && gpsRecords.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              Esta atividade não possui dados de GPS detalhados.
+            </p>
+          )}
+
+          {!loadingGps && gpsChartData.length > 0 && (
+            <div className="space-y-5">
+              <div>
+                <p className="text-sm font-medium mb-2">Frequência cardíaca ao longo do percurso</p>
+                <ResponsiveContainer width="100%" height={140}>
+                  <ComposedChart data={gpsChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                    <XAxis dataKey="dist" tick={{ fontSize: 11 }} unit=" km" />
+                    <YAxis tick={{ fontSize: 11 }} domain={['auto', 'auto']} unit=" bpm" />
+                    <Tooltip formatter={(v: any) => [`${v} bpm`, 'FC']} labelFormatter={(l) => `${l} km`} />
+                    <Area type="monotone" dataKey="hr" stroke="#E24B4A" fill="#E24B4A" fillOpacity={0.15} strokeWidth={1.5} dot={false} name="FC" connectNulls />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium mb-2">Pace ao longo do percurso</p>
+                <ResponsiveContainer width="100%" height={140}>
+                  <ComposedChart data={gpsChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                    <XAxis dataKey="dist" tick={{ fontSize: 11 }} unit=" km" />
+                    <YAxis tick={{ fontSize: 11 }} reversed domain={['auto', 'auto']} tickFormatter={(v) => formatPace(v)} />
+                    <Tooltip formatter={(v: any) => [formatPace(v), 'Pace']} labelFormatter={(l) => `${l} km`} />
+                    <Area type="monotone" dataKey="pace" stroke="#378ADD" fill="#378ADD" fillOpacity={0.15} strokeWidth={1.5} dot={false} name="Pace" connectNulls />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+
+              {gpsChartData.some((d) => d.alt != null) && (
+                <div>
+                  <p className="text-sm font-medium mb-2">Altitude ao longo do percurso</p>
+                  <ResponsiveContainer width="100%" height={120}>
+                    <ComposedChart data={gpsChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                      <XAxis dataKey="dist" tick={{ fontSize: 11 }} unit=" km" />
+                      <YAxis tick={{ fontSize: 11 }} unit=" m" domain={['auto', 'auto']} />
+                      <Tooltip formatter={(v: any) => [`${v} m`, 'Altitude']} labelFormatter={(l) => `${l} km`} />
+                      <Area type="monotone" dataKey="alt" stroke="#27500A" fill="#27500A" fillOpacity={0.2} strokeWidth={1.5} dot={false} name="Altitude" connectNulls />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {gpsChartData.some((d) => d.cadence != null) && (
+                <div>
+                  <p className="text-sm font-medium mb-2">Cadência ao longo do percurso</p>
+                  <ResponsiveContainer width="100%" height={120}>
+                    <ComposedChart data={gpsChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                      <XAxis dataKey="dist" tick={{ fontSize: 11 }} unit=" km" />
+                      <YAxis tick={{ fontSize: 11 }} unit=" spm" domain={['auto', 'auto']} />
+                      <Tooltip formatter={(v: any) => [`${v} spm`, 'Cadência']} labelFormatter={(l) => `${l} km`} />
+                      <Line type="monotone" dataKey="cadence" stroke="#D85A30" strokeWidth={1.5} dot={false} name="Cadência" connectNulls />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>
