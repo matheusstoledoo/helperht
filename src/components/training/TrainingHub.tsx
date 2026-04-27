@@ -580,6 +580,40 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
             } catch {
               // arquivo .fit inválido dentro do ZIP — ignorar e continuar
             }
+          } else if (lowerName.endsWith(".fit.gz")) {
+            try {
+              // Descomprime o gzip para obter o .fit
+              const compressedBuffer = await zipEntry.async("arraybuffer");
+              const ds = new DecompressionStream("gzip");
+              const writer = ds.writable.getWriter();
+              const reader = ds.readable.getReader();
+
+              writer.write(new Uint8Array(compressedBuffer));
+              writer.close();
+
+              const chunks: Uint8Array[] = [];
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                chunks.push(value);
+              }
+
+              const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
+              const decompressed = new Uint8Array(totalLength);
+              let offset = 0;
+              for (const chunk of chunks) {
+                decompressed.set(chunk, offset);
+                offset += chunk.length;
+              }
+
+              const fitFile = new File([decompressed.buffer], filename.replace(".gz", ""), {
+                type: "application/octet-stream",
+              });
+              const parsed = await parseGarminFit(fitFile);
+              allRows.push(...parsed);
+            } catch {
+              // arquivo .fit.gz inválido — ignorar e continuar
+            }
           } else if (lowerName.endsWith(".csv")) {
             const text = await zipEntry.async("string");
             const results = Papa.parse(text, { header: true, skipEmptyLines: true });
