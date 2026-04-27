@@ -491,18 +491,82 @@ export default function ProfPatientHealthSummary() {
 
           {/* ═══ TAB: RESUMO DE SAÚDE ═══ */}
           <TabsContent value="resumo" className="space-y-4 mt-4">
+            {/* Card de Score holístico do paciente (mesmo que aparece na visão dele) */}
+            {loadingGoals ? (
+              <Skeleton className="h-40 w-full rounded-lg" />
+            ) : healthData ? (
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+                    <ScoreCircleInsights score={healthData.score ?? 0} />
+                    <div className="min-w-0 flex-1 text-center sm:text-left">
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground">Score de Saúde</p>
+                      <p className="text-xl font-semibold mt-1" style={{ color: scoreColorInsights(healthData.score ?? 0) }}>
+                        {healthData.score_label || "—"}
+                      </p>
+                      {healthData.summary && (
+                        <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{healthData.summary}</p>
+                      )}
+                      {insightTs && (
+                        <p className="text-[11px] text-muted-foreground mt-2">
+                          Atualizado em {format(new Date(insightTs), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="p-6 text-center space-y-2">
+                  <Sparkles className="h-8 w-8 mx-auto text-muted-foreground/50" />
+                  <p className="text-sm font-medium text-foreground">Score de Saúde indisponível</p>
+                  <p className="text-xs text-muted-foreground">
+                    O paciente ainda não gerou a análise integrada de IA.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Marcadores principais (do insight integrado do paciente) */}
+            {!loadingGoals && healthData?.main_markers?.length ? (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FlaskConical className="h-4 w-4 text-primary" /> Marcadores principais
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {healthData.main_markers.map((m, i) => (
+                    <div key={i} className="flex items-center justify-between gap-2 py-1.5 border-b last:border-0">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{m.name}</p>
+                        <p className="text-xs text-muted-foreground">{m.value}</p>
+                      </div>
+                      <Badge variant="outline" className={`text-xs shrink-0 ${markerStatusClasses(m.status)}`}>
+                        {markerStatusLabel(m.status)}
+                      </Badge>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ) : null}
+
+            {/* ── Análise dos exames laboratoriais ── */}
             {loadingResumo ? (
               <div className="space-y-4">
                 <Skeleton className="h-28 w-full rounded-lg" />
                 <Skeleton className="h-40 w-full rounded-lg" />
-                <Skeleton className="h-24 w-full rounded-lg" />
               </div>
             ) : !analise ? (
               <Card>
-                <CardContent className="p-8 text-center space-y-3">
-                  <FileText className="h-12 w-12 mx-auto text-muted-foreground/50" />
-                  <p className="text-muted-foreground font-medium">Nenhum exame analisado ainda</p>
-                  <Button onClick={() => navigate(`/prof/paciente/${id}/documentos`)} className="gap-1">
+                <CardContent className="p-6 text-center space-y-2">
+                  <FileText className="h-10 w-10 mx-auto text-muted-foreground/50" />
+                  <p className="text-sm font-medium text-foreground">Nenhum exame laboratorial analisado</p>
+                  <p className="text-xs text-muted-foreground">
+                    Quando houver exames analisados, a análise clínica detalhada aparecerá aqui.
+                  </p>
+                  <Button variant="outline" size="sm" onClick={() => navigate(`/prof/paciente/${id}/documentos`)} className="gap-1 mt-2">
                     Ir para Exames <ArrowRight className="h-4 w-4" />
                   </Button>
                 </CardContent>
