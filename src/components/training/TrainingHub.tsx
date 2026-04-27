@@ -324,7 +324,7 @@ const parseGarminFit = (
             : new Date().toISOString().split("T")[0];
 
           const durationMin = s.total_timer_time ? Math.round(s.total_timer_time / 60) : null;
-          const distanceKm = s.total_distance ? Math.round((s.total_distance / 1000) * 100) / 100 : null;
+          const distanceKm = s.total_distance ? Math.round(s.total_distance * 100) / 100 : null;
           const pace = distanceKm && durationMin ? Math.round((durationMin / distanceKm) * 100) / 100 : null;
 
           return {
