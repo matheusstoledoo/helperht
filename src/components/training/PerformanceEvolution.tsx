@@ -241,6 +241,13 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
           }
         }
 
+        // Min/Max FC da semana (apenas atividades cardio com FC válida)
+        const fcRawValues = hrLogs
+          .map((l) => Number(l.avg_heart_rate))
+          .filter((v) => v > 0);
+        const fcMin = fcRawValues.length > 0 ? Math.min(...fcRawValues) : null;
+        const fcMax = fcRawValues.length > 0 ? Math.max(...fcRawValues) : null;
+
         // Pace médio semanal — exige distância > 0 e pace válido (< 20 min/km).
         // Nunca inclui musculação/força ou treinos sem distância.
         const paceLogs = weekLogs.filter((l) => {
@@ -262,13 +269,39 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
             ) / paceLogs.length
           : null;
 
+        // Min/Max Pace da semana — apenas corrida com pace fisiológico (3 < pace < 10)
+        const paceRawValues = paceLogs
+          .filter((l) => String(l.sport || "").toLowerCase() === "corrida")
+          .map(
+            (l) =>
+              Number(l.avg_pace_min_km) ||
+              (Number(l.avg_speed_kmh) > 0 ? 60 / Number(l.avg_speed_kmh) : 0)
+          )
+          .filter((v) => v > 3 && v < 10);
+        const paceMin = paceRawValues.length > 0 ? Math.min(...paceRawValues) : null;
+        const paceMax = paceRawValues.length > 0 ? Math.max(...paceRawValues) : null;
+
+        const round2 = (v: number) => Math.round(v * 100) / 100;
+
         return {
           label: format(parseISO(key), "dd/MM"),
           tss: Math.round(tssTotal),
           km: Math.round(kmTotal * 10) / 10,
-          avgPace: avgPace ? Math.round(avgPace * 100) / 100 : null,
+          avgPace: avgPace ? round2(avgPace) : null,
           avgPaceLabel: avgPace ? formatPace(avgPace) : "—",
           avgHr: avgHr ? Math.round(avgHr) : null,
+          fcMin: fcMin != null ? Math.round(fcMin) : null,
+          fcMax: fcMax != null ? Math.round(fcMax) : null,
+          fcBand:
+            fcMin != null && fcMax != null
+              ? ([Math.round(fcMin), Math.round(fcMax)] as [number, number])
+              : null,
+          paceMin: paceMin != null ? round2(paceMin) : null,
+          paceMax: paceMax != null ? round2(paceMax) : null,
+          paceBand:
+            paceMin != null && paceMax != null
+              ? ([round2(paceMin), round2(paceMax)] as [number, number])
+              : null,
           count: weekLogs.length,
         };
       });
