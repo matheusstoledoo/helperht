@@ -1001,12 +1001,41 @@ export default function PatientGoalsInsights() {
                               })}
                             </div>
                           )}
-                          {progress !== null && (
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-xs text-muted-foreground"><span>Progresso</span><span>{progress}%</span></div>
-                              <Progress value={progress} className="h-2" />
-                            </div>
-                          )}
+                          {goal.status === "ativo" && (() => {
+                            const dyn = goalProgress[goal.id];
+                            if (dyn?.available && dyn.pct !== null) {
+                              return (
+                                <div className="space-y-1 border-t pt-2">
+                                  <div className="flex justify-between text-xs text-muted-foreground">
+                                    <span>Progresso atual</span>
+                                    <span className="font-medium">{dyn.pct}%</span>
+                                  </div>
+                                  <Progress value={dyn.pct} className="h-2" />
+                                  <p className="text-[11px] text-muted-foreground">{dyn.label}</p>
+                                </div>
+                              );
+                            }
+                            // Sem dados — exibir estado vazio
+                            if (Object.keys(goal.target_metrics || {}).length > 0) {
+                              return (
+                                <div className="border-t pt-2">
+                                  <p className="text-[11px] text-muted-foreground italic">
+                                    Registre dados para acompanhar o progresso
+                                  </p>
+                                </div>
+                              );
+                            }
+                            // Tipo sem métrica — fallback ao cálculo manual antigo
+                            if (progress !== null) {
+                              return (
+                                <div className="space-y-1 border-t pt-2">
+                                  <div className="flex justify-between text-xs text-muted-foreground"><span>Progresso</span><span>{progress}%</span></div>
+                                  <Progress value={progress} className="h-2" />
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
                           <div className="flex items-center justify-between text-xs text-muted-foreground">
                             {goal.target_date && (<div className="flex items-center gap-1"><CalendarIcon className="h-3.5 w-3.5" /><span>Meta: {format(new Date(goal.target_date), "dd/MM/yyyy", { locale: ptBR })}</span></div>)}
                             {daysLeft !== null && daysLeft >= 0 && (<span className="font-medium">{daysLeft === 0 ? "Hoje!" : `${daysLeft} dias restantes`}</span>)}
