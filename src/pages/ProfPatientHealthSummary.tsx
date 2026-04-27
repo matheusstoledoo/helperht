@@ -315,12 +315,12 @@ export default function ProfPatientHealthSummary() {
 
     if (goalsRes.data) setGoals(goalsRes.data as unknown as PatientGoal[]);
 
-    // patient_insights.patient_id = auth.uid() do paciente
-    if (patientUserId) {
+    // patient_insights.patient_id = patients.id (UUID da tabela patients)
+    if (id) {
       const { data: latestInsight } = await supabase
         .from("patient_insights")
         .select("content, created_at")
-        .eq("patient_id", patientUserId)
+        .eq("patient_id", id)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
