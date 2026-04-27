@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Papa from "papaparse";
 import FitParser from "fit-file-parser";
+import JSZip from "jszip";
 import { differenceInDays, format, parseISO, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
@@ -557,6 +558,53 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
 
   const handleFile = async (file?: File) => {
     if (!file) return;
+
+    const isZip = file.name.toLowerCase().endsWith(".zip");
+
+    if (isZip) {
+      setParsingFile(true);
+      try {
+        const zip = await JSZip.loadAsync(file);
+        const allRows: ParsedRow[] = [];
+
+        for (const [filename, zipEntry] of Object.entries(zip.files)) {
+          if (zipEntry.dir) continue;
+          const lowerName = filename.toLowerCase();
+
+          if (lowerName.endsWith(".fit")) {
+            const buffer = await zipEntry.async("arraybuffer");
+            const fitFile = new File([buffer], filename, { type: "application/octet-stream" });
+            try {
+              const parsed = await parseGarminFit(fitFile);
+              allRows.push(...parsed);
+            } catch {
+              // arquivo .fit inválido dentro do ZIP — ignorar e continuar
+            }
+          } else if (lowerName.endsWith(".csv")) {
+            const text = await zipEntry.async("string");
+            const results = Papa.parse(text, { header: true, skipEmptyLines: true });
+            const parsed = (results.data as any[])
+              .filter((row) => Object.values(row).some((v) => v !== "" && v !== null))
+              .map((row) => (importTab === "garmin" ? parseGarminRow(row) : parseTrainingPeaksRow(row)))
+              .filter((row) => row.activity_date);
+            allRows.push(...parsed);
+          }
+        }
+
+        if (allRows.length === 0) {
+          toast.error("Nenhuma atividade encontrada no ZIP");
+        } else {
+          toast.success(`${allRows.length} atividade${allRows.length === 1 ? "" : "s"} carregada${allRows.length === 1 ? "" : "s"} do ZIP`);
+          setParsedRows(allRows);
+        }
+      } catch {
+        toast.error("Erro ao processar o arquivo ZIP");
+      }
+      if (fileRef.current) fileRef.current.value = "";
+      setParsingFile(false);
+      return;
+    }
+
     setParsingFile(true);
 
     const isGarmin = importTab === "garmin";
@@ -1211,7 +1259,7 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
                     <Input
                       ref={fileRef}
                       type="file"
-                      accept={importTab === "garmin" ? ".csv,.fit" : ".csv"}
+                      accept={importTab === "garmin" ? ".csv,.fit,.zip" : ".csv"}
                       onChange={(e) => handleFile(e.target.files?.[0])}
                       className="max-w-xs mx-auto"
                     />
