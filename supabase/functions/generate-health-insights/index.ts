@@ -929,13 +929,47 @@ ${evidenceSection}`;
       };
     }
 
-    return new Response(JSON.stringify({
+    const finalPayload = {
       ...parsed,
       score: healthScore.score,
       score_label: healthScore.score_label,
       domain_scores: healthScore.domain_scores,
       domain_details: healthScore.domain_details,
-    }), {
+    };
+
+    // Salvar snapshot em patient_insights para acesso do profissional
+    try {
+      // Deletar insights anteriores do paciente para manter apenas o mais recente
+      await supabase
+        .from("patient_insights")
+        .delete()
+        .eq("patient_id", user.id);
+
+      // Inserir novo snapshot (RLS exige patient_id = auth.uid())
+      await supabase
+        .from("patient_insights")
+        .insert({
+          patient_id: user.id,
+          title: "Análise Integrada de Saúde",
+          content: JSON.stringify(finalPayload),
+          priority_score: Math.max(1, Math.min(10, Math.round(((100 - (healthScore.score ?? 50)) / 10)) || 1)),
+          category: "correlacao_cruzada",
+          status: "ativo",
+          model_used: "google/gemini-2.5-flash",
+          prompt_version: "v2-goals-aware",
+          data_snapshot: {
+            generated_at: new Date().toISOString(),
+            score: healthScore.score,
+            score_label: healthScore.score_label,
+            domain_scores: healthScore.domain_scores,
+          },
+        });
+    } catch (saveError) {
+      console.error("Erro ao salvar patient_insights:", saveError);
+      // Não bloquear o retorno ao frontend se falhar
+    }
+
+    return new Response(JSON.stringify(finalPayload), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
