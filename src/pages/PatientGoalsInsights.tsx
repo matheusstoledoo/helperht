@@ -662,7 +662,26 @@ export default function PatientGoalsInsights() {
                           <ScoreCircle score={healthData.score ?? 0} />
                         </button>
                         <div className="min-w-0 flex-1 text-center sm:text-left">
-                          <p className="text-xs uppercase tracking-wider text-muted-foreground">Score de saúde</p>
+                          <div className="flex items-center justify-center sm:justify-between gap-2 flex-wrap">
+                            <p className="text-xs uppercase tracking-wider text-muted-foreground">Score de saúde</p>
+                            <div className="flex items-center gap-2">
+                              {analysisTs && (
+                                <span className="text-[11px] text-muted-foreground">
+                                  Atualizado {formatRelativeTime(analysisTs)}
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => { invalidateHealthCache(); fetchHealthData(true); }}
+                                disabled={healthRefreshing}
+                                className="h-6 w-6 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+                                title="Reanalisar"
+                                aria-label="Reanalisar"
+                              >
+                                <RefreshCw className={`h-3.5 w-3.5 ${healthRefreshing ? "animate-spin" : ""}`} />
+                              </button>
+                            </div>
+                          </div>
                           <p className="text-xl font-semibold text-foreground mt-1" style={{ color: scoreColor(healthData.score ?? 0) }}>
                             {healthData.score_label || "—"}
                           </p>
