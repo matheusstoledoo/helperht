@@ -339,17 +339,21 @@ const parseGarminFit = (
         }
 
         const name = (s.sport_profile_name || s.sport || "").toLowerCase();
-        const sport = name.includes("run") || name.includes("corrid")
+        const sport = name.includes("run") || name.includes("corrid") || name.includes("esteira") || name.includes("treadmill") || name.includes("trail")
           ? "corrida"
-          : name.includes("bike") || name.includes("ride") || name.includes("cicl")
+          : name.includes("bike") || name.includes("ride") || name.includes("cicl") || name.includes("cycling")
             ? "ciclismo"
             : name.includes("swim") || name.includes("nat")
               ? "natacao"
-              : name.includes("strength") || name.includes("força") || name.includes("gym")
+              : name.includes("strength") || name.includes("força") || name.includes("gym") || name.includes("weight") || name.includes("indoor")
                 ? "musculacao"
                 : name.includes("triathl")
                   ? "triatlo"
-                  : "outro";
+                  : name.includes("yoga") || name.includes("ioga") || name.includes("pilates")
+                    ? "yoga"
+                    : name.includes("functional") || name.includes("funcional") || name.includes("hiit") || name.includes("crossfit")
+                      ? "funcional"
+                      : "outro";
 
         const startTime = new Date(s.start_time);
         const activityDate = !Number.isNaN(startTime.getTime())
@@ -364,9 +368,12 @@ const parseGarminFit = (
           : null;
 
         // Nome real da atividade — usar workout name ou sport label, nunca "lap"
-        const workoutName = data.workout?.wkt_name || s.sport_profile_name || null;
-        const activityName = workoutName
-          ? String(workoutName)
+        const rawName = data.workout?.wkt_name || s.sport_profile_name || null;
+        const activityName = rawName
+          ? String(rawName)
+              .replace(/[^\x20-\x7E\u00C0-\u024F\u00À-\u00FF]/g, "")
+              .replace(/\s+/g, " ")
+              .trim() || (SPORT_LABELS[sport] || "Atividade")
           : (SPORT_LABELS[sport] || "Atividade");
 
         const row: ParsedRow = {
