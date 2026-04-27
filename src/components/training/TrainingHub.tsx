@@ -1280,6 +1280,43 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
         )}
       </section>
 
+      {hasGarminWithoutGps && onBackfillGps && (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-primary" />
+            <h3 className="text-base font-medium">Dados de GPS</h3>
+          </div>
+          <Card>
+            <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+              <div className="space-y-1 min-w-0">
+                <p className="text-sm font-medium">Extrair GPS de atividades anteriores</p>
+                <p className="text-xs text-muted-foreground">
+                  Recupera o percurso (mapa, FC, ritmo) de atividades já importadas do Garmin/Strava.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => onBackfillGps()}
+                disabled={backfillingGps}
+                className="shrink-0 w-full sm:w-auto"
+              >
+                {backfillingGps ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Extraindo...
+                  </>
+                ) : (
+                  <>
+                    <MapPin className="h-4 w-4 mr-2" />
+                    Extrair GPS
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
       <Sheet open={showImportSheet} onOpenChange={setShowImportSheet}>
         <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
           <SheetHeader>
