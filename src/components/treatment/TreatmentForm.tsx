@@ -88,6 +88,7 @@ export const TreatmentForm = ({ open, onOpenChange, patientId, existingTreatment
         toast.success("Tratamento adicionado com sucesso");
       }
 
+      markDataUpdated();
       onOpenChange(false);
       // Reset form
       setName("");
