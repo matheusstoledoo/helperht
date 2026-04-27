@@ -343,24 +343,30 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
     [weeklyData]
   );
 
-  // Domínio dinâmico do eixo Y para FC (margem de 15 bpm)
+  // Domínio dinâmico do eixo Y para FC (margem de 10 bpm, considera banda min/max)
   const hrDomain = useMemo<[number, number]>(() => {
-    const values = weeklyData
-      .map((w) => w.avgHr)
-      .filter((v): v is number => v != null && v > 0);
+    const values: number[] = [];
+    weeklyData.forEach((w) => {
+      if (w.avgHr != null && w.avgHr > 0) values.push(w.avgHr);
+      if (w.fcMin != null && w.fcMin > 0) values.push(w.fcMin);
+      if (w.fcMax != null && w.fcMax > 0) values.push(w.fcMax);
+    });
     if (values.length === 0) return [60, 200];
-    return [Math.floor(Math.min(...values) - 15), Math.ceil(Math.max(...values) + 15)];
+    return [Math.floor(Math.min(...values) - 10), Math.ceil(Math.max(...values) + 10)];
   }, [weeklyData]);
 
-  // Domínio dinâmico do eixo Y para Pace (margem de 0.5 min/km)
+  // Domínio dinâmico do eixo Y para Pace (margem de 0.5 min/km, considera banda min/max)
   const paceDomain = useMemo<[number, number]>(() => {
-    const values = weeklyData
-      .map((w) => w.avgPace)
-      .filter((v): v is number => v != null && v > 0);
+    const values: number[] = [];
+    weeklyData.forEach((w) => {
+      if (w.avgPace != null && w.avgPace > 0) values.push(w.avgPace);
+      if (w.paceMin != null && w.paceMin > 0) values.push(w.paceMin);
+      if (w.paceMax != null && w.paceMax > 0) values.push(w.paceMax);
+    });
     if (values.length === 0) return [2, 8];
     return [
-      Math.max(0, Math.min(...values) - 0.5),
-      Math.max(...values) + 0.5,
+      Math.max(0, Math.floor((Math.min(...values) - 0.5) * 10) / 10),
+      Math.ceil((Math.max(...values) + 0.5) * 10) / 10,
     ];
   }, [weeklyData]);
 
