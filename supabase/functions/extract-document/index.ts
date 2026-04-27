@@ -514,8 +514,12 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
-  } catch (error) {
-    console.error("Extract document error:", error);
+  } catch (error: any) {
+    console.error("extract-document ERRO:", {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+    });
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
