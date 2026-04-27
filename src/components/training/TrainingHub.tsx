@@ -619,12 +619,11 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
         const csvRows: ParsedRow[] = [];
 
         const pushFitResult = (
-          result: { rows: ParsedRow[]; gpsRecords: ParsedGpsRecord[] }
+          result: { row: ParsedRow | null; gpsRecords: ParsedGpsRecord[] }
         ) => {
-          // 1 FIT = 1 fluxo GPS; anexamos os mesmos gpsRecords à primeira sessão e [] às demais.
-          result.rows.forEach((row, idx) => {
-            fitResults.push({ row, gpsRecords: idx === 0 ? result.gpsRecords : [] });
-          });
+          // 1 FIT = 1 workout_log (apenas a session principal) + 1 fluxo GPS
+          const { row, gpsRecords } = result;
+          if (row) fitResults.push({ row, gpsRecords });
         };
 
         for (const [filename, zipEntry] of Object.entries(zip.files)) {
