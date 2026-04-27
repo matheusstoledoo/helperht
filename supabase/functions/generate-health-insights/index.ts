@@ -842,8 +842,24 @@ ${profRecsSection}
 METAS DE SAÚDE ATIVAS:
 ${goalsSection}
 
-OBJETIVOS ATIVOS DO PACIENTE (com métricas e linha de base):
+═══════════════════════════════════════════════════
+OBJETIVOS DE SAÚDE ATIVOS DO PACIENTE (PRIORIDADE MÁXIMA NA ANÁLISE):
 ${patientGoalsSection}
+
+INSTRUÇÃO OBRIGATÓRIA SOBRE OS OBJETIVOS ACIMA:
+Cada insight gerado DEVE indicar explicitamente, no campo "description",
+se APOIA, CONTRADIZ ou é NEUTRO em relação aos objetivos listados acima.
+Exemplos:
+- Se o paciente tem objetivo de "Perda de Peso" e os dados de nutrição mostram
+  excesso calórico ou poucos treinos cumpridos, mencione essa CONTRADIÇÃO
+  diretamente: "Este padrão alimentar contradiz seu objetivo de perda de peso..."
+- Se o paciente tem objetivo de "Performance Aeróbica" e o VO2max melhorou,
+  mencione o APOIO: "Esta evolução APOIA seu objetivo de performance aeróbica."
+- Quando um insight não se conectar a nenhum objetivo, marque como NEUTRO
+  em relação aos objetivos.
+Inclua sempre pelo menos 1 insight da categoria "meta" que conecte progresso
+ou obstáculos diretamente a um dos objetivos ativos do paciente.
+═══════════════════════════════════════════════════
 
 EVIDÊNCIAS CIENTÍFICAS RELEVANTES PARA OS OBJETIVOS DO PACIENTE:
 ${evidenceSection}`;

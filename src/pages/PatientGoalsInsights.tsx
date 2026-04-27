@@ -322,6 +322,14 @@ export default function PatientGoalsInsights() {
   const [formMetrics, setFormMetrics] = useState<Record<string, string>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  // Per-goal dynamic progress (calculado a partir de vital_signs / workout_logs / lab_results)
+  interface GoalProgress {
+    pct: number | null;     // 0-100, null se não calculável
+    label: string;          // "Último dado: 26/04" ou "VO2 atual 42 / meta 50"
+    available: boolean;     // se há dados suficientes
+  }
+  const [goalProgress, setGoalProgress] = useState<Record<string, GoalProgress>>({});
+
   // ── Unified health data state (single source for Resumo + Insights) ──
   const [healthData, setHealthData] = useState<HealthData | null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
@@ -389,6 +397,24 @@ export default function PatientGoalsInsights() {
         sessionStorage.setItem(healthCacheKey, JSON.stringify({ data, ts: now }));
       } catch { /* noop */ }
       if (user) markAnalysisGenerated(user.id, data);
+
+      // Persistir em patient_insights (RLS exige patient_id = auth.uid())
+      try {
+        const hd = data as HealthData;
+        await supabase.from("patient_insights").insert({
+          patient_id: user.id,
+          category: "correlacao_cruzada",
+          status: "ativo",
+          title: `Resumo de saúde — ${hd.score_label || "análise"} (${hd.score ?? 0}/100)`,
+          content: JSON.stringify(hd),
+          priority_score: Math.max(1, Math.min(10, Math.round(((100 - (hd.score ?? 50)) / 10)))),
+          data_snapshot: { source: "generate-health-insights", generated_at: new Date().toISOString() },
+          prompt_version: "v2-goals-aware",
+          model_used: "google/gemini-2.5-flash",
+        });
+      } catch (persistErr) {
+        console.warn("Não foi possível persistir insight:", persistErr);
+      }
     } catch (e: any) {
       // Se falhou mas temos dados antigos, manter os dados antigos sem mostrar erro
       if (!cachedData) {
@@ -442,20 +468,176 @@ export default function PatientGoalsInsights() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  // Bootstrap from localStorage to avoid loading screen on next open
+  // ── Indicador dinâmico de progresso por objetivo ──
+  // Mapeia tipos de marcador (chave do target_metrics) para nomes esperados em lab_results
+  const LAB_MARKER_ALIASES: Record<string, string[]> = {
+    pcr: ["pcr", "proteína c reativa", "proteina c reativa", "pcr-us"],
+    vo2max: ["vo2max", "vo2 max", "vo2"],
+    glicose_jejum: ["glicose", "glicemia", "glicose em jejum", "glicemia de jejum"],
+    hba1c: ["hba1c", "hemoglobina glicada", "hemoglobina a1c", "a1c"],
+    triglicerideos: ["triglicerídeos", "triglicerideos", "triglycerides"],
+    ldl: ["ldl", "ldl-c", "ldl colesterol", "colesterol ldl"],
+  };
+
+  useEffect(() => {
+    if (!user || !patientId || goals.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const activeGoals = goals.filter((g) => g.status === "ativo");
+      if (activeGoals.length === 0) return;
+
+      // Carregar fontes de dados em paralelo (apenas o necessário)
+      const fourWeeksAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+      const [vitalsRes, workoutsRes, labsRes] = await Promise.all([
+        supabase.from("vital_signs")
+          .select("type, weight, recorded_at")
+          .eq("patient_id", patientId)
+          .eq("type", "peso")
+          .order("recorded_at", { ascending: false })
+          .limit(1),
+        supabase.from("workout_logs")
+          .select("activity_date")
+          .eq("user_id", user.id)
+          .gte("activity_date", fourWeeksAgo),
+        supabase.from("lab_results")
+          .select("marker_name, value, collection_date")
+          .eq("user_id", user.id)
+          .order("collection_date", { ascending: false })
+          .limit(100),
+      ]);
+
+      if (cancelled) return;
+
+      const latestWeight = vitalsRes.data?.[0];
+      const workoutsCount = workoutsRes.data?.length || 0;
+      const labs = labsRes.data || [];
+
+      const map: Record<string, GoalProgress> = {};
+
+      for (const goal of activeGoals) {
+        const tm = goal.target_metrics || {};
+        const baselineLabs = (goal.baseline_snapshot?.lab_results || {}) as Record<string, any>;
+        const baselineWeight = goal.baseline_snapshot?.weight as number | undefined;
+        let progress: GoalProgress = { pct: null, label: "", available: false };
+
+        // 1) Objetivos de peso
+        if (
+          (goal.goal === "perda_de_peso" || goal.goal === "ganho_de_massa") &&
+          tm.peso_alvo != null &&
+          latestWeight?.weight != null
+        ) {
+          const baseW = baselineWeight ?? Number(latestWeight.weight);
+          const target = Number(tm.peso_alvo);
+          const current = Number(latestWeight.weight);
+          const totalDelta = target - baseW;
+          const currentDelta = current - baseW;
+          let pct = totalDelta !== 0 ? Math.round((currentDelta / totalDelta) * 100) : 0;
+          pct = Math.max(0, Math.min(100, pct));
+          progress = {
+            pct,
+            label: `Atual ${current}kg / meta ${target}kg · ${format(new Date(latestWeight.recorded_at), "dd/MM", { locale: ptBR })}`,
+            available: true,
+          };
+        }
+        // 2) Objetivos de atividade física (frequência semanal-alvo)
+        else if (
+          goal.goal === "performance_aerobica" || goal.goal === "performance_forca" || goal.goal === "bem_estar_geral"
+        ) {
+          // Meta: 4x/semana × 4 semanas = 16 treinos
+          const weeklyTarget = 4;
+          const targetTotal = weeklyTarget * 4;
+          const pct = Math.max(0, Math.min(100, Math.round((workoutsCount / targetTotal) * 100)));
+          if (workoutsCount > 0) {
+            progress = {
+              pct,
+              label: `${workoutsCount} treinos nas últimas 4 semanas (meta ${targetTotal})`,
+              available: true,
+            };
+          }
+        }
+
+        // 3) Objetivos de exames (LDL, HbA1c, glicose, etc.)
+        if (!progress.available) {
+          const metricKeys = Object.keys(tm);
+          for (const key of metricKeys) {
+            const aliases = LAB_MARKER_ALIASES[key];
+            if (!aliases) continue;
+            const lab = labs.find((l: any) =>
+              aliases.includes((l.marker_name || "").toLowerCase().trim())
+            );
+            if (lab && lab.value != null) {
+              const current = Number(lab.value);
+              const target = Number(tm[key]);
+              const baseline =
+                baselineLabs[lab.marker_name]?.value != null
+                  ? Number(baselineLabs[lab.marker_name].value)
+                  : current;
+              const totalDelta = target - baseline;
+              const currentDelta = current - baseline;
+              let pct =
+                totalDelta !== 0 ? Math.round((currentDelta / totalDelta) * 100) : current === target ? 100 : 0;
+              pct = Math.max(0, Math.min(100, pct));
+              progress = {
+                pct,
+                label: `${lab.marker_name}: ${current} / meta ${target} · ${format(new Date(lab.collection_date), "dd/MM", { locale: ptBR })}`,
+                available: true,
+              };
+              break;
+            }
+          }
+        }
+
+        map[goal.id] = progress;
+      }
+      if (!cancelled) setGoalProgress(map);
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id, patientId, goals]);
+
+
+  // Bootstrap from localStorage AND patient_insights table to avoid loading on next open
   useEffect(() => {
     if (!user) return;
-    const last = getLastAnalysis<HealthData>(user.id);
-    if (last) {
-      setHealthData(last.data);
-      setAnalysisTs(last.ts);
-      setHealthLoading(false);
-    }
-    const lastDataTs = getLastDataUpdate();
-    const lastAnalysisTs = getLastAnalysisTimestamp(user.id);
-    if (lastDataTs && (!lastAnalysisTs || lastDataTs > lastAnalysisTs)) {
-      setHasNewerData(true);
-    }
+    let cancelled = false;
+    (async () => {
+      // 1) localStorage (instantâneo)
+      const last = getLastAnalysis<HealthData>(user.id);
+      if (last && !cancelled) {
+        setHealthData(last.data);
+        setAnalysisTs(last.ts);
+        setHealthLoading(false);
+      }
+      // 2) Banco — busca o registro mais recente em patient_insights
+      try {
+        const { data: cachedInsight } = await supabase
+          .from("patient_insights")
+          .select("content, created_at")
+          .eq("patient_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (!cancelled && cachedInsight?.content) {
+          const dbTs = new Date(cachedInsight.created_at).getTime();
+          // Só sobrescreve se for mais recente que o que temos do localStorage
+          if (!last || dbTs > last.ts) {
+            try {
+              const parsed = JSON.parse(cachedInsight.content) as HealthData;
+              setHealthData(parsed);
+              setAnalysisTs(dbTs);
+              setHealthLoading(false);
+            } catch { /* conteúdo não é JSON — ignorar */ }
+          }
+        }
+      } catch { /* RLS/rede — ignorar, fluxo normal segue via fetchHealthData */ }
+
+      // 3) Verifica se houve dados novos desde o último insight
+      const lastDataTs = getLastDataUpdate();
+      const lastAnalysisTs = getLastAnalysisTimestamp(user.id);
+      if (!cancelled && lastDataTs && (!lastAnalysisTs || lastDataTs > lastAnalysisTs)) {
+        setHasNewerData(true);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [user?.id]);
 
   // Carregar health data apenas quando o usuário acessa as abas relevantes
@@ -819,12 +1001,41 @@ export default function PatientGoalsInsights() {
                               })}
                             </div>
                           )}
-                          {progress !== null && (
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-xs text-muted-foreground"><span>Progresso</span><span>{progress}%</span></div>
-                              <Progress value={progress} className="h-2" />
-                            </div>
-                          )}
+                          {goal.status === "ativo" && (() => {
+                            const dyn = goalProgress[goal.id];
+                            if (dyn?.available && dyn.pct !== null) {
+                              return (
+                                <div className="space-y-1 border-t pt-2">
+                                  <div className="flex justify-between text-xs text-muted-foreground">
+                                    <span>Progresso atual</span>
+                                    <span className="font-medium">{dyn.pct}%</span>
+                                  </div>
+                                  <Progress value={dyn.pct} className="h-2" />
+                                  <p className="text-[11px] text-muted-foreground">{dyn.label}</p>
+                                </div>
+                              );
+                            }
+                            // Sem dados — exibir estado vazio
+                            if (Object.keys(goal.target_metrics || {}).length > 0) {
+                              return (
+                                <div className="border-t pt-2">
+                                  <p className="text-[11px] text-muted-foreground italic">
+                                    Registre dados para acompanhar o progresso
+                                  </p>
+                                </div>
+                              );
+                            }
+                            // Tipo sem métrica — fallback ao cálculo manual antigo
+                            if (progress !== null) {
+                              return (
+                                <div className="space-y-1 border-t pt-2">
+                                  <div className="flex justify-between text-xs text-muted-foreground"><span>Progresso</span><span>{progress}%</span></div>
+                                  <Progress value={progress} className="h-2" />
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
                           <div className="flex items-center justify-between text-xs text-muted-foreground">
                             {goal.target_date && (<div className="flex items-center gap-1"><CalendarIcon className="h-3.5 w-3.5" /><span>Meta: {format(new Date(goal.target_date), "dd/MM/yyyy", { locale: ptBR })}</span></div>)}
                             {daysLeft !== null && daysLeft >= 0 && (<span className="font-medium">{daysLeft === 0 ? "Hoje!" : `${daysLeft} dias restantes`}</span>)}
@@ -847,6 +1058,37 @@ export default function PatientGoalsInsights() {
 
             {/* ═══ TAB: INSIGHTS ═══ */}
             <TabsContent value="insights" className="space-y-4 mt-4">
+              {hasNewerData && !bannerDismissed && healthData && !healthRefreshing && (
+                <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
+                  <CardContent className="p-3 flex items-center justify-between gap-3 flex-wrap">
+                    <p className="text-sm text-amber-900 dark:text-amber-200 flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 shrink-0" />
+                      Você registrou novos dados. Seus insights podem estar desatualizados.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setBannerDismissed(true)}>Ignorar</Button>
+                      <Button size="sm" onClick={() => { invalidateHealthCache(); fetchHealthData(true); }} className="gap-1">
+                        <RefreshCw className="h-3.5 w-3.5" /> Regenerar Insights
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              {healthData && analysisTs && !healthRefreshing && (
+                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground px-1">
+                  <span>
+                    Insights gerados em {format(new Date(analysisTs), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => { invalidateHealthCache(); fetchHealthData(true); }}
+                    className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                    title="Atualizar"
+                  >
+                    <RefreshCw className="h-3 w-3" /> Atualizar
+                  </button>
+                </div>
+              )}
               {healthRefreshing && healthData && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
                   <Loader2 className="h-3 w-3 animate-spin" />
