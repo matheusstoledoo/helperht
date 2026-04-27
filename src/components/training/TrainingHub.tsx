@@ -281,6 +281,11 @@ type ParsedGpsRecord = {
   distance_km: number | null;
 };
 
+interface FitResult {
+  row: ParsedRow;
+  gpsRecords: ParsedGpsRecord[];
+}
+
 const parseGarminFit = (
   file: File
 ): Promise<{ rows: ParsedRow[]; gpsRecords: ParsedGpsRecord[] }> => {
