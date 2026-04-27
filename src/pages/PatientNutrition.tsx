@@ -16,6 +16,7 @@ import {
   ChevronUp,
   Pill,
   Trash2,
+  Pencil,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -369,27 +370,45 @@ export default function PatientNutrition() {
     <div key={plan.id} className="space-y-4">
       <Card>
         <CardContent className="p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Badge variant={isActive ? "default" : "secondary"}>
-                  {isActive ? "Ativo" : "Encerrado"}
-                </Badge>
-                {plan.start_date && (
-                  <span className="text-xs text-muted-foreground">
-                    {format(new Date(plan.start_date), "dd/MM/yyyy", { locale: ptBR })}
-                    {plan.end_date && ` — ${format(new Date(plan.end_date), "dd/MM/yyyy", { locale: ptBR })}`}
-                  </span>
-                )}
-              </div>
-              {plan.professional_name && (
-                <p className="text-sm text-foreground font-medium">{plan.professional_name}</p>
-              )}
-              {plan.professional_registry && (
-                <p className="text-xs text-muted-foreground">{plan.professional_registry}</p>
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <Badge variant={isActive ? "default" : "secondary"}>
+                {isActive ? "Ativo" : "Encerrado"}
+              </Badge>
+              {plan.start_date && (
+                <span className="text-xs text-muted-foreground">
+                  {format(new Date(plan.start_date), "dd/MM/yyyy", { locale: ptBR })}
+                  {plan.end_date && ` — ${format(new Date(plan.end_date), "dd/MM/yyyy", { locale: ptBR })}`}
+                </span>
               )}
             </div>
+            {isActive && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setEditingPlan(plan)}
+                  className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                  title="Editar plano"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  title="Excluir plano"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
           </div>
+          {plan.professional_name && (
+            <p className="text-sm text-foreground font-medium">{plan.professional_name}</p>
+          )}
+          {plan.professional_registry && (
+            <p className="text-xs text-muted-foreground">{plan.professional_registry}</p>
+          )}
           {plan.observations && <p className="text-sm text-muted-foreground mt-3">{plan.observations}</p>}
           {plan.restrictions && plan.restrictions.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1">
@@ -401,27 +420,6 @@ export default function PatientNutrition() {
             </div>
           )}
         </CardContent>
-        {isActive && (
-          <div className="px-4 pb-4">
-            <div className="flex gap-2 pt-3 border-t">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setEditingPlan(plan)}
-              >
-                Editar plano
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={() => setShowDeleteConfirm(true)}
-              >
-                Excluir plano
-              </Button>
-            </div>
-          </div>
-        )}
       </Card>
       {isActive && renderMacros(plan)}
       {isActive && renderMeals(plan)}
