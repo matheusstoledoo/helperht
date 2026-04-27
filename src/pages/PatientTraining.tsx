@@ -108,7 +108,7 @@ export default function PatientTraining() {
       const todayLog = (rLogsRes.data || []).find((r: any) => r.log_date === today);
       setTodayRecovery(todayLog || null);
 
-      // Verificar se há logs Garmin sem GPS
+      // Mostrar botão sempre que houver qualquer atividade Garmin
       const { data: garminLogs } = await supabase
         .from("workout_logs")
         .select("id")
@@ -116,15 +116,7 @@ export default function PatientTraining() {
         .eq("source", "garmin")
         .limit(50);
 
-      if (garminLogs && garminLogs.length > 0) {
-        const logIds = garminLogs.map((l: any) => l.id);
-        const { data: recordsWithGps } = await (supabase.from("workout_records") as any)
-          .select("workout_log_id")
-          .in("workout_log_id", logIds)
-          .not("lat", "is", null)
-          .limit(1);
-        setHasGarminWithoutGps(!recordsWithGps || recordsWithGps.length < garminLogs.length);
-      }
+      setHasGarminWithoutGps((garminLogs?.length ?? 0) > 0);
 
       setLoading(false);
     };
