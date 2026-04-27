@@ -288,7 +288,7 @@ interface FitResult {
 
 const parseGarminFit = (
   file: File
-): Promise<{ rows: ParsedRow[]; gpsRecords: ParsedGpsRecord[] }> => {
+): Promise<{ row: ParsedRow | null; gpsRecords: ParsedGpsRecord[] }> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -307,51 +307,6 @@ const parseGarminFit = (
           reject(err);
           return;
         }
-
-        const sessions = data.sessions || data.activity?.sessions || [];
-        const rows: ParsedRow[] = sessions.map((s: any) => {
-          const name = (s.sport_profile_name || s.sport || "").toLowerCase();
-          const sport = name.includes("run") || name.includes("corrid")
-            ? "corrida"
-            : name.includes("bike") || name.includes("ride") || name.includes("cicl")
-              ? "ciclismo"
-              : name.includes("swim") || name.includes("nat")
-                ? "natacao"
-                : name.includes("strength") || name.includes("força") || name.includes("gym")
-                  ? "musculacao"
-                  : name.includes("triathl")
-                    ? "triatlo"
-                    : "outro";
-
-          const startTime = new Date(s.start_time);
-          const activityDate = !Number.isNaN(startTime.getTime())
-            ? startTime.toISOString().split("T")[0]
-            : new Date().toISOString().split("T")[0];
-
-          const durationMin = s.total_timer_time ? Math.round(s.total_timer_time / 60) : null;
-          const distanceKm = s.total_distance ? Math.round(s.total_distance * 100) / 100 : null;
-          const pace = distanceKm && durationMin ? Math.round((durationMin / distanceKm) * 100) / 100 : null;
-
-          return {
-            activity_name: s.event ? `${SPORT_LABELS[sport] || "Atividade"} ${s.event}` : null,
-            sport,
-            activity_date: activityDate,
-            duration_minutes: durationMin,
-            planned_duration_minutes: null,
-            distance_km: distanceKm,
-            tss: s.training_stress_score ?? null,
-            intensity_factor: s.intensity_factor ?? null,
-            avg_heart_rate: s.avg_heart_rate ?? null,
-            max_heart_rate: s.max_heart_rate ?? null,
-            calories: s.total_calories ?? null,
-            elevation_gain_m: s.total_ascent ?? null,
-            avg_pace_min_km: pace,
-            notes: null,
-            perceived_effort: null,
-            compliance_pct: null,
-            srpe: null,
-          };
-        });
 
         // Extrair records ponto-a-ponto com GPS
         const fitRecords = data.records || data.activity?.records || [];
@@ -373,10 +328,59 @@ const parseGarminFit = (
               r.distance != null ? Math.round(Number(r.distance) * 100) / 100 : null,
           }));
 
-        resolve({
-          rows: rows.filter((row) => row.activity_date),
-          gpsRecords,
-        });
+        const sessions = data.sessions || data.activity?.sessions || [];
+
+        // Usar apenas a primeira sessão (session principal da atividade).
+        // Arquivos .fit do Garmin sempre têm 1 sessão por arquivo.
+        const s = sessions[0];
+        if (!s) {
+          resolve({ row: null, gpsRecords: [] });
+          return;
+        }
+
+        const name = (s.sport_profile_name || s.sport || "").toLowerCase();
+        const sport = name.includes("run") || name.includes("corrid")
+          ? "corrida"
+          : name.includes("bike") || name.includes("ride") || name.includes("cicl")
+            ? "ciclismo"
+            : name.includes("swim") || name.includes("nat")
+              ? "natacao"
+              : name.includes("strength") || name.includes("força") || name.includes("gym")
+                ? "musculacao"
+                : name.includes("triathl")
+                  ? "triatlo"
+                  : "outro";
+
+        const startTime = new Date(s.start_time);
+        const activityDate = !Number.isNaN(startTime.getTime())
+          ? startTime.toISOString().split("T")[0]
+          : new Date().toISOString().split("T")[0];
+
+        const durationMin = s.total_timer_time ? Math.round(s.total_timer_time / 60) : null;
+        const distanceKm = s.total_distance ? Math.round(s.total_distance * 100) / 100 : null;
+        const pace = distanceKm && durationMin ? Math.round((durationMin / distanceKm) * 100) / 100 : null;
+
+        const row: ParsedRow = {
+          activity_name: s.event ? `${SPORT_LABELS[sport] || "Atividade"} ${s.event}` : null,
+          sport,
+          activity_date: activityDate,
+          duration_minutes: durationMin,
+          planned_duration_minutes: null,
+          distance_km: distanceKm,
+          tss: s.training_stress_score ?? null,
+          intensity_factor: s.intensity_factor ?? null,
+          avg_heart_rate: s.avg_heart_rate ?? null,
+          max_heart_rate: s.max_heart_rate ?? null,
+          calories: s.total_calories ?? null,
+          elevation_gain_m: s.total_ascent ?? null,
+          avg_pace_min_km: pace,
+          notes: null,
+          perceived_effort: null,
+          compliance_pct: null,
+          srpe: null,
+        };
+
+        resolve({ row, gpsRecords });
       });
     };
 
