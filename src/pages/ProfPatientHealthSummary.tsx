@@ -315,33 +315,20 @@ export default function ProfPatientHealthSummary() {
 
     if (goalsRes.data) setGoals(goalsRes.data as unknown as PatientGoal[]);
 
-    // patient_insights.patient_id = auth.uid() do paciente
-    if (patientUserId) {
+    // patient_insights.patient_id = patients.id (UUID da tabela patients)
+    if (id) {
       const { data: latestInsight } = await supabase
         .from("patient_insights")
-        .select("content, priority_score, created_at")
-        .eq("patient_id", patientUserId)
+        .select("content, created_at")
+        .eq("patient_id", id)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (latestInsight?.content) {
         try {
-          const parsed = JSON.parse(latestInsight.content) as Partial<HealthData>;
-          const resolvedScore =
-            typeof parsed.score === "number"
-              ? parsed.score
-              : typeof latestInsight.priority_score === "number"
-                ? latestInsight.priority_score
-                : 0;
-          setHealthData({
-            score: resolvedScore,
-            score_label: parsed.score_label || scoreLabelFromValue(resolvedScore),
-            summary: parsed.summary || "",
-            main_markers: parsed.main_markers || [],
-            priorities: parsed.priorities || [],
-            insights: parsed.insights || [],
-          });
+          const parsed = JSON.parse(latestInsight.content) as HealthData;
+          setHealthData(parsed);
           setInsightTs(new Date(latestInsight.created_at).getTime());
         } catch {
           setHealthData(null);

@@ -316,12 +316,7 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(
-        JSON.stringify({ error: "Sessão expirada. Faça login novamente." }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    if (!authHeader) throw new Error("Missing authorization");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -330,13 +325,7 @@ serve(async (req) => {
     });
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      console.error("Auth failed:", authError?.message);
-      return new Response(
-        JSON.stringify({ error: "Sessão expirada. Faça login novamente." }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    if (authError || !user) throw new Error("Unauthorized");
 
     // Resolve patientId first (needed by most queries). Single small query.
     const patientPreRes = await supabase
@@ -954,13 +943,13 @@ ${evidenceSection}`;
       await supabase
         .from("patient_insights")
         .delete()
-        .eq("patient_id", patientId);
+        .eq("patient_id", user.id);
 
       // Inserir novo snapshot (RLS exige patient_id = auth.uid())
       await supabase
         .from("patient_insights")
         .insert({
-          patient_id: patientId,
+          patient_id: user.id,
           title: "Análise Integrada de Saúde",
           content: JSON.stringify(finalPayload),
           priority_score: Math.max(1, Math.min(10, Math.round(((100 - (healthScore.score ?? 50)) / 10)) || 1)),
