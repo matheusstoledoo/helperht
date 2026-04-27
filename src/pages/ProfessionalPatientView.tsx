@@ -497,20 +497,34 @@ const ProfessionalPatientView = () => {
           <div>
             <h3 className="text-lg font-semibold mb-3 sm:mb-4">Atalhos</h3>
             <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-              {/* 1. Resumo de Saúde */}
-              <Card
-                className="cursor-pointer hover:bg-accent/50 transition-colors"
-                onClick={() => navigate(`${basePath}/resumo`)}
-              >
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+              {/* 1. Saúde & Objetivos (unificado: Resumo de Saúde + Objetivos & Insights) */}
+              <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center gap-2">
                     <Heart className="h-5 w-5 text-primary shrink-0" />
-                    <div>
-                      <p className="font-medium text-sm">Resumo de Saúde</p>
-                      <p className="text-xs text-muted-foreground">Visão geral</p>
-                    </div>
+                    <p className="font-medium text-sm">Saúde & Objetivos</p>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`${basePath}/resumo?tab=resumo`)}
+                      className="w-full flex items-center justify-between text-left rounded-md px-2 py-1.5 hover:bg-muted/60 transition-colors"
+                    >
+                      <span className="text-xs text-foreground">Resumo de Saúde</span>
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`${basePath}/resumo?tab=objetivos`)}
+                      className="w-full flex items-center justify-between text-left rounded-md px-2 py-1.5 hover:bg-muted/60 transition-colors"
+                    >
+                      <span className="text-xs text-foreground flex items-center gap-1.5">
+                        <Target className="h-3 w-3 text-muted-foreground" />
+                        Objetivos & Insights
+                      </span>
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    </button>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -616,22 +630,7 @@ const ProfessionalPatientView = () => {
                 </CardContent>
               </Card>
 
-              {/* 8. Objetivos & Insights */}
-              <Card
-                className="cursor-pointer hover:bg-accent/50 transition-colors"
-                onClick={() => navigate(`${basePath}/resumo`)}
-              >
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Target className="h-5 w-5 text-primary shrink-0" />
-                    <div>
-                      <p className="font-medium text-sm">Objetivos & Insights</p>
-                      <p className="text-xs text-muted-foreground">{goalCount} ativo{goalCount !== 1 ? "s" : ""}</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                </CardContent>
-              </Card>
+              {/* Objetivos & Insights agora está unificado dentro de "Saúde & Objetivos" acima */}
             </div>
           </div>
 
