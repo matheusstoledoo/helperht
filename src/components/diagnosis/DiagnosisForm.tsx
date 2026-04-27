@@ -112,6 +112,7 @@ export const DiagnosisForm = ({ open, onOpenChange, patientId, existingDiagnosis
         toast.success("Diagnóstico adicionado com sucesso");
       }
 
+      markDataUpdated();
       onOpenChange(false);
       // Reset form
       setName("");
