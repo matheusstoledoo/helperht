@@ -309,6 +309,27 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
     [weeklyData]
   );
 
+  // Domínio dinâmico do eixo Y para FC (margem de 15 bpm)
+  const hrDomain = useMemo<[number, number]>(() => {
+    const values = weeklyData
+      .map((w) => w.avgHr)
+      .filter((v): v is number => v != null && v > 0);
+    if (values.length === 0) return [60, 200];
+    return [Math.floor(Math.min(...values) - 15), Math.ceil(Math.max(...values) + 15)];
+  }, [weeklyData]);
+
+  // Domínio dinâmico do eixo Y para Pace (margem de 0.5 min/km)
+  const paceDomain = useMemo<[number, number]>(() => {
+    const values = weeklyData
+      .map((w) => w.avgPace)
+      .filter((v): v is number => v != null && v > 0);
+    if (values.length === 0) return [2, 8];
+    return [
+      Math.max(0, Math.min(...values) - 0.5),
+      Math.max(...values) + 0.5,
+    ];
+  }, [weeklyData]);
+
   // Aerobic Efficiency
   const aerobicEfficiency = useMemo(() => {
     return logs
