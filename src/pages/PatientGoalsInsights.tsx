@@ -328,6 +328,9 @@ export default function PatientGoalsInsights() {
   const [healthRefreshing, setHealthRefreshing] = useState(false);
   const [healthError, setHealthError] = useState<string | null>(null);
   const [showScoreDialog, setShowScoreDialog] = useState(false);
+  const [analysisTs, setAnalysisTs] = useState<number | null>(null);
+  const [hasNewerData, setHasNewerData] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
