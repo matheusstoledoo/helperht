@@ -442,6 +442,22 @@ export default function PatientGoalsInsights() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  // Bootstrap from localStorage to avoid loading screen on next open
+  useEffect(() => {
+    if (!user) return;
+    const last = getLastAnalysis<HealthData>(user.id);
+    if (last) {
+      setHealthData(last.data);
+      setAnalysisTs(last.ts);
+      setHealthLoading(false);
+    }
+    const lastDataTs = getLastDataUpdate();
+    const lastAnalysisTs = getLastAnalysisTimestamp(user.id);
+    if (lastDataTs && (!lastAnalysisTs || lastDataTs > lastAnalysisTs)) {
+      setHasNewerData(true);
+    }
+  }, [user?.id]);
+
   // Carregar health data apenas quando o usuário acessa as abas relevantes
   useEffect(() => {
     if (user && (activeTab === "resumo" || activeTab === "insights")) {
@@ -449,6 +465,21 @@ export default function PatientGoalsInsights() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, activeTab]);
+
+  // Re-check freshness on tab focus
+  useEffect(() => {
+    const onFocus = () => {
+      if (!user) return;
+      const lastDataTs = getLastDataUpdate();
+      const lastAnalysisTs = getLastAnalysisTimestamp(user.id);
+      if (lastDataTs && (!lastAnalysisTs || lastDataTs > lastAnalysisTs)) {
+        setHasNewerData(true);
+        setBannerDismissed(false);
+      }
+    };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [user?.id]);
 
   const buildBaselineSnapshot = async (): Promise<Record<string, any>> => {
     if (!user || !patientId) return {};
