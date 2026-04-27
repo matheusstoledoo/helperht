@@ -38,6 +38,7 @@ import { FloatingUploadButton } from "@/components/documents/FloatingUploadButto
 import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import SupplementsLog from "@/components/nutrition/SupplementsLog";
 import ManualNutritionPlanForm from "@/components/nutrition/ManualNutritionPlanForm";
+import { markDataUpdated } from "@/lib/healthDataEvents";
 
 interface NutritionPlan {
   id: string;
