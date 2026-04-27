@@ -588,7 +588,7 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
               const writer = ds.writable.getWriter();
               const reader = ds.readable.getReader();
 
-              writer.write(compressedBuffer);
+              writer.write(compressedBuffer as unknown as Uint8Array);
               writer.close();
 
               const chunks: Uint8Array[] = [];
