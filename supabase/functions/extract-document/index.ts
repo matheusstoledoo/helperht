@@ -56,20 +56,46 @@ async function callClaude(
   systemPrompt: string,
   attempt = 1
 ): Promise<any> {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "claude-opus-4-6",
-      max_tokens: 4000,
-      system: systemPrompt,
-      messages,
-    }),
+  const model = "claude-opus-4-6";
+  const bodyStr = JSON.stringify({
+    model,
+    max_tokens: 4000,
+    system: systemPrompt,
+    messages,
   });
+
+  console.log("chamando Claude API", {
+    model,
+    contentLength: bodyStr.length,
+    attempt,
+  });
+
+  // Timeout explícito de 90s para PDFs com múltiplas páginas
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 90000);
+
+  let response: Response;
+  try {
+    response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: bodyStr,
+    });
+  } catch (fetchErr: any) {
+    clearTimeout(timeoutId);
+    if (fetchErr?.name === "AbortError") {
+      throw new Error("Claude API timeout após 90 segundos");
+    }
+    throw fetchErr;
+  }
+  clearTimeout(timeoutId);
+
+  console.log("resposta Claude recebida", { status: response.status });
 
   if (!response.ok) {
     const err = await response.text();
