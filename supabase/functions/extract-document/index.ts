@@ -426,6 +426,8 @@ serve(async (req) => {
           };
         });
 
+      console.log("inserindo lab_results", { count: labRows.length });
+
       if (labRows.length > 0) {
         const { error: labError } = await supabase
           .from("lab_results")
