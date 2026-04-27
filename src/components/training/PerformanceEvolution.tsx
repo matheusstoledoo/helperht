@@ -216,11 +216,12 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
           .filter((l) => Number(l.distance_km) > 0)
           .reduce((s, l) => s + Number(l.distance_km), 0);
 
-        // FC média semanal — exclui musculação/força, valida faixa fisiológica,
+        // FC média semanal — apenas esportes cardio, valida faixa fisiológica,
         // e pondera pela duração do treino quando disponível.
+        const cardioSports = ["corrida", "ciclismo", "natacao", "triatlo", "outro"];
         const hrLogs = weekLogs.filter((l) => {
           const sportLower = String(l.sport || "").toLowerCase();
-          if (sportLower === "musculacao" || sportLower === "forca" || sportLower === "força") return false;
+          if (!cardioSports.includes(sportLower)) return false;
           const hr = Number(l.avg_heart_rate);
           return hr > 0 && hr < 220;
         });
@@ -307,6 +308,27 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
       ),
     [weeklyData]
   );
+
+  // Domínio dinâmico do eixo Y para FC (margem de 15 bpm)
+  const hrDomain = useMemo<[number, number]>(() => {
+    const values = weeklyData
+      .map((w) => w.avgHr)
+      .filter((v): v is number => v != null && v > 0);
+    if (values.length === 0) return [60, 200];
+    return [Math.floor(Math.min(...values) - 15), Math.ceil(Math.max(...values) + 15)];
+  }, [weeklyData]);
+
+  // Domínio dinâmico do eixo Y para Pace (margem de 0.5 min/km)
+  const paceDomain = useMemo<[number, number]>(() => {
+    const values = weeklyData
+      .map((w) => w.avgPace)
+      .filter((v): v is number => v != null && v > 0);
+    if (values.length === 0) return [2, 8];
+    return [
+      Math.max(0, Math.min(...values) - 0.5),
+      Math.max(...values) + 0.5,
+    ];
+  }, [weeklyData]);
 
   // Aerobic Efficiency
   const aerobicEfficiency = useMemo(() => {
@@ -565,6 +587,7 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
                     <YAxis
                       tick={{ fontSize: 11 }}
                       reversed
+                      domain={paceDomain}
                       tickFormatter={(v) => formatPace(v)}
                     />
                     <Tooltip
@@ -595,7 +618,7 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
                   <LineChart data={weeklyData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
                     <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} domain={hrDomain} />
                     <Tooltip />
                     <Line
                       type="monotone"
