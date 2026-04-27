@@ -725,10 +725,11 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
 
     try {
       if (isFit && isGarmin) {
-        const { rows: parsed, gpsRecords } = await parseGarminFit(file);
+        const { row, gpsRecords } = await parseGarminFit(file);
+        const parsed = row ? [row] : [];
         setParsedRows(parsed);
-        // 1 FIT = 1 fluxo GPS; alinhamos com a primeira sessão.
-        setGpsRecordsBySession(parsed.map((_, idx) => (idx === 0 ? gpsRecords : [])));
+        // 1 FIT = 1 workout_log + 1 fluxo GPS associado à única session.
+        setGpsRecordsBySession(parsed.map(() => gpsRecords));
         const gpsSuffix = gpsRecords.length > 0 ? ` · ${gpsRecords.length} pontos GPS` : "";
         toast.success(`${parsed.length} atividade${parsed.length === 1 ? "" : "s"} carregada${parsed.length === 1 ? "" : "s"}${gpsSuffix}`);
       } else {
