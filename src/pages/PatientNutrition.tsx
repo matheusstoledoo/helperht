@@ -168,6 +168,7 @@ export default function PatientNutrition() {
         .single();
       if (newLog) setMealLogs((prev) => [...prev, newLog]);
     }
+    markDataUpdated();
     setTogglingMeal(null);
   };
 
