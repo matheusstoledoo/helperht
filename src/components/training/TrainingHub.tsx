@@ -726,7 +726,8 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
         setParsedRows(parsed);
         // 1 FIT = 1 fluxo GPS; alinhamos com a primeira sessão.
         setGpsRecordsBySession(parsed.map((_, idx) => (idx === 0 ? gpsRecords : [])));
-        toast.success(`${parsed.length} atividade${parsed.length === 1 ? "" : "s"} carregada${parsed.length === 1 ? "" : "s"}`);
+        const gpsSuffix = gpsRecords.length > 0 ? ` · ${gpsRecords.length} pontos GPS` : "";
+        toast.success(`${parsed.length} atividade${parsed.length === 1 ? "" : "s"} carregada${parsed.length === 1 ? "" : "s"}${gpsSuffix}`);
       } else {
         Papa.parse(file, {
           header: true,
