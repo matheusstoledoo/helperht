@@ -237,6 +237,13 @@ serve(async (req) => {
   try {
     const { document_id, file_path, file_type, category_hint } = await req.json();
 
+    console.log("extract-document iniciado", {
+      documentId: document_id,
+      filePath: file_path,
+      fileType: file_type,
+      category: category_hint,
+    });
+
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
 
@@ -256,15 +263,19 @@ serve(async (req) => {
       .download(file_path);
 
     if (downloadError || !fileData) {
+      console.error("Erro ao baixar arquivo do storage:", {
+        filePath: file_path,
+        error: downloadError,
+      });
       await supabase
         .from("document_extractions")
         .update({
           extraction_status: "failed",
-          error_message: "Não foi possível acessar o arquivo no armazenamento.",
+          error_message: `Não foi possível acessar o arquivo no armazenamento: ${downloadError?.message ?? "arquivo não encontrado"}`,
         })
         .eq("document_id", document_id);
       return new Response(
-        JSON.stringify({ error: "Failed to download file" }),
+        JSON.stringify({ error: "Failed to download file", details: downloadError?.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -274,7 +285,12 @@ serve(async (req) => {
     const base64Data = base64Encode(arrayBuffer);
     const mimeType = file_type || "application/octet-stream";
 
-    console.log(`Arquivo: ${file_path}, tamanho: ${uint8Array.length} bytes, tipo: ${mimeType}`);
+    console.log("documento encontrado", {
+      filePath: file_path,
+      fileSize: uint8Array.length,
+      mimeType,
+      base64Length: base64Data.length,
+    });
 
     // Monta o conteúdo para o Claude conforme o tipo de arquivo
     let userContent: any[];
