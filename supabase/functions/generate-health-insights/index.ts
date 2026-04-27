@@ -939,17 +939,21 @@ ${evidenceSection}`;
 
     // Salvar snapshot em patient_insights para acesso do profissional
     try {
-      // Deletar insights anteriores do paciente para manter apenas o mais recente
-      await supabase
+      // Usar service role para bypassar RLS no insert
+      const supabaseAdmin = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+
+      await supabaseAdmin
         .from("patient_insights")
         .delete()
-        .eq("patient_id", user.id);
+        .eq("patient_id", patientId);
 
-      // Inserir novo snapshot (RLS exige patient_id = auth.uid())
-      await supabase
+      await supabaseAdmin
         .from("patient_insights")
         .insert({
-          patient_id: user.id,
+          patient_id: patientId,
           title: "Análise Integrada de Saúde",
           content: JSON.stringify(finalPayload),
           priority_score: Math.max(1, Math.min(10, Math.round(((100 - (healthScore.score ?? 50)) / 10)) || 1)),
@@ -966,7 +970,6 @@ ${evidenceSection}`;
         });
     } catch (saveError) {
       console.error("Erro ao salvar patient_insights:", saveError);
-      // Não bloquear o retorno ao frontend se falhar
     }
 
     return new Response(JSON.stringify(finalPayload), {
