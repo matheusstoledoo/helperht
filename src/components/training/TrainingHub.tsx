@@ -397,6 +397,8 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
   const [showSessions, setShowSessions] = useState(false);
   const [importTab, setImportTab] = useState<"menu" | "trainingpeaks" | "garmin" | "manual">("menu");
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
+  // GPS records por sessão importada (alinhado por índice com parsedRows oriundos de .fit)
+  const [gpsRecordsBySession, setGpsRecordsBySession] = useState<ParsedGpsRecord[][]>([]);
   const [parsingFile, setParsingFile] = useState(false);
   const [importingRows, setImportingRows] = useState(false);
   const [workoutType, setWorkoutType] = useState("musculacao");
