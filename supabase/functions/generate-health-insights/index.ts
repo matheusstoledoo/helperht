@@ -954,13 +954,13 @@ ${evidenceSection}`;
       await supabase
         .from("patient_insights")
         .delete()
-        .eq("patient_id", user.id);
+        .eq("patient_id", patientId);
 
       // Inserir novo snapshot (RLS exige patient_id = auth.uid())
       await supabase
         .from("patient_insights")
         .insert({
-          patient_id: user.id,
+          patient_id: patientId,
           title: "Análise Integrada de Saúde",
           content: JSON.stringify(finalPayload),
           priority_score: Math.max(1, Math.min(10, Math.round(((100 - (healthScore.score ?? 50)) / 10)) || 1)),
