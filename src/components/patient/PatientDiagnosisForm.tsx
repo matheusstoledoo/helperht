@@ -51,6 +51,7 @@ export function PatientDiagnosisForm({ patientId, onCreated }: Props) {
       return;
     }
     toast.success("Diagnóstico cadastrado!");
+    markDataUpdated();
     setName("");
     setIcdCode("");
     setDate(new Date().toISOString().split("T")[0]);
