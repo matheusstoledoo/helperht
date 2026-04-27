@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { markDataUpdated, markAnalysisGenerated, getLastAnalysis, getLastAnalysisTimestamp, getLastDataUpdate, formatRelativeTime } from "@/lib/healthDataEvents";
 
 // ── Goal types & config ──
 
