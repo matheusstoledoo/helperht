@@ -460,10 +460,10 @@ export default function ProfPatientHealthSummary() {
             <BreadcrumbSeparator />
             <BreadcrumbItem><BreadcrumbLink href={`/prof/paciente/${id}`}>{patientName}</BreadcrumbLink></BreadcrumbItem>
             <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbPage>Saúde & Objetivos</BreadcrumbPage></BreadcrumbItem>
+            <BreadcrumbItem><BreadcrumbPage>Saúde e Objetivos</BreadcrumbPage></BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
-        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Saúde & Objetivos</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Saúde e Objetivos</h1>
         <p className="text-sm text-muted-foreground">Visão integrada da saúde de {patientName || "paciente"}</p>
       </header>
 
