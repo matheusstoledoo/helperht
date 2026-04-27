@@ -55,6 +55,7 @@ export function PatientTreatmentForm({ patientId, onCreated }: Props) {
       return;
     }
     toast.success("Tratamento cadastrado!");
+    markDataUpdated();
     setName("");
     setDosage("");
     setFrequency("");
