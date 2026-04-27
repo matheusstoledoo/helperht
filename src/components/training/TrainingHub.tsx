@@ -440,6 +440,7 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
     if (!showImportSheet) {
       setImportTab("menu");
       setParsedRows([]);
+      setGpsRecordsBySession([]);
       setParsingFile(false);
       setImportingRows(false);
     }
