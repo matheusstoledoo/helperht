@@ -587,6 +587,7 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
                     <YAxis
                       tick={{ fontSize: 11 }}
                       reversed
+                      domain={paceDomain}
                       tickFormatter={(v) => formatPace(v)}
                     />
                     <Tooltip
