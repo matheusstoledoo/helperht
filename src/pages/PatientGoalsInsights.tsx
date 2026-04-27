@@ -322,6 +322,14 @@ export default function PatientGoalsInsights() {
   const [formMetrics, setFormMetrics] = useState<Record<string, string>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  // Per-goal dynamic progress (calculado a partir de vital_signs / workout_logs / lab_results)
+  interface GoalProgress {
+    pct: number | null;     // 0-100, null se não calculável
+    label: string;          // "Último dado: 26/04" ou "VO2 atual 42 / meta 50"
+    available: boolean;     // se há dados suficientes
+  }
+  const [goalProgress, setGoalProgress] = useState<Record<string, GoalProgress>>({});
+
   // ── Unified health data state (single source for Resumo + Insights) ──
   const [healthData, setHealthData] = useState<HealthData | null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
