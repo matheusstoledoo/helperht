@@ -103,6 +103,36 @@ const movingAverage = (values: (number | null)[], window: number): (number | nul
   });
 };
 
+// Linear regression sobre os últimos N pontos não-nulos.
+// Retorna um array do mesmo tamanho de `values`, com a reta de tendência projetada
+// apenas nas posições dos N últimos pontos não-nulos (demais posições = null).
+const trendLineLastN = (values: (number | null)[], n: number): (number | null)[] => {
+  const result: (number | null)[] = values.map(() => null);
+  const indexed = values
+    .map((v, i) => ({ v, i }))
+    .filter((p): p is { v: number; i: number } => p.v != null);
+  if (indexed.length < 2) return result;
+  const lastN = indexed.slice(-n);
+  if (lastN.length < 2) return result;
+
+  const xs = lastN.map((p) => p.i);
+  const ys = lastN.map((p) => p.v);
+  const count = xs.length;
+  const sumX = xs.reduce((a, b) => a + b, 0);
+  const sumY = ys.reduce((a, b) => a + b, 0);
+  const sumXY = xs.reduce((s, x, idx) => s + x * ys[idx], 0);
+  const sumXX = xs.reduce((s, x) => s + x * x, 0);
+  const denom = count * sumXX - sumX * sumX;
+  if (denom === 0) return result;
+  const slope = (count * sumXY - sumX * sumY) / denom;
+  const intercept = (sumY - slope * sumX) / count;
+
+  for (const p of lastN) {
+    result[p.i] = Math.round((slope * p.i + intercept) * 100) / 100;
+  }
+  return result;
+};
+
 const COMPARE_COLORS = ["#378ADD", "#E24B4A", "#27500A", "#D85A30"];
 
 export default function PerformanceEvolution({ userId, patientId }: PerformanceEvolutionProps) {
