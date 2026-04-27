@@ -389,6 +389,24 @@ export default function PatientGoalsInsights() {
         sessionStorage.setItem(healthCacheKey, JSON.stringify({ data, ts: now }));
       } catch { /* noop */ }
       if (user) markAnalysisGenerated(user.id, data);
+
+      // Persistir em patient_insights (RLS exige patient_id = auth.uid())
+      try {
+        const hd = data as HealthData;
+        await supabase.from("patient_insights").insert({
+          patient_id: user.id,
+          category: "correlacao_cruzada",
+          status: "ativo",
+          title: `Resumo de saúde — ${hd.score_label || "análise"} (${hd.score ?? 0}/100)`,
+          content: JSON.stringify(hd),
+          priority_score: Math.max(1, Math.min(10, Math.round(((100 - (hd.score ?? 50)) / 10)))),
+          data_snapshot: { source: "generate-health-insights", generated_at: new Date().toISOString() },
+          prompt_version: "v2-goals-aware",
+          model_used: "google/gemini-2.5-flash",
+        });
+      } catch (persistErr) {
+        console.warn("Não foi possível persistir insight:", persistErr);
+      }
     } catch (e: any) {
       // Se falhou mas temos dados antigos, manter os dados antigos sem mostrar erro
       if (!cachedData) {
