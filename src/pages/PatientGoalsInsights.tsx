@@ -381,11 +381,14 @@ export default function PatientGoalsInsights() {
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
       setHealthData(data as HealthData);
+      const now = Date.now();
+      setAnalysisTs(now);
+      setHasNewerData(false);
+      setBannerDismissed(false);
       try {
-        sessionStorage.setItem(healthCacheKey, JSON.stringify({ data, ts: Date.now() }));
-      } catch {
-        // sessionStorage cheio ou indisponível — segue sem cache
-      }
+        sessionStorage.setItem(healthCacheKey, JSON.stringify({ data, ts: now }));
+      } catch { /* noop */ }
+      if (user) markAnalysisGenerated(user.id, data);
     } catch (e: any) {
       // Se falhou mas temos dados antigos, manter os dados antigos sem mostrar erro
       if (!cachedData) {
