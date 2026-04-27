@@ -144,6 +144,39 @@ export default function PerformanceEvolution({ userId, patientId }: PerformanceE
   const [comparisonLaps, setComparisonLaps] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);
   const [compareMetric, setCompareMetric] = useState<CompareMetric>("hr");
+  const [selectedGpsLog, setSelectedGpsLog] = useState<string | null>(null);
+  const [gpsRecords, setGpsRecords] = useState<any[]>([]);
+  const [loadingGps, setLoadingGps] = useState(false);
+
+  useEffect(() => {
+    if (!selectedGpsLog) { setGpsRecords([]); return; }
+    const fetchGps = async () => {
+      setLoadingGps(true);
+      const { data } = await supabase
+        .from('workout_records')
+        .select('elapsed_seconds, lat, lng, heart_rate, speed_kmh, cadence, altitude_m, distance_km')
+        .eq('workout_log_id', selectedGpsLog)
+        .order('elapsed_seconds', { ascending: true });
+      setGpsRecords(data || []);
+      setLoadingGps(false);
+    };
+    fetchGps();
+  }, [selectedGpsLog]);
+
+  const gpsChartData = useMemo(() => {
+    if (gpsRecords.length === 0) return [];
+    const total = gpsRecords.length;
+    const step = Math.max(1, Math.floor(total / 200));
+    return gpsRecords
+      .filter((_, i) => i % step === 0)
+      .map((r) => ({
+        dist: r.distance_km ? Math.round(r.distance_km * 100) / 100 : null,
+        hr: r.heart_rate ?? null,
+        pace: r.speed_kmh && r.speed_kmh > 0 ? Math.round((60 / r.speed_kmh) * 100) / 100 : null,
+        cadence: r.cadence ?? null,
+        alt: r.altitude_m ? Math.round(r.altitude_m) : null,
+      }));
+  }, [gpsRecords]);
 
   useEffect(() => {
     if (!userId) return;
