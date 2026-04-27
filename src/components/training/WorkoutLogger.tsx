@@ -91,6 +91,7 @@ export default function WorkoutLogger({ userId, patientId }: WorkoutLoggerProps)
       toast.error("Erro ao salvar treino");
       return;
     }
+    markDataUpdated();
     toast.success("Treino registrado! 💪");
     setWorkoutType("musculacao");
     setDuration("");
