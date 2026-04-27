@@ -14,6 +14,7 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import StravaImport from "./StravaImport";
 import { Separator } from "@/components/ui/separator";
+import { markDataUpdated } from "@/lib/healthDataEvents";
 
 interface WorkoutLoggerProps {
   userId: string;
