@@ -401,6 +401,27 @@ export default function PatientNutrition() {
             </div>
           )}
         </CardContent>
+        {isActive && (
+          <div className="px-4 pb-4">
+            <div className="flex gap-2 pt-3 border-t">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditingPlan(plan)}
+              >
+                Editar plano
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => setShowDeleteConfirm(true)}
+              >
+                Excluir plano
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
       {isActive && renderMacros(plan)}
       {isActive && renderMeals(plan)}
