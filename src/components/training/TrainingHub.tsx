@@ -270,7 +270,20 @@ const parseTrainingPeaksRow = (row: any): ParsedRow => {
   };
 };
 
-const parseGarminFit = (file: File): Promise<ParsedRow[]> => {
+type ParsedGpsRecord = {
+  elapsed_seconds: number | null;
+  lat: number | null;
+  lng: number | null;
+  heart_rate: number | null;
+  speed_kmh: number | null;
+  cadence: number | null;
+  altitude_m: number | null;
+  distance_km: number | null;
+};
+
+const parseGarminFit = (
+  file: File
+): Promise<{ rows: ParsedRow[]; gpsRecords: ParsedGpsRecord[] }> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -335,7 +348,30 @@ const parseGarminFit = (file: File): Promise<ParsedRow[]> => {
           };
         });
 
-        resolve(rows.filter((row) => row.activity_date));
+        // Extrair records ponto-a-ponto com GPS
+        const fitRecords = data.records || data.activity?.records || [];
+        const gpsRecords: ParsedGpsRecord[] = fitRecords
+          .filter((r: any) => r.position_lat != null && r.position_long != null)
+          .map((r: any) => ({
+            elapsed_seconds:
+              r.elapsed_time != null
+                ? Math.round(Number(r.elapsed_time))
+                : null,
+            lat: Number(r.position_lat),
+            lng: Number(r.position_long),
+            heart_rate: r.heart_rate ?? null,
+            speed_kmh:
+              r.speed != null ? Math.round(Number(r.speed) * 10) / 10 : null,
+            cadence: r.cadence ?? null,
+            altitude_m: r.altitude ?? null,
+            distance_km:
+              r.distance != null ? Math.round(Number(r.distance) * 100) / 100 : null,
+          }));
+
+        resolve({
+          rows: rows.filter((row) => row.activity_date),
+          gpsRecords,
+        });
       });
     };
 
