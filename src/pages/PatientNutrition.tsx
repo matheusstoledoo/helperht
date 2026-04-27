@@ -464,6 +464,31 @@ export default function PatientNutrition() {
               ) : activePlan ? (
                 <>
                   {renderPlanCard(activePlan, true)}
+                  {showDeleteConfirm && (
+                    <Card className="border-destructive/30 bg-destructive/5">
+                      <CardContent className="p-4">
+                        <p className="text-sm font-medium text-destructive mb-3">
+                          Tem certeza que deseja excluir o plano alimentar ativo?
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={async () => {
+                              await supabase.from('nutrition_plans').delete().eq('id', activePlan.id);
+                              setShowDeleteConfirm(false);
+                              window.location.reload();
+                            }}
+                          >
+                            Confirmar exclusão
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(false)}>
+                            Cancelar
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
                   {nutritionRecs.length > 0 && (
                     <Card>
                       <CardHeader className="pb-3">
@@ -495,26 +520,16 @@ export default function PatientNutrition() {
                       </CardContent>
                     </Card>
                   )}
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <Button
-                      variant="ghost"
-                      className="w-full"
-                      size="sm"
-                      onClick={() => setEditingPlan(activePlan)}
-                    >
-                      Editar plano
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => {
-                        setEditingPlan(null);
-                        setShowCreateForm(true);
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-1" /> Criar novo plano
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setEditingPlan(null);
+                      setShowCreateForm(true);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-1" /> Criar novo plano
+                  </Button>
                 </>
               ) : (
                 <Card>
