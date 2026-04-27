@@ -371,7 +371,7 @@ const parseGarminFit = (
         const rawName = data.workout?.wkt_name || s.sport_profile_name || null;
         const activityName = rawName
           ? String(rawName)
-              .replace(/[^\x20-\x7E\u00C0-\u024F\u00À-\u00FF]/g, "")
+              .replace(/[^\x20-\x7E\u00C0-\u024F]/g, "")
               .replace(/\s+/g, " ")
               .trim() || (SPORT_LABELS[sport] || "Atividade")
           : (SPORT_LABELS[sport] || "Atividade");
