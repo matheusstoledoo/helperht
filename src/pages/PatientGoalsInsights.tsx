@@ -468,6 +468,133 @@ export default function PatientGoalsInsights() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  // ── Indicador dinâmico de progresso por objetivo ──
+  // Mapeia tipos de marcador (chave do target_metrics) para nomes esperados em lab_results
+  const LAB_MARKER_ALIASES: Record<string, string[]> = {
+    pcr: ["pcr", "proteína c reativa", "proteina c reativa", "pcr-us"],
+    vo2max: ["vo2max", "vo2 max", "vo2"],
+    glicose_jejum: ["glicose", "glicemia", "glicose em jejum", "glicemia de jejum"],
+    hba1c: ["hba1c", "hemoglobina glicada", "hemoglobina a1c", "a1c"],
+    triglicerideos: ["triglicerídeos", "triglicerideos", "triglycerides"],
+    ldl: ["ldl", "ldl-c", "ldl colesterol", "colesterol ldl"],
+  };
+
+  useEffect(() => {
+    if (!user || !patientId || goals.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const activeGoals = goals.filter((g) => g.status === "ativo");
+      if (activeGoals.length === 0) return;
+
+      // Carregar fontes de dados em paralelo (apenas o necessário)
+      const fourWeeksAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+      const [vitalsRes, workoutsRes, labsRes] = await Promise.all([
+        supabase.from("vital_signs")
+          .select("type, weight, recorded_at")
+          .eq("patient_id", patientId)
+          .eq("type", "peso")
+          .order("recorded_at", { ascending: false })
+          .limit(1),
+        supabase.from("workout_logs")
+          .select("activity_date")
+          .eq("user_id", user.id)
+          .gte("activity_date", fourWeeksAgo),
+        supabase.from("lab_results")
+          .select("marker_name, value, collection_date")
+          .eq("user_id", user.id)
+          .order("collection_date", { ascending: false })
+          .limit(100),
+      ]);
+
+      if (cancelled) return;
+
+      const latestWeight = vitalsRes.data?.[0];
+      const workoutsCount = workoutsRes.data?.length || 0;
+      const labs = labsRes.data || [];
+
+      const map: Record<string, GoalProgress> = {};
+
+      for (const goal of activeGoals) {
+        const tm = goal.target_metrics || {};
+        const baselineLabs = (goal.baseline_snapshot?.lab_results || {}) as Record<string, any>;
+        const baselineWeight = goal.baseline_snapshot?.weight as number | undefined;
+        let progress: GoalProgress = { pct: null, label: "", available: false };
+
+        // 1) Objetivos de peso
+        if (
+          (goal.goal === "perda_de_peso" || goal.goal === "ganho_de_massa") &&
+          tm.peso_alvo != null &&
+          latestWeight?.weight != null
+        ) {
+          const baseW = baselineWeight ?? Number(latestWeight.weight);
+          const target = Number(tm.peso_alvo);
+          const current = Number(latestWeight.weight);
+          const totalDelta = target - baseW;
+          const currentDelta = current - baseW;
+          let pct = totalDelta !== 0 ? Math.round((currentDelta / totalDelta) * 100) : 0;
+          pct = Math.max(0, Math.min(100, pct));
+          progress = {
+            pct,
+            label: `Atual ${current}kg / meta ${target}kg · ${format(new Date(latestWeight.recorded_at), "dd/MM", { locale: ptBR })}`,
+            available: true,
+          };
+        }
+        // 2) Objetivos de atividade física (frequência semanal-alvo)
+        else if (
+          goal.goal === "performance_aerobica" || goal.goal === "performance_forca" || goal.goal === "bem_estar_geral"
+        ) {
+          // Meta: 4x/semana × 4 semanas = 16 treinos
+          const weeklyTarget = 4;
+          const targetTotal = weeklyTarget * 4;
+          const pct = Math.max(0, Math.min(100, Math.round((workoutsCount / targetTotal) * 100)));
+          if (workoutsCount > 0) {
+            progress = {
+              pct,
+              label: `${workoutsCount} treinos nas últimas 4 semanas (meta ${targetTotal})`,
+              available: true,
+            };
+          }
+        }
+
+        // 3) Objetivos de exames (LDL, HbA1c, glicose, etc.)
+        if (!progress.available) {
+          const metricKeys = Object.keys(tm);
+          for (const key of metricKeys) {
+            const aliases = LAB_MARKER_ALIASES[key];
+            if (!aliases) continue;
+            const lab = labs.find((l: any) =>
+              aliases.includes((l.marker_name || "").toLowerCase().trim())
+            );
+            if (lab && lab.value != null) {
+              const current = Number(lab.value);
+              const target = Number(tm[key]);
+              const baseline =
+                baselineLabs[lab.marker_name]?.value != null
+                  ? Number(baselineLabs[lab.marker_name].value)
+                  : current;
+              const totalDelta = target - baseline;
+              const currentDelta = current - baseline;
+              let pct =
+                totalDelta !== 0 ? Math.round((currentDelta / totalDelta) * 100) : current === target ? 100 : 0;
+              pct = Math.max(0, Math.min(100, pct));
+              progress = {
+                pct,
+                label: `${lab.marker_name}: ${current} / meta ${target} · ${format(new Date(lab.collection_date), "dd/MM", { locale: ptBR })}`,
+                available: true,
+              };
+              break;
+            }
+          }
+        }
+
+        map[goal.id] = progress;
+      }
+      if (!cancelled) setGoalProgress(map);
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id, patientId, goals]);
+
+
   // Bootstrap from localStorage AND patient_insights table to avoid loading on next open
   useEffect(() => {
     if (!user) return;
