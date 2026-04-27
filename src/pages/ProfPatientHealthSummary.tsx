@@ -319,7 +319,7 @@ export default function ProfPatientHealthSummary() {
     if (patientUserId) {
       const { data: latestInsight } = await supabase
         .from("patient_insights")
-        .select("content, created_at")
+        .select("content, priority_score, created_at")
         .eq("patient_id", patientUserId)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -327,8 +327,21 @@ export default function ProfPatientHealthSummary() {
 
       if (latestInsight?.content) {
         try {
-          const parsed = JSON.parse(latestInsight.content) as HealthData;
-          setHealthData(parsed);
+          const parsed = JSON.parse(latestInsight.content) as Partial<HealthData>;
+          const resolvedScore =
+            typeof parsed.score === "number"
+              ? parsed.score
+              : typeof latestInsight.priority_score === "number"
+                ? latestInsight.priority_score
+                : 0;
+          setHealthData({
+            score: resolvedScore,
+            score_label: parsed.score_label || scoreLabelFromValue(resolvedScore),
+            summary: parsed.summary || "",
+            main_markers: parsed.main_markers || [],
+            priorities: parsed.priorities || [],
+            insights: parsed.insights || [],
+          });
           setInsightTs(new Date(latestInsight.created_at).getTime());
         } catch {
           setHealthData(null);
