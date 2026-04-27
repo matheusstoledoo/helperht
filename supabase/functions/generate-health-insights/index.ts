@@ -316,7 +316,9 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Missing authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      throw new Error("Missing authorization");
+    }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -324,8 +326,13 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) throw new Error("Unauthorized");
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: authError } = await supabase.auth.getClaims(token);
+    if (authError || !claimsData?.claims?.sub) {
+      console.error("Auth failed:", authError);
+      throw new Error("Unauthorized");
+    }
+    const user = { id: claimsData.claims.sub as string };
 
     // Resolve patientId first (needed by most queries). Single small query.
     const patientPreRes = await supabase
