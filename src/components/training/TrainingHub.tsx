@@ -604,6 +604,20 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
       try {
         const zip = await JSZip.loadAsync(file);
         const allRows: ParsedRow[] = [];
+        // Alinhado por índice com allRows: cada entrada é o conjunto de GPS records
+        // do log correspondente (ou [] quando o arquivo origem não traz GPS).
+        const allGpsBySession: ParsedGpsRecord[][] = [];
+
+        const pushFitResult = (
+          result: { rows: ParsedRow[]; gpsRecords: ParsedGpsRecord[] }
+        ) => {
+          // Quando o FIT tem múltiplas sessões, anexamos os mesmos gpsRecords à
+          // primeira e [] às demais (1 FIT = 1 fluxo GPS, normalmente 1 sessão).
+          result.rows.forEach((row, idx) => {
+            allRows.push(row);
+            allGpsBySession.push(idx === 0 ? result.gpsRecords : []);
+          });
+        };
 
         for (const [filename, zipEntry] of Object.entries(zip.files)) {
           if (zipEntry.dir) continue;
@@ -614,7 +628,7 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
             const fitFile = new File([buffer], filename, { type: "application/octet-stream" });
             try {
               const parsed = await parseGarminFit(fitFile);
-              allRows.push(...parsed);
+              pushFitResult(parsed);
             } catch {
               // arquivo .fit inválido dentro do ZIP — ignorar e continuar
             }
@@ -648,7 +662,7 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
                 type: "application/octet-stream",
               });
               const parsed = await parseGarminFit(fitFile);
-              allRows.push(...parsed);
+              pushFitResult(parsed);
             } catch {
               // arquivo .fit.gz inválido — ignorar e continuar
             }
@@ -659,7 +673,10 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
               .filter((row) => Object.values(row).some((v) => v !== "" && v !== null))
               .map((row) => (importTab === "garmin" ? parseGarminRow(row) : parseTrainingPeaksRow(row)))
               .filter((row) => row.activity_date);
-            allRows.push(...parsed);
+            parsed.forEach((row) => {
+              allRows.push(row);
+              allGpsBySession.push([]);
+            });
           }
         }
 
@@ -668,6 +685,7 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
         } else {
           toast.success(`${allRows.length} atividade${allRows.length === 1 ? "" : "s"} carregada${allRows.length === 1 ? "" : "s"} do ZIP`);
           setParsedRows(allRows);
+          setGpsRecordsBySession(allGpsBySession);
         }
       } catch {
         toast.error("Erro ao processar o arquivo ZIP");
@@ -684,8 +702,10 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
 
     try {
       if (isFit && isGarmin) {
-        const parsed = await parseGarminFit(file);
+        const { rows: parsed, gpsRecords } = await parseGarminFit(file);
         setParsedRows(parsed);
+        // 1 FIT = 1 fluxo GPS; alinhamos com a primeira sessão.
+        setGpsRecordsBySession(parsed.map((_, idx) => (idx === 0 ? gpsRecords : [])));
         toast.success(`${parsed.length} atividade${parsed.length === 1 ? "" : "s"} carregada${parsed.length === 1 ? "" : "s"}`);
       } else {
         Papa.parse(file, {
@@ -698,6 +718,7 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
               .map((row) => (isGarmin ? parseGarminRow(row) : parseTrainingPeaksRow(row)))
               .filter((row) => row.activity_date);
             setParsedRows(parsed);
+            setGpsRecordsBySession(parsed.map(() => []));
             if (parsed.length === 0) toast.error("Nenhuma atividade encontrada no arquivo");
             else toast.success(`${parsed.length} atividades carregadas`);
             setParsingFile(false);
