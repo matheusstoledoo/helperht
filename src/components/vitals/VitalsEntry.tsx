@@ -175,6 +175,7 @@ export default function VitalsEntry({ patientId }: VitalsEntryProps) {
       }
       const { error } = await supabase.from("vital_signs").insert(record as any);
       if (error) throw error;
+      markDataUpdated();
       toast({ title: "✅ Registro salvo" });
       if (type === "pressao") { setSystolic(""); setDiastolic(""); setHeartRate(""); setPaStep(0); }
       if (type === "glicemia") setGlucose("");
