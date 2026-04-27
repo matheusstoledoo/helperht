@@ -24,6 +24,7 @@ import {
   ComposedChart,
   Line,
   LineChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
