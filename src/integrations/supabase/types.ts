@@ -3925,6 +3925,79 @@ export type Database = {
           },
         ]
       }
+      workout_sets: {
+        Row: {
+          created_at: string | null
+          exercise_name: string
+          id: string
+          load_kg: number | null
+          muscle_group: string | null
+          notes: string | null
+          patient_id: string | null
+          reps: number | null
+          rest_seconds: number | null
+          rpe: number | null
+          set_number: number
+          time_under_tension_seconds: number | null
+          user_id: string
+          workout_log_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          exercise_name: string
+          id?: string
+          load_kg?: number | null
+          muscle_group?: string | null
+          notes?: string | null
+          patient_id?: string | null
+          reps?: number | null
+          rest_seconds?: number | null
+          rpe?: number | null
+          set_number: number
+          time_under_tension_seconds?: number | null
+          user_id: string
+          workout_log_id: string
+        }
+        Update: {
+          created_at?: string | null
+          exercise_name?: string
+          id?: string
+          load_kg?: number | null
+          muscle_group?: string | null
+          notes?: string | null
+          patient_id?: string | null
+          reps?: number | null
+          rest_seconds?: number | null
+          rpe?: number | null
+          set_number?: number
+          time_under_tension_seconds?: number | null
+          user_id?: string
+          workout_log_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_sets_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "workout_sets_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_sets_workout_log_id_fkey"
+            columns: ["workout_log_id"]
+            isOneToOne: false
+            referencedRelation: "workout_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       patient_ai_context: {
@@ -3950,6 +4023,44 @@ export type Database = {
           patient_id?: string | null
         }
         Relationships: []
+      }
+      workout_tonnage: {
+        Row: {
+          avg_rpe: number | null
+          exercise_name: string | null
+          max_load_kg: number | null
+          muscle_group: string | null
+          patient_id: string | null
+          tonnage_kg: number | null
+          total_reps: number | null
+          total_sets: number | null
+          user_id: string | null
+          week: string | null
+          workout_log_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_sets_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "workout_sets_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_sets_workout_log_id_fkey"
+            columns: ["workout_log_id"]
+            isOneToOne: false
+            referencedRelation: "workout_logs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
