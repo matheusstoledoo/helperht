@@ -1110,26 +1110,66 @@ export default function PatientGoalsInsights() {
               ) : healthData && healthData.insights?.length > 0 ? (
                 <>
                   <div className="space-y-3">
-                    {healthData.insights.map((insight, i) => (
-                      <Card key={i} className={`border ${priorityStyles(insight.priority)}`}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start gap-3">
-                            <div className="h-8 w-8 rounded-lg bg-background border flex items-center justify-center shrink-0 text-primary">
-                              {categoryIcon(insight.category)}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
-                                <p className="text-sm font-semibold text-foreground">{insight.title}</p>
-                                {priorityBadge(insight.priority)}
-                              </div>
-                              <Badge variant="outline" className="text-xs gap-1 mb-2">
+                    {healthData.insights.map((insight: any, i: number) => (
+                      <div key={i} className={`p-4 rounded-lg border space-y-2 ${priorityStyles(insight.priority)}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-foreground">{insight.title}</p>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {insight.priority === "alert" && (
+                              <Badge variant="destructive" className="text-xs">⚠ Alerta</Badge>
+                            )}
+                            {insight.priority === "attention" && (
+                              <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">Atenção</Badge>
+                            )}
+                            {insight.priority === "positive" && (
+                              <Badge variant="outline" className="text-xs border-green-500 text-green-600">Positivo</Badge>
+                            )}
+                            {insight.priority === "info" && (
+                              <Badge variant="secondary" className="text-xs">Info</Badge>
+                            )}
+                            {insight.category && (
+                              <Badge variant="outline" className="text-xs gap-1">
                                 {categoryIcon(insight.category)} {categoryLabel(insight.category)}
                               </Badge>
-                              <p className="text-sm text-muted-foreground leading-relaxed">{insight.description}</p>
-                            </div>
+                            )}
                           </div>
-                        </CardContent>
-                      </Card>
+                        </div>
+                        <p className="text-sm text-muted-foreground leading-relaxed">{insight.description}</p>
+                        {(insight.clinical_basis || insight.performance_data || insight.reasoning || insight.evidence) && (
+                          <details className="group">
+                            <summary className="text-xs text-primary cursor-pointer hover:underline list-none flex items-center gap-1 mt-1">
+                              <span className="group-open:hidden">▸ Ver raciocínio clínico</span>
+                              <span className="hidden group-open:inline">▾ Ocultar</span>
+                            </summary>
+                            <div className="mt-2 space-y-2 border-t pt-2">
+                              {insight.clinical_basis && (
+                                <div>
+                                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Base clínica</p>
+                                  <p className="text-xs text-foreground mt-0.5">{insight.clinical_basis}</p>
+                                </div>
+                              )}
+                              {insight.performance_data && (
+                                <div>
+                                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Dados de performance</p>
+                                  <p className="text-xs text-foreground mt-0.5">{insight.performance_data}</p>
+                                </div>
+                              )}
+                              {insight.reasoning && (
+                                <div>
+                                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Raciocínio integrado</p>
+                                  <p className="text-xs text-foreground mt-0.5">{insight.reasoning}</p>
+                                </div>
+                              )}
+                              {insight.evidence && (
+                                <div>
+                                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Evidência científica</p>
+                                  <p className="text-xs text-muted-foreground italic mt-0.5">{insight.evidence}</p>
+                                </div>
+                              )}
+                            </div>
+                          </details>
+                        )}
+                      </div>
                     ))}
                   </div>
                   <Button variant="outline" onClick={() => { invalidateHealthCache(); fetchHealthData(true); }} disabled={healthLoading} className="w-full gap-2">
