@@ -222,15 +222,64 @@ export default function ProfPatientHealthSummary() {
               </p>
             )}
             {aiInsights.length > 0 ? aiInsights.map((insight: any, i: number) => (
-              <div key={i} className={`p-4 rounded-lg border ${insightPriority(insight.priority)}`}>
-                <div className="flex items-center justify-between gap-2 mb-1">
+              <div key={i} className={`p-4 rounded-lg border space-y-2 ${insightPriority(insight.priority)}`}>
+                <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-semibold">{insight.title}</p>
-                  <Badge variant="outline" className={`text-xs shrink-0 ${insight.priority === "positive" ? "border-green-500 text-green-600" : insight.priority === "attention" ? "border-amber-500 text-amber-600" : ""}`}>
-                    {insight.priority === "positive" ? "Positivo" : insight.priority === "attention" ? "Atenção" : "Info"}
-                  </Badge>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {insight.priority === "alert" && (
+                      <Badge variant="destructive" className="text-xs">⚠ Alerta</Badge>
+                    )}
+                    {insight.priority === "attention" && (
+                      <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">Atenção</Badge>
+                    )}
+                    {insight.priority === "positive" && (
+                      <Badge variant="outline" className="text-xs border-green-500 text-green-600">Positivo</Badge>
+                    )}
+                    {insight.priority === "info" && (
+                      <Badge variant="secondary" className="text-xs">Info</Badge>
+                    )}
+                    {insight.category && (
+                      <Badge variant="secondary" className="text-xs capitalize">
+                        {insight.category.replace(/_/g, " ")}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
-                {insight.category && <Badge variant="secondary" className="text-xs mb-2">{insight.category.replace(/_/g, " ")}</Badge>}
-                <p className="text-xs text-muted-foreground leading-relaxed">{insight.description}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{insight.description}</p>
+                {(insight.clinical_basis || insight.performance_data || insight.reasoning || insight.evidence) && (
+                  <details className="group">
+                    <summary className="text-xs text-primary cursor-pointer hover:underline list-none flex items-center gap-1 mt-1">
+                      <span className="group-open:hidden">▸ Ver raciocínio clínico</span>
+                      <span className="hidden group-open:inline">▾ Ocultar</span>
+                    </summary>
+                    <div className="mt-2 space-y-2 border-t pt-2">
+                      {insight.clinical_basis && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Base clínica</p>
+                          <p className="text-xs text-foreground mt-0.5">{insight.clinical_basis}</p>
+                        </div>
+                      )}
+                      {insight.performance_data && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Dados de performance</p>
+                          <p className="text-xs text-foreground mt-0.5">{insight.performance_data}</p>
+                        </div>
+                      )}
+                      {insight.reasoning && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Raciocínio integrado</p>
+                          <p className="text-xs text-foreground mt-0.5">{insight.reasoning}</p>
+                        </div>
+                      )}
+                      {insight.evidence && (
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Evidência científica</p>
+                          <p className="text-xs text-muted-foreground italic mt-0.5">{insight.evidence}</p>
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                )}
               </div>
             )) : (
               <Card><CardContent className="p-8 text-center text-muted-foreground">O paciente ainda não gerou uma análise de IA.</CardContent></Card>
