@@ -183,34 +183,6 @@ export default function PatientDashboardMain() {
           ))}
         </div>
 
-        {/* Acesso rápido — últimos 3 itens acessados */}
-        {recentCards.length > 0 && (
-          <div className="mt-8 sm:mt-10">
-            <div className="flex items-center gap-2 mb-3">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                Acesso rápido
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {recentCards.map((card) => (
-                <button
-                  key={`recent-${card.id}`}
-                  onClick={() => handleNavigate(card)}
-                  className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 hover:border-primary/40 transition-colors text-left"
-                >
-                  <div className={`p-2 rounded-lg ${card.color} shrink-0`}>
-                    <div className="[&>svg]:h-5 [&>svg]:w-5">{card.icon}</div>
-                  </div>
-                  <span className="text-sm font-medium text-foreground truncate">
-                    {card.title}
-                  </span>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto shrink-0" />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
     </PatientLayout>
