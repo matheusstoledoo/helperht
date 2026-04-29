@@ -215,7 +215,7 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
 
             {role === "patient" && (
               <p className="text-xs text-center text-muted-foreground">
-                Sua conta de paciente é criada automaticamente. Você poderá completar o CPF depois.
+                Preencha seus dados para criar sua conta de paciente.
               </p>
             )}
             <div className="space-y-2">
