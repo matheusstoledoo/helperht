@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,12 +47,15 @@ const baseSchema = z.object({
 
 type RoleChoice = "" | "patient" | "professional";
 
+const UF_LIST = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+
 export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
   const { toast } = useToast();
-  const { signIn, getActiveRole } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState<RoleChoice>("");
+  const [step, setStep] = useState<1 | 2>(1);
 
   // Form fields
   const [name, setName] = useState("");
@@ -59,17 +63,27 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [cpf, setCpf] = useState("");
-  const [professionalRegistry, setProfessionalRegistry] = useState("");
+
+  // Professional step 2 fields
+  const [specialty, setSpecialty] = useState("");
+  const [subspecialty, setSubspecialty] = useState("");
+  const [councilNumber, setCouncilNumber] = useState("");
+  const [councilState, setCouncilState] = useState("");
+
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const resetForm = () => {
     setRole("");
+    setStep(1);
     setName("");
     setEmail("");
     setPassword("");
     setConfirmPassword("");
     setCpf("");
-    setProfessionalRegistry("");
+    setSpecialty("");
+    setSubspecialty("");
+    setCouncilNumber("");
+    setCouncilState("");
     setErrors({});
   };
 
@@ -78,11 +92,7 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
     onOpenChange(isOpen);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrors({});
-
-    // Validate base fields
+  const validateBaseFields = (): boolean => {
     const baseResult = baseSchema.safeParse({ name, email, password, confirmPassword });
     if (!baseResult.success) {
       const fieldErrors: Record<string, string> = {};
@@ -90,20 +100,54 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
         if (err.path[0]) fieldErrors[err.path[0] as string] = err.message;
       });
       setErrors(fieldErrors);
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors({});
+
+    // Professional step 1 → advance to step 2
+    if (role === "professional" && step === 1) {
+      if (!validateBaseFields()) return;
+      // CPF é opcional para profissional, mas se preenchido valida
+      if (cpf.trim()) {
+        const cpfResult = cpfSchema.safeParse(cpf);
+        if (!cpfResult.success) {
+          setErrors({ cpf: cpfResult.error.errors[0].message });
+          return;
+        }
+      }
+      setStep(2);
       return;
     }
 
-    // Validate CPF (mandatory for all roles)
-    const cpfResult = cpfSchema.safeParse(cpf);
-    if (!cpfResult.success) {
-      setErrors({ cpf: cpfResult.error.errors[0].message });
-      return;
+    // Patient (single-step) — validate all
+    if (role === "patient") {
+      if (!validateBaseFields()) return;
+      const cpfResult = cpfSchema.safeParse(cpf);
+      if (!cpfResult.success) {
+        setErrors({ cpf: cpfResult.error.errors[0].message });
+        return;
+      }
     }
 
-    // Validate professional registry
-    if (role === "professional" && !professionalRegistry.trim()) {
-      setErrors({ professionalRegistry: "Registro profissional é obrigatório" });
-      return;
+    // Professional step 2 — validate specialty/council/state
+    if (role === "professional" && step === 2) {
+      if (!specialty) {
+        toast({ title: "Especialidade obrigatória", description: "Selecione sua especialidade.", variant: "destructive" });
+        return;
+      }
+      if (!councilNumber.trim()) {
+        toast({ title: "Número do conselho obrigatório", description: "Informe o número do seu registro.", variant: "destructive" });
+        return;
+      }
+      if (!councilState.trim()) {
+        toast({ title: "Estado de registro obrigatório", description: "Informe o estado do registro.", variant: "destructive" });
+        return;
+      }
     }
 
     setLoading(true);
@@ -129,57 +173,68 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
         return;
       }
 
-      // Login automático após criar conta
+      // Atualizar perfil profissional na etapa 2
+      if (role === 'professional' && createData.userId) {
+        await supabase
+          .from('users')
+          .update({
+            specialty,
+            subspecialty: subspecialty.trim() || null,
+            council_number: `${councilNumber.trim()}/${councilState}`,
+            onboarding_completed: true,
+          } as any)
+          .eq('id', createData.userId);
+      }
+
+      // Login automático
       const { error: signInError } = await signIn(normalizedEmail, password);
 
       if (signInError) {
-        toast({
-          title: "Conta criada",
-          description: "Faça login para continuar.",
-        });
+        toast({ title: "Conta criada", description: "Faça login para continuar." });
         handleOpenChange(false);
         return;
       }
 
-      toast({
-        title: "Cadastro realizado!",
-        description: "Redirecionando...",
-      });
-
+      toast({ title: "Cadastro realizado!", description: "Redirecionando..." });
       handleOpenChange(false);
-      const activeRole = await getActiveRole();
-      navigate(activeRole === 'patient' ? '/pac/inicio' : '/dashboard');
+      navigate(role === 'patient' ? '/pac/inicio' : '/dashboard');
     } catch {
-      toast({
-        title: "Erro",
-        description: "Não foi possível criar a conta. Tente novamente.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: "Não foi possível criar a conta. Tente novamente.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
+  const councilLabel =
+    specialty === "médico" ? "CRM *"
+    : specialty === "fisioterapeuta" ? "CREFITO *"
+    : specialty === "nutricionista" ? "CRN *"
+    : specialty === "educador físico" ? "CREF *"
+    : specialty === "psicólogo" ? "CRP *"
+    : "Número do conselho profissional *";
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Criar conta</DialogTitle>
           <DialogDescription>
             {!role
               ? "Selecione o tipo de conta que deseja criar."
               : role === "professional"
-              ? "Preencha seus dados de profissional de saúde."
+              ? step === 1
+                ? "Etapa 1 de 2 — Dados pessoais."
+                : "Etapa 2 de 2 — Dados profissionais."
               : "Preencha seus dados de paciente."}
           </DialogDescription>
         </DialogHeader>
 
-        {/* Step 1: Role selection */}
+        {/* Step 0: Role selection */}
         {!role && (
           <div className="grid grid-cols-2 gap-4 mt-2">
             <button
               type="button"
-              onClick={() => setRole("professional")}
+              onClick={() => { setRole("professional"); setStep(1); }}
               className="flex flex-col items-center gap-3 p-6 rounded-lg border-2 border-border hover:border-primary hover:bg-primary/5 transition-all"
             >
               <Stethoscope className="w-10 h-10 text-primary" />
@@ -188,7 +243,7 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
             </button>
             <button
               type="button"
-              onClick={() => setRole("patient")}
+              onClick={() => { setRole("patient"); setStep(1); }}
               className="flex flex-col items-center gap-3 p-6 rounded-lg border-2 border-border hover:border-accent hover:bg-accent/5 transition-all"
             >
               <Heart className="w-10 h-10 text-accent" />
@@ -198,105 +253,167 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
           </div>
         )}
 
-        {/* Step 2: Form */}
+        {/* Form */}
         {role && (
           <form onSubmit={handleSubmit} className="space-y-4 mt-2">
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => { setRole(""); setErrors({}); }}
+              onClick={() => {
+                if (role === "professional" && step === 2) {
+                  setStep(1);
+                } else {
+                  setRole("");
+                  setStep(1);
+                }
+                setErrors({});
+              }}
               className="mb-1 -ml-2"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
               Voltar
             </Button>
 
-            <div className="space-y-2">
-              <Label htmlFor="signup-name">Nome completo *</Label>
-              <Input
-                id="signup-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Seu nome completo"
-                disabled={loading}
-              />
-              {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
-            </div>
+            {/* Step 1 fields (paciente single-step + profissional etapa 1) */}
+            {(role === "patient" || (role === "professional" && step === 1)) && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-name">Nome completo *</Label>
+                  <Input
+                    id="signup-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Seu nome completo"
+                    disabled={loading}
+                  />
+                  {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="signup-email">E-mail *</Label>
-              <Input
-                id="signup-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu@email.com"
-                disabled={loading}
-              />
-              {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">E-mail *</Label>
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="seu@email.com"
+                    disabled={loading}
+                  />
+                  {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="signup-cpf">CPF *</Label>
-              <Input
-                id="signup-cpf"
-                value={cpf}
-                onChange={(e) => setCpf(e.target.value)}
-                placeholder="000.000.000-00"
-                disabled={loading}
-                maxLength={14}
-              />
-              {errors.cpf && <p className="text-sm text-destructive">{errors.cpf}</p>}
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-cpf">
+                    CPF {role === "professional" ? "(opcional)" : "*"}
+                  </Label>
+                  <Input
+                    id="signup-cpf"
+                    value={cpf}
+                    onChange={(e) => setCpf(e.target.value)}
+                    placeholder="000.000.000-00"
+                    disabled={loading}
+                    maxLength={14}
+                  />
+                  {errors.cpf && <p className="text-sm text-destructive">{errors.cpf}</p>}
+                </div>
 
-            {role === "professional" && (
-              <div className="space-y-2">
-                <Label htmlFor="signup-registry">Registro profissional *</Label>
-                <Input
-                  id="signup-registry"
-                  value={professionalRegistry}
-                  onChange={(e) => setProfessionalRegistry(e.target.value)}
-                  placeholder="Ex: CRM 12345/SP, CRN 6789"
-                  disabled={loading}
-                />
-                {errors.professionalRegistry && (
-                  <p className="text-sm text-destructive">{errors.professionalRegistry}</p>
-                )}
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Senha *</Label>
+                  <Input
+                    id="signup-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Mínimo 6 caracteres"
+                    disabled={loading}
+                  />
+                  {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-confirm">Confirmar senha *</Label>
+                  <Input
+                    id="signup-confirm"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Repita a senha"
+                    disabled={loading}
+                  />
+                  {errors.confirmPassword && (
+                    <p className="text-sm text-destructive">{errors.confirmPassword}</p>
+                  )}
+                </div>
+              </>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="signup-password">Senha *</Label>
-              <Input
-                id="signup-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Mínimo 6 caracteres"
-                disabled={loading}
-              />
-              {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
-            </div>
+            {/* Step 2: profissional */}
+            {role === "professional" && step === 2 && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-specialty">Especialidade *</Label>
+                  <Select value={specialty} onValueChange={setSpecialty} disabled={loading}>
+                    <SelectTrigger id="signup-specialty">
+                      <SelectValue placeholder="Selecione sua especialidade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="médico">Médico</SelectItem>
+                      <SelectItem value="fisioterapeuta">Fisioterapeuta</SelectItem>
+                      <SelectItem value="nutricionista">Nutricionista</SelectItem>
+                      <SelectItem value="educador físico">Educador físico</SelectItem>
+                      <SelectItem value="psicólogo">Psicólogo</SelectItem>
+                      <SelectItem value="outro">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="signup-confirm">Confirmar senha *</Label>
-              <Input
-                id="signup-confirm"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Repita a senha"
-                disabled={loading}
-              />
-              {errors.confirmPassword && (
-                <p className="text-sm text-destructive">{errors.confirmPassword}</p>
-              )}
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-subspecialty">
+                    {specialty === "médico"
+                      ? "Área de atuação (ex: ortopedia, cardiologia)"
+                      : specialty === "fisioterapeuta"
+                      ? "Área de atuação (ex: esportiva, neurológica)"
+                      : "Subespecialidade ou área de atuação (opcional)"}
+                  </Label>
+                  <Input
+                    id="signup-subspecialty"
+                    value={subspecialty}
+                    onChange={(e) => setSubspecialty(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-council">{councilLabel}</Label>
+                  <Input
+                    id="signup-council"
+                    value={councilNumber}
+                    onChange={(e) => setCouncilNumber(e.target.value)}
+                    placeholder="Ex: 12345"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signup-council-state">Estado de registro *</Label>
+                  <Select value={councilState} onValueChange={setCouncilState} disabled={loading}>
+                    <SelectTrigger id="signup-council-state">
+                      <SelectValue placeholder="Selecione o estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {UF_LIST.map((uf) => (
+                        <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Criar conta
+              {role === "professional" && step === 1 ? "Continuar" : "Criar conta"}
             </Button>
           </form>
         )}

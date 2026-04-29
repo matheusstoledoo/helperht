@@ -24,15 +24,18 @@ import { ImageShowcase } from "@/components/landing/ImageShowcase";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, getActiveRole } = useAuth();
   const [interestFormOpen, setInterestFormOpen] = useState(false);
   const [signUpOpen, setSignUpOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
-      navigate("/dashboard");
+      getActiveRole().then(role => {
+        navigate(role === 'patient' ? '/pac/inicio' : '/dashboard');
+      });
     }
-  }, [user, loading, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, loading]);
 
   const openInterestForm = () => {
     setInterestFormOpen(true);
