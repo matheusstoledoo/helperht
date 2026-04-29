@@ -24,15 +24,21 @@ import { ImageShowcase } from "@/components/landing/ImageShowcase";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { user, loading, getActiveRole } = useAuth();
+  const { user, loading } = useAuth();
   const [interestFormOpen, setInterestFormOpen] = useState(false);
   const [signUpOpen, setSignUpOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
-      getActiveRole().then(role => {
-        navigate(role === 'patient' ? '/pac/inicio' : '/dashboard');
-      });
+      supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .then(({ data }) => {
+          const roles = (data ?? []).map((r: any) => r.role);
+          const isProfessional = roles.includes('professional') || roles.includes('admin');
+          navigate(isProfessional ? '/dashboard' : '/pac/inicio');
+        });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, loading]);
