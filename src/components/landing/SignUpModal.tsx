@@ -205,7 +205,10 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
 
       toast({ title: "Cadastro realizado!", description: "Redirecionando..." });
       handleOpenChange(false);
-      navigate(role === 'patient' ? '/pac/inicio' : '/dashboard');
+      // Pequeno delay para garantir que o update do perfil profissional foi processado
+      setTimeout(() => {
+        navigate(role === 'patient' ? '/pac/inicio' : '/dashboard');
+      }, 500);
     } catch {
       toast({ title: "Erro", description: "Não foi possível criar a conta. Tente novamente.", variant: "destructive" });
     } finally {
