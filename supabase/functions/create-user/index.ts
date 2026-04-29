@@ -35,7 +35,7 @@ serve(async (req) => {
           error: 'email_exists',
           message: 'Este email já está cadastrado. Por favor, use outro email ou faça login.',
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
 
