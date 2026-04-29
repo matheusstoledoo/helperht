@@ -77,6 +77,7 @@ const App = () => (
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/completar-perfil" element={<CompletarPerfil />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/selecionar-perfil" element={<SelecionarPerfil />} />
               <Route path="/prof/pacientes/novo" element={<NewPatient />} />
               <Route path="/prof/paciente/:id/timeline" element={<PatientTimeline />} />
               <Route path="/prof/paciente/:id/diagnosticos" element={<PatientDiagnoses />} />
