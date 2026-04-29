@@ -205,10 +205,25 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
 
       toast({ title: "Cadastro realizado!", description: "Redirecionando..." });
       handleOpenChange(false);
-      // Pequeno delay para garantir que o update do perfil profissional foi processado
-      setTimeout(() => {
-        navigate(role === 'patient' ? '/pac/inicio' : '/dashboard');
-      }, 500);
+
+      // Aguarda processamento do perfil e busca o papel direto da fonte da verdade
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      const userId = createData?.userId;
+      let resolvedRole: 'patient' | 'professional' = role as 'patient' | 'professional';
+      if (userId) {
+        const { data: roleRow } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId)
+          .order('role', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (roleRow?.role === 'professional' || roleRow?.role === 'patient') {
+          resolvedRole = roleRow.role;
+        }
+      }
+      navigate(resolvedRole === 'patient' ? '/pac/inicio' : '/dashboard');
     } catch {
       toast({ title: "Erro", description: "Não foi possível criar a conta. Tente novamente.", variant: "destructive" });
     } finally {
