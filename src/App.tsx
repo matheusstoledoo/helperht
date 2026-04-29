@@ -19,7 +19,7 @@ import PatientDashboardMain from "./pages/PatientDashboardMain";
 
 // Lazy load everything else
 const Dashboard = lazy(() => import("./pages/Dashboard"));
-const SelecionarPerfil = lazy(() => import("./pages/SelecionarPerfil"));
+
 const NewPatient = lazy(() => import("./pages/NewPatient"));
 const ProfessionalPatientView = lazy(() => import("./pages/ProfessionalPatientView"));
 const PatientTimeline = lazy(() => import("./pages/PatientTimeline"));
@@ -77,7 +77,7 @@ const App = () => (
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/completar-perfil" element={<CompletarPerfil />} />
                 <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/selecionar-perfil" element={<SelecionarPerfil />} />
+                
               <Route path="/prof/pacientes/novo" element={<NewPatient />} />
               <Route path="/prof/paciente/:id/timeline" element={<PatientTimeline />} />
               <Route path="/prof/paciente/:id/diagnosticos" element={<PatientDiagnoses />} />
@@ -97,6 +97,7 @@ const App = () => (
               <Route path="/consultation" element={<Consultation />} />
               <Route path="/prof/config" element={<ProfessionalSettings />} />
               <Route path="/pac/dashboard" element={<PatientDashboardMain />} />
+              <Route path="/pac/inicio" element={<PatientDashboardMain />} />
               <Route path="/pac/profissionais" element={<PatientProfessionals />} />
               <Route path="/pac/profissional/:id" element={<PatientProfessionalView />} />
               <Route path="/pac/profissional/:professionalId/diagnosticos" element={<PatientDiagnosesView />} />
