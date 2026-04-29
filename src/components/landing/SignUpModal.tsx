@@ -93,13 +93,11 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
       return;
     }
 
-    // Validate CPF (mandatory only for professional; optional for patient)
-    if (role === "professional" || cpf.trim()) {
-      const cpfResult = cpfSchema.safeParse(cpf);
-      if (!cpfResult.success) {
-        setErrors({ cpf: cpfResult.error.errors[0].message });
-        return;
-      }
+    // Validate CPF (mandatory for all roles)
+    const cpfResult = cpfSchema.safeParse(cpf);
+    if (!cpfResult.success) {
+      setErrors({ cpf: cpfResult.error.errors[0].message });
+      return;
     }
 
     // Validate professional registry
@@ -213,11 +211,6 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
               Voltar
             </Button>
 
-            {role === "patient" && (
-              <p className="text-xs text-center text-muted-foreground">
-                Preencha seus dados para criar sua conta de paciente.
-              </p>
-            )}
             <div className="space-y-2">
               <Label htmlFor="signup-name">Nome completo *</Label>
               <Input
@@ -244,7 +237,7 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="signup-cpf">CPF {role === "professional" ? "*" : "(opcional)"}</Label>
+              <Label htmlFor="signup-cpf">CPF *</Label>
               <Input
                 id="signup-cpf"
                 value={cpf}
