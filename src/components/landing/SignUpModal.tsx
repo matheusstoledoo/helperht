@@ -93,11 +93,13 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
       return;
     }
 
-    // Validate CPF
-    const cpfResult = cpfSchema.safeParse(cpf);
-    if (!cpfResult.success) {
-      setErrors({ cpf: cpfResult.error.errors[0].message });
-      return;
+    // Validate CPF (mandatory only for professional; optional for patient)
+    if (role === "professional" || cpf.trim()) {
+      const cpfResult = cpfSchema.safeParse(cpf);
+      if (!cpfResult.success) {
+        setErrors({ cpf: cpfResult.error.errors[0].message });
+        return;
+      }
     }
 
     // Validate professional registry
@@ -108,22 +110,36 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
 
     setLoading(true);
     try {
-      const { error } = await signUp(email, password, name, role as "patient" | "professional", cpf);
+      const normalizedEmail = email.trim().toLowerCase();
+      const cleanCpf = cpf.replace(/[^\d]/g, '');
 
-      if (error) {
-        if (error.message.includes("already registered")) {
-          toast({
-            title: "Erro ao cadastrar",
-            description: "Este email já está cadastrado. Faça login.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Erro ao cadastrar",
-            description: error.message,
-            variant: "destructive",
-          });
-        }
+      const { data: createData, error: createError } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: normalizedEmail,
+          password,
+          name,
+          role,
+          cpf: cleanCpf,
+        },
+      });
+
+      if (createError || !createData?.success) {
+        const msg = createData?.error === 'email_exists'
+          ? 'Este email já está cadastrado. Faça login.'
+          : (createData?.message || createError?.message || 'Não foi possível criar a conta.');
+        toast({ title: "Erro ao cadastrar", description: msg, variant: "destructive" });
+        return;
+      }
+
+      // Login automático após criar conta
+      const { error: signInError } = await signIn(normalizedEmail, password);
+
+      if (signInError) {
+        toast({
+          title: "Conta criada",
+          description: "Faça login para continuar.",
+        });
+        handleOpenChange(false);
         return;
       }
 
