@@ -244,7 +244,7 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="signup-cpf">CPF *</Label>
+              <Label htmlFor="signup-cpf">CPF {role === "professional" ? "*" : "(opcional)"}</Label>
               <Input
                 id="signup-cpf"
                 value={cpf}
