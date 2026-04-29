@@ -244,8 +244,7 @@ const Auth = () => {
         title: "Conta criada com sucesso!",
         description: "Bem-vindo ao Helper.",
       });
-      const role = await getActiveRole();
-      navigate(role === 'patient' ? '/pac/inicio' : '/dashboard');
+      navigate('/dashboard');
 
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -324,7 +323,6 @@ const Auth = () => {
                         placeholder="000.000.000-00"
                         value={signupCpf}
                         onChange={(e) => setSignupCpf(e.target.value)}
-                        required
                         disabled={loading}
                         maxLength={14}
                       />
