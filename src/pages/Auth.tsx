@@ -55,6 +55,7 @@ const Auth = () => {
   const [signupSpecialty, setSignupSpecialty] = useState("");
   const [signupSubspecialty, setSignupSubspecialty] = useState("");
   const [signupCouncilNumber, setSignupCouncilNumber] = useState("");
+  const [signupCouncilState, setSignupCouncilState] = useState("");
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -128,7 +129,9 @@ const Auth = () => {
     try {
       nameSchema.parse(signupName);
       emailSchema.parse(signupEmail.trim().toLowerCase());
-      cpfSchema.parse(signupCpf);
+      if (signupCpf.trim()) {
+        cpfSchema.parse(signupCpf);
+      }
       passwordSchema.parse(signupPassword);
 
       if (signupPassword !== signupConfirmPassword) {
@@ -160,6 +163,26 @@ const Auth = () => {
         toast({
           title: "Especialidade obrigatória",
           description: "Selecione sua especialidade para continuar.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (!signupCouncilNumber.trim()) {
+        toast({
+          title: "Número do conselho obrigatório",
+          description: "Informe o número do seu registro profissional.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (!signupCouncilState.trim()) {
+        toast({
+          title: "Estado de registro obrigatório",
+          description: "Informe o estado do seu registro profissional.",
           variant: "destructive",
         });
         setLoading(false);
@@ -201,7 +224,7 @@ const Auth = () => {
           .update({
             specialty: signupSpecialty,
             subspecialty: signupSubspecialty.trim() || null,
-            council_number: signupCouncilNumber.trim() || null,
+            council_number: `${signupCouncilNumber.trim()}/${signupCouncilState}`,
             onboarding_completed: true,
           } as any)
           .eq('id', newUserId);
@@ -294,7 +317,7 @@ const Auth = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="prof-cpf">CPF</Label>
+                      <Label htmlFor="prof-cpf">CPF (opcional)</Label>
                       <Input
                         id="prof-cpf"
                         type="text"
