@@ -19,6 +19,7 @@ import PatientDashboardMain from "./pages/PatientDashboardMain";
 
 // Lazy load everything else
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const SelecionarPerfil = lazy(() => import("./pages/SelecionarPerfil"));
 const NewPatient = lazy(() => import("./pages/NewPatient"));
 const ProfessionalPatientView = lazy(() => import("./pages/ProfessionalPatientView"));
 const PatientTimeline = lazy(() => import("./pages/PatientTimeline"));
