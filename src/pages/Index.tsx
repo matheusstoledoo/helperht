@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Users, 
@@ -15,8 +15,6 @@ import {
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { InterestForm } from "@/components/landing/InterestForm";
 import { SignUpModal } from "@/components/landing/SignUpModal";
 import { FeatureSection } from "@/components/landing/FeatureSection";
@@ -25,24 +23,8 @@ import { ImageShowcase } from "@/components/landing/ImageShowcase";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
   const [interestFormOpen, setInterestFormOpen] = useState(false);
   const [signUpOpen, setSignUpOpen] = useState(false);
-
-  useEffect(() => {
-    if (!loading && user) {
-      supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .then(({ data }) => {
-          const roles = (data ?? []).map((r: any) => r.role);
-          const isProfessional = roles.includes('professional') || roles.includes('admin');
-          navigate(isProfessional ? '/dashboard' : '/pac/inicio');
-        });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, loading]);
 
   const openInterestForm = () => {
     setInterestFormOpen(true);
