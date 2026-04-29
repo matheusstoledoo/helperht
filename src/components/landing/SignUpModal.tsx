@@ -147,7 +147,8 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
       });
 
       handleOpenChange(false);
-      navigate(role === "patient" ? "/pac/dashboard" : "/dashboard");
+      const activeRole = await getActiveRole();
+      navigate(activeRole === 'patient' ? '/pac/inicio' : '/dashboard');
     } catch {
       toast({
         title: "Erro",
