@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
 import logo from "@/assets/logo.png";
-import { lovable } from "@/integrations/lovable";
+
 import { supabase } from "@/integrations/supabase/client";
 
 const emailSchema = z.string().trim().email({ message: "Email inválido" }).max(255);
