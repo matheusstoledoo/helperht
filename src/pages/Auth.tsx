@@ -105,23 +105,13 @@ const Auth = () => {
           title: "Bem-vindo!",
           description: "Login realizado com sucesso.",
         });
-        const { data: userData } = await supabase.auth.getUser();
         const { data: rolesData } = await supabase
           .from('user_roles')
           .select('role')
-          .eq('user_id', userData.user?.id ?? '');
+          .eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '');
 
-        const roles = (rolesData ?? []).map((r: any) => r.role);
-        const hasPatient = roles.includes('patient');
-        const hasProfessional = roles.includes('professional');
-
-        if (hasPatient && hasProfessional) {
-          navigate('/selecionar-perfil');
-        } else if (hasPatient) {
-          navigate('/pac/dashboard');
-        } else {
-          navigate('/dashboard');
-        }
+        const isProfessional = rolesData?.some((r: any) => r.role === 'professional');
+        navigate(isProfessional ? '/dashboard' : '/pac/inicio');
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
