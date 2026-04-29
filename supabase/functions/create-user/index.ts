@@ -29,21 +29,54 @@ serve(async (req) => {
     const existingUser = existingUsers?.users?.find((u) => u.email === email);
 
     if (existingUser) {
-      // Check if patient record exists
-      const { data: existingPatient } = await supabaseAdmin
-        .from("patients")
-        .select("id")
-        .eq("user_id", existingUser.id)
+      // Verificar se o papel solicitado já existe para esse usuário
+      const { data: existingRole } = await supabaseAdmin
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', existingUser.id)
+        .eq('role', role)
         .maybeSingle();
 
+      if (existingRole) {
+        // Papel já existe — erro real de duplicata
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'email_exists',
+            message: 'Um usuário com este e-mail já existe.',
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+
+      // Email existe mas com papel diferente — adicionar novo papel ao usuário existente
+      const userId = existingUser.id;
+
+      await supabaseAdmin
+        .from('user_roles')
+        .insert({ user_id: userId, role })
+        .select();
+
+      let patientId: string | null = null;
+
+      if (role === 'patient') {
+        const { data: patientData } = await supabaseAdmin
+          .from('patients')
+          .upsert({ user_id: userId, birthdate: '1999-01-10' })
+          .select('id')
+          .single();
+        patientId = patientData?.id ?? null;
+
+        if (requesting_professional_id && patientId) {
+          await supabaseAdmin
+            .from('professional_patient_links')
+            .insert({ professional_id: requesting_professional_id, patient_id: patientId, status: 'active' });
+        }
+      }
+
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: "email_exists",
-          message: "Um usuário com este e-mail já existe.",
-          existingPatientId: existingPatient?.id || null,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        JSON.stringify({ success: true, userId, patientId }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
