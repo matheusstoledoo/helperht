@@ -13,8 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Stethoscope, Heart, ArrowLeft } from "lucide-react";
-
 
 interface SignUpModalProps {
   open: boolean;
@@ -48,7 +48,7 @@ type RoleChoice = "" | "patient" | "professional";
 
 export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
   const { toast } = useToast();
-  const { signUp } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState<RoleChoice>("");
@@ -93,11 +93,13 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
       return;
     }
 
-    // Validate CPF
-    const cpfResult = cpfSchema.safeParse(cpf);
-    if (!cpfResult.success) {
-      setErrors({ cpf: cpfResult.error.errors[0].message });
-      return;
+    // Validate CPF (mandatory only for professional; optional for patient)
+    if (role === "professional" || cpf.trim()) {
+      const cpfResult = cpfSchema.safeParse(cpf);
+      if (!cpfResult.success) {
+        setErrors({ cpf: cpfResult.error.errors[0].message });
+        return;
+      }
     }
 
     // Validate professional registry
@@ -108,22 +110,36 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
 
     setLoading(true);
     try {
-      const { error } = await signUp(email, password, name, role as "patient" | "professional", cpf);
+      const normalizedEmail = email.trim().toLowerCase();
+      const cleanCpf = cpf.replace(/[^\d]/g, '');
 
-      if (error) {
-        if (error.message.includes("already registered")) {
-          toast({
-            title: "Erro ao cadastrar",
-            description: "Este email já está cadastrado. Faça login.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Erro ao cadastrar",
-            description: error.message,
-            variant: "destructive",
-          });
-        }
+      const { data: createData, error: createError } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: normalizedEmail,
+          password,
+          name,
+          role,
+          cpf: cleanCpf,
+        },
+      });
+
+      if (createError || !createData?.success) {
+        const msg = createData?.error === 'email_exists'
+          ? 'Este email já está cadastrado. Faça login.'
+          : (createData?.message || createError?.message || 'Não foi possível criar a conta.');
+        toast({ title: "Erro ao cadastrar", description: msg, variant: "destructive" });
+        return;
+      }
+
+      // Login automático após criar conta
+      const { error: signInError } = await signIn(normalizedEmail, password);
+
+      if (signInError) {
+        toast({
+          title: "Conta criada",
+          description: "Faça login para continuar.",
+        });
+        handleOpenChange(false);
         return;
       }
 
@@ -199,7 +215,7 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
 
             {role === "patient" && (
               <p className="text-xs text-center text-muted-foreground">
-                Sua conta de paciente é criada automaticamente. Você poderá completar o CPF depois.
+                Preencha seus dados para criar sua conta de paciente.
               </p>
             )}
             <div className="space-y-2">
@@ -228,7 +244,7 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="signup-cpf">CPF *</Label>
+              <Label htmlFor="signup-cpf">CPF {role === "professional" ? "*" : "(opcional)"}</Label>
               <Input
                 id="signup-cpf"
                 value={cpf}
