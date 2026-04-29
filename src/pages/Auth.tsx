@@ -442,20 +442,36 @@ const Auth = () => {
 
                     <div className="space-y-2">
                       <Label htmlFor="prof-council">
-                        {signupSpecialty === "médico" ? "CRM"
-                          : signupSpecialty === "fisioterapeuta" ? "CREFITO"
-                          : signupSpecialty === "nutricionista" ? "CRN"
-                          : signupSpecialty === "educador físico" ? "CREF"
-                          : signupSpecialty === "psicólogo" ? "CRP"
-                          : "Número do conselho profissional (opcional)"}
+                        {signupSpecialty === "médico" ? "CRM *"
+                          : signupSpecialty === "fisioterapeuta" ? "CREFITO *"
+                          : signupSpecialty === "nutricionista" ? "CRN *"
+                          : signupSpecialty === "educador físico" ? "CREF *"
+                          : signupSpecialty === "psicólogo" ? "CRP *"
+                          : "Número do conselho profissional *"}
                       </Label>
                       <Input
                         id="prof-council"
                         type="text"
+                        placeholder="Ex: 12345"
                         value={signupCouncilNumber}
                         onChange={(e) => setSignupCouncilNumber(e.target.value)}
+                        required
                         disabled={loading}
                       />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="prof-council-state">Estado de registro *</Label>
+                      <Select value={signupCouncilState} onValueChange={setSignupCouncilState} disabled={loading}>
+                        <SelectTrigger id="prof-council-state">
+                          <SelectValue placeholder="Selecione o estado" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"].map(uf => (
+                            <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </CardContent>
                   <CardFooter className="flex flex-col gap-3">
