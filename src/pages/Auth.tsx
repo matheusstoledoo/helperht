@@ -33,7 +33,7 @@ const cpfSchema = z.string()
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp, user, loading: authLoading, getActiveRole } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -58,10 +58,12 @@ const Auth = () => {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (user) {
-      navigate("/dashboard");
+    if (user && !authLoading) {
+      getActiveRole().then((role) => {
+        navigate(role === 'patient' ? '/pac/inicio' : '/dashboard');
+      });
     }
-  }, [user, navigate]);
+  }, [user, authLoading]);
 
   if (user) {
     return null;
@@ -105,13 +107,8 @@ const Auth = () => {
           title: "Bem-vindo!",
           description: "Login realizado com sucesso.",
         });
-        const { data: rolesData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '');
-
-        const isProfessional = rolesData?.some((r: any) => r.role === 'professional');
-        navigate(isProfessional ? '/dashboard' : '/pac/inicio');
+        const role = await getActiveRole();
+        navigate(role === 'patient' ? '/pac/inicio' : '/dashboard');
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -224,7 +221,8 @@ const Auth = () => {
         title: "Conta criada com sucesso!",
         description: "Bem-vindo ao Helper.",
       });
-      navigate('/dashboard');
+      const role = await getActiveRole();
+      navigate(role === 'patient' ? '/pac/inicio' : '/dashboard');
 
     } catch (error) {
       if (error instanceof z.ZodError) {

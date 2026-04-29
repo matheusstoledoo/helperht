@@ -48,7 +48,7 @@ type RoleChoice = "" | "patient" | "professional";
 
 export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
   const { toast } = useToast();
-  const { signIn } = useAuth();
+  const { signIn, getActiveRole } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState<RoleChoice>("");
