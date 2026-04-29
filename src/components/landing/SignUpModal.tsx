@@ -165,10 +165,18 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
         },
       });
 
-      if (createError || !createData?.success) {
-        const msg = createData?.error === 'email_exists'
+      // FunctionsHttpError: tentar ler o body para extrair o erro semântico
+      let errorPayload: any = createData;
+      if (createError && (createError as any).context?.json) {
+        try { errorPayload = await (createError as any).context.json(); } catch { /* noop */ }
+      } else if (createError && (createError as any).context?.text) {
+        try { errorPayload = JSON.parse(await (createError as any).context.text()); } catch { /* noop */ }
+      }
+
+      if (createError || !errorPayload?.success) {
+        const msg = errorPayload?.error === 'email_exists'
           ? 'Este email já está cadastrado. Faça login.'
-          : (createData?.message || createError?.message || 'Não foi possível criar a conta.');
+          : (errorPayload?.message || createError?.message || 'Não foi possível criar a conta.');
         toast({ title: "Erro ao cadastrar", description: msg, variant: "destructive" });
         return;
       }
