@@ -418,8 +418,7 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
   const [editingPlan, setEditingPlan] = useState<any | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showImportSheet, setShowImportSheet] = useState(false);
-  const [showStrengthSheet, setShowStrengthSheet] = useState(false);
-  const [showAerobicSection, setShowAerobicSection] = useState(true);
+  const [section, setSection] = useState<'home' | 'aerobico' | 'musculacao'>('home');
   const [timePeriod, setTimePeriod] = useState<"4s" | "1m" | "3m">("4s");
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
   const [expandedActivities, setExpandedActivities] = useState<Set<string>>(new Set());
@@ -885,8 +884,64 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
 
   const activePlan = plans.find((p) => p.status === "active");
 
+  if (!readOnly && section === 'home') {
+    return (
+      <div className="space-y-6 mt-4">
+        <section className="grid grid-cols-2 gap-3 max-w-2xl mx-auto">
+          <button
+            type="button"
+            onClick={() => setSection('musculacao')}
+            className="flex flex-col items-center gap-2 p-6 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all"
+          >
+            <span className="text-4xl">🏋️</span>
+            <span className="text-sm font-medium">Musculação</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSection('aerobico')}
+            className="flex flex-col items-center gap-2 p-6 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all"
+          >
+            <span className="text-4xl">🏃</span>
+            <span className="text-sm font-medium">Atividades Aeróbicas</span>
+          </button>
+        </section>
+      </div>
+    );
+  }
+
+  if (!readOnly && section === 'musculacao') {
+    return (
+      <div className="space-y-4 mt-4">
+        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => setSection('home')}>
+          <ChevronLeft className="h-4 w-4 mr-1" /> Voltar
+        </Button>
+        <Tabs defaultValue="register">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="register">Registrar</TabsTrigger>
+            <TabsTrigger value="evolution">Evolução</TabsTrigger>
+          </TabsList>
+          <TabsContent value="register" className="mt-4">
+            <StrengthWorkoutLogger
+              userId={userId}
+              patientId={patientId}
+              onSaved={() => fetchData()}
+            />
+          </TabsContent>
+          <TabsContent value="evolution" className="mt-4">
+            <StrengthEvolutionDashboard userId={userId} />
+          </TabsContent>
+        </Tabs>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 mt-4">
+      {!readOnly && (
+        <Button variant="ghost" size="sm" className="-ml-2" onClick={() => setSection('home')}>
+          <ChevronLeft className="h-4 w-4 mr-1" /> Voltar
+        </Button>
+      )}
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h3 className="text-base font-medium flex items-center gap-2">
@@ -1041,26 +1096,7 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
         )}
       </section>
 
-      {!readOnly && (
-        <section className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => setShowStrengthSheet(true)}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all"
-          >
-            <span className="text-3xl">🏋️</span>
-            <span className="text-sm font-medium">Musculação</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowAerobicSection(true)}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all"
-          >
-            <span className="text-3xl">🏃</span>
-            <span className="text-sm font-medium">Atividades Aeróbicas</span>
-          </button>
-        </section>
-      )}
+
 
       <section className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
@@ -1605,34 +1641,6 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
       </Sheet>
       )}
 
-      {!readOnly && (
-        <Sheet open={showStrengthSheet} onOpenChange={setShowStrengthSheet}>
-          <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
-            <SheetHeader>
-              <SheetTitle>Musculação</SheetTitle>
-            </SheetHeader>
-            <Tabs defaultValue="register" className="mt-4">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="register">Registrar</TabsTrigger>
-                <TabsTrigger value="evolution">Evolução</TabsTrigger>
-              </TabsList>
-              <TabsContent value="register" className="mt-4">
-                <StrengthWorkoutLogger
-                  userId={userId}
-                  patientId={patientId}
-                  onSaved={() => {
-                    setShowStrengthSheet(false);
-                    fetchData();
-                  }}
-                />
-              </TabsContent>
-              <TabsContent value="evolution" className="mt-4">
-                <StrengthEvolutionDashboard userId={userId} />
-              </TabsContent>
-            </Tabs>
-          </SheetContent>
-        </Sheet>
-      )}
     </div>
   );
 }
