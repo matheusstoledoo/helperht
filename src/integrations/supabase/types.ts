@@ -2057,6 +2057,50 @@ export type Database = {
           },
         ]
       }
+      personal_records: {
+        Row: {
+          created_at: string | null
+          exercise_name: string
+          id: string
+          one_rep_max: number | null
+          recorded_at: string
+          reps: number | null
+          user_id: string | null
+          weight_kg: number | null
+          workout_log_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          exercise_name: string
+          id?: string
+          one_rep_max?: number | null
+          recorded_at?: string
+          reps?: number | null
+          user_id?: string | null
+          weight_kg?: number | null
+          workout_log_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          exercise_name?: string
+          id?: string
+          one_rep_max?: number | null
+          recorded_at?: string
+          reps?: number | null
+          user_id?: string | null
+          weight_kg?: number | null
+          workout_log_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personal_records_workout_log_id_fkey"
+            columns: ["workout_log_id"]
+            isOneToOne: false
+            referencedRelation: "workout_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professional_patient_links: {
         Row: {
           created_at: string
@@ -3262,6 +3306,33 @@ export type Database = {
           },
         ]
       }
+      training_streaks: {
+        Row: {
+          current_streak: number | null
+          id: string
+          last_workout_date: string | null
+          longest_streak: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          current_streak?: number | null
+          id?: string
+          last_workout_date?: string | null
+          longest_streak?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          current_streak?: number | null
+          id?: string
+          last_workout_date?: string | null
+          longest_streak?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       treatments: {
         Row: {
           change_reason: string | null
@@ -3928,7 +3999,9 @@ export type Database = {
       workout_sets: {
         Row: {
           created_at: string | null
+          exercise_feel: number | null
           exercise_name: string
+          exercise_pain: number | null
           id: string
           load_kg: number | null
           muscle_group: string | null
@@ -3944,7 +4017,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          exercise_feel?: number | null
           exercise_name: string
+          exercise_pain?: number | null
           id?: string
           load_kg?: number | null
           muscle_group?: string | null
@@ -3960,7 +4035,9 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          exercise_feel?: number | null
           exercise_name?: string
+          exercise_pain?: number | null
           id?: string
           load_kg?: number | null
           muscle_group?: string | null
@@ -3994,6 +4071,54 @@ export type Database = {
             columns: ["workout_log_id"]
             isOneToOne: false
             referencedRelation: "workout_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workout_templates: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          exercises: Json
+          id: string
+          name: string
+          patient_id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          exercises?: Json
+          id?: string
+          name: string
+          patient_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          exercises?: Json
+          id?: string
+          name?: string
+          patient_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_templates_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "workout_templates_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]
