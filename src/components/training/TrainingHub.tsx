@@ -1226,7 +1226,11 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
                                         className="h-7 text-xs text-primary hover:text-primary"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          navigate(`/pac/atividade/${log.id}`);
+                                          if (readOnly && patientId) {
+                                            navigate(`/prof/paciente/${patientId}/atividade/${log.id}`);
+                                          } else {
+                                            navigate(`/pac/atividade/${log.id}`);
+                                          }
                                         }}
                                       >
                                         Ver análise →
