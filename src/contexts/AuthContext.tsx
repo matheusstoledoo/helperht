@@ -118,28 +118,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     let uid = userId;
     if (!uid) {
       const { data: { user } } = await supabase.auth.getUser();
+      console.log('[getActiveRole] getUser result:', user?.id);
       if (!user) return null;
       uid = user.id;
     }
+    console.log('[getActiveRole] using uid:', uid);
 
-    const { data: rows } = await supabase
+    const { data: rows, error } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', uid)
       .limit(5);
 
+    console.log('[getActiveRole] user_roles rows:', rows, 'error:', error);
+
     if (rows && rows.length > 0) {
       const isProfessional = rows.some((r: any) => r.role === 'professional');
+      console.log('[getActiveRole] isProfessional:', isProfessional);
       return isProfessional ? 'professional' : 'patient';
     }
 
-    // Fallback: busca direto em users.role
-    const { data: userRow } = await supabase
+    const { data: userRow, error: userError } = await supabase
       .from('users')
       .select('role')
       .eq('id', uid)
       .maybeSingle();
 
+    console.log('[getActiveRole] users.role fallback:', userRow, 'error:', userError);
     return (userRow?.role as 'patient' | 'professional') ?? null;
   };
 
