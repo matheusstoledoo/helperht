@@ -25,17 +25,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import PerformanceEvolution from "@/components/training/PerformanceEvolution";
 import TrainingHub from "@/components/training/TrainingHub";
+import StrengthWorkoutLogger from "@/components/training/StrengthWorkoutLogger";
+import StrengthEvolutionDashboard from "@/components/training/StrengthEvolutionDashboard";
 import PatientLayout from "@/components/patient/PatientLayout";
 import { PatientBreadcrumb } from "@/components/patient/PatientBreadcrumb";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, MapPin, MessageSquare, Plus, Star, Trophy } from "lucide-react";
+import { ChevronLeft, Loader2, MapPin, MessageSquare, Plus, Star, Trophy } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PatientTraining() {
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [patientId, setPatientId] = useState<string | null>(null);
+  const [section, setSection] = useState<'home' | 'aerobico' | 'musculacao'>('home');
 
   const [raceEvents, setRaceEvents] = useState<any[]>([]);
   const [recoveryLogs, setRecoveryLogs] = useState<any[]>([]);
