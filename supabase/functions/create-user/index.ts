@@ -32,10 +32,10 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'email_exists',
-          message: 'Este email já está cadastrado. Por favor, use outro email ou faça login.',
+          error: "email_exists",
+          message: "Este email já está cadastrado. Por favor, use outro email ou faça login.",
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
       );
     }
 
@@ -53,36 +53,42 @@ serve(async (req) => {
 
     if (authError) {
       console.error("Auth error:", authError);
-      return new Response(
-        JSON.stringify({ success: false, error: authError.message }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
-      );
+      return new Response(JSON.stringify({ success: false, error: authError.message }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
     }
 
     const userId = authData.user.id;
 
-    // Create user profile in users table
-    const { error: userError } = await supabaseAdmin
-      .from("users")
-      .upsert({
+    // Se email já existe com id diferente, atualiza o id
+    await supabaseAdmin.from("users").update({ id: userId, name, role }).eq("email", email).neq("id", userId);
+
+    // Insere ou atualiza pelo id
+    const { error: userError } = await supabaseAdmin.from("users").upsert(
+      {
         id: userId,
         email,
         name,
         role,
-        cpf,
-      });
+        cpf: cpf || null,
+      },
+      { onConflict: "id" },
+    );
+
+    if (userError) {
+      console.error("User table error:", userError);
+    }
 
     if (userError) {
       console.error("User table error:", userError);
     }
 
     // Create user role
-    const { error: roleError } = await supabaseAdmin
-      .from("user_roles")
-      .upsert({
-        user_id: userId,
-        role,
-      });
+    const { error: roleError } = await supabaseAdmin.from("user_roles").upsert({
+      user_id: userId,
+      role,
+    });
 
     if (roleError) {
       console.error("Role error:", roleError);
@@ -109,13 +115,11 @@ serve(async (req) => {
 
       // Auto-link professional to patient if requesting_professional_id is provided
       if (requesting_professional_id && patientId) {
-        const { error: linkError } = await supabaseAdmin
-          .from("professional_patient_links")
-          .insert({
-            professional_id: requesting_professional_id,
-            patient_id: patientId,
-            status: "active",
-          });
+        const { error: linkError } = await supabaseAdmin.from("professional_patient_links").insert({
+          professional_id: requesting_professional_id,
+          patient_id: patientId,
+          status: "active",
+        });
 
         if (linkError) {
           console.error("Link error:", linkError);
@@ -125,16 +129,15 @@ serve(async (req) => {
       }
     }
 
-    return new Response(
-      JSON.stringify({ success: true, userId, patientId }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ success: true, userId, patientId }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error: unknown) {
     console.error("Error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
-    );
+    return new Response(JSON.stringify({ success: false, error: errorMessage }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
   }
 });
