@@ -232,7 +232,7 @@ export default function ProfPatientTraining() {
           {/* ABA 3 — Evolução */}
           <TabsContent value="evolution">
             {patientUserId ? (
-              <PerformanceEvolution userId={patientUserId} patientId={id ?? undefined} />
+              <PerformanceEvolution userId={patientUserId} patientId={id ?? null} />
             ) : (
               <Card>
                 <CardContent className="p-8 text-center">
