@@ -191,6 +191,77 @@ export default function StrengthWorkoutLogger({ userId, patientId, onSaved }: St
     setTemplateSheetOpen(false);
   };
 
+  const handleExtractWorkout = async () => {
+    if (!importFile) return;
+    setExtracting(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(importFile);
+      });
+
+      const { data, error } = await supabase.functions.invoke("extract-workout-template", {
+        body: { base64, mimeType: importFile.type },
+      });
+      if (error) throw error;
+      const extracted = data?.extracted;
+      if (!extracted?.sessions?.length) {
+        throw new Error("Nenhum exercício encontrado na ficha");
+      }
+
+      // Salvar como template
+      await supabase.from("workout_templates").insert({
+        user_id: userId,
+        patient_id: patientId,
+        name: extracted.template_name || "Ficha importada",
+        description: extracted.periodization_notes || null,
+        exercises: extracted.sessions,
+      });
+
+      // Recarregar lista de templates
+      const { data: tplData } = await supabase
+        .from("workout_templates")
+        .select("id, name, exercises")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (tplData) setTemplates(tplData as Template[]);
+
+      setExtractedSessions(extracted.sessions);
+
+      // Se só tem uma sessão, pré-popular direto
+      if (extracted.sessions.length === 1) {
+        const newExs = (extracted.sessions[0].exercises || []).map((ex: any) =>
+          newExercise(String(ex.name)),
+        );
+        setExercises((prev) => [...prev, ...newExs]);
+        setSelectedSessionName(extracted.sessions[0].name);
+      } else {
+        setSelectedSessionName("");
+      }
+
+      toast.success(
+        `Ficha importada! ${extracted.sessions.length} treino(s) salvo(s) como template.`,
+      );
+      setShowImportSheet(false);
+      setImportFile(null);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Erro ao extrair ficha");
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  const handlePickExtractedSession = (name: string) => {
+    setSelectedSessionName(name);
+    const session = extractedSessions.find((s) => s.name === name);
+    if (!session) return;
+    const newExs = (session.exercises || []).map((ex: any) => newExercise(String(ex.name)));
+    setExercises((prev) => [...prev, ...newExs]);
+  };
+
   const handleFinalize = async () => {
     if (exercises.length === 0) {
       toast.error("Adicione pelo menos um exercício");
