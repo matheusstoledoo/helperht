@@ -38,6 +38,7 @@ interface TrainingHubProps {
   onBackfillGps?: () => void | Promise<void>;
   backfillingGps?: boolean;
   hasGarminWithoutGps?: boolean;
+  readOnly?: boolean;
 }
 
 interface TrainingPlan {
