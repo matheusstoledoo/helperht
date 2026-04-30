@@ -269,7 +269,7 @@ export default function PatientTraining() {
               <TabsTrigger value="evolucao" className="flex-1">Evolução</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="treinos">
+            <TabsContent value="treinos" className="space-y-6 mt-4">
               <TrainingHub
                 userId={user.id}
                 patientId={patientId}
@@ -277,6 +277,70 @@ export default function PatientTraining() {
                 backfillingGps={backfillingGps}
                 hasGarminWithoutGps={hasGarminWithoutGps}
               />
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-medium flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-amber-600" />
+                    Próximas provas
+                  </h3>
+                  <Button size="sm" variant="outline" onClick={() => setShowRaceForm(true)}>
+                    <Plus className="h-4 w-4 mr-1" /> Adicionar
+                  </Button>
+                </div>
+
+                {raceEvents.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-6 text-center">
+                      <Trophy className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                      <p className="text-sm text-muted-foreground">Nenhuma prova agendada</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  raceEvents.map((event) => {
+                    const days = daysLeft(event.event_date);
+                    const badge = daysLeftBadge(days);
+                    const sc = sportColor(event.sport);
+                    return (
+                      <Card key={event.id}>
+                        <CardContent className="p-4 space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="space-y-1">
+                              <p className="font-medium">{event.name}</p>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span
+                                  className="text-xs px-2 py-0.5 rounded-full font-medium"
+                                  style={{ backgroundColor: sc.bg, color: sc.text }}
+                                >
+                                  {event.sport}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {format(parseISO(event.event_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                                </span>
+                                {event.distance_km && (
+                                  <span className="text-xs text-muted-foreground">{event.distance_km} km</span>
+                                )}
+                              </div>
+                              {event.location && (
+                                <p className="text-xs text-muted-foreground">{event.location}</p>
+                              )}
+                              {event.goal && (
+                                <p className="text-xs italic text-muted-foreground">🎯 {event.goal}</p>
+                              )}
+                            </div>
+                            <span
+                              className="text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap"
+                              style={{ backgroundColor: badge.bg, color: badge.text }}
+                            >
+                              {badge.label}
+                            </span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                )}
+              </div>
             </TabsContent>
 
             <TabsContent value="recuperacao" className="space-y-6 mt-4">
