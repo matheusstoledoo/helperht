@@ -269,7 +269,7 @@ export default function PatientTraining() {
               <TabsTrigger value="evolucao" className="flex-1">Evolução</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="treinos">
+            <TabsContent value="treinos" className="space-y-6 mt-4">
               <TrainingHub
                 userId={user.id}
                 patientId={patientId}
@@ -277,9 +277,7 @@ export default function PatientTraining() {
                 backfillingGps={backfillingGps}
                 hasGarminWithoutGps={hasGarminWithoutGps}
               />
-            </TabsContent>
 
-            <TabsContent value="recuperacao" className="space-y-6 mt-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-base font-medium flex items-center gap-2">
@@ -343,7 +341,9 @@ export default function PatientTraining() {
                   })
                 )}
               </div>
+            </TabsContent>
 
+            <TabsContent value="recuperacao" className="space-y-6 mt-4">
               <div className="space-y-3">
                 <h3 className="text-base font-medium">Como você está hoje?</h3>
                 {todayRecovery && !showRecoveryForm ? (
