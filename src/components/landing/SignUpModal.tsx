@@ -112,14 +112,6 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
     // Professional step 1 → advance to step 2
     if (role === "professional" && step === 1) {
       if (!validateBaseFields()) return;
-      // CPF é opcional para profissional, mas se preenchido valida
-      if (cpf.trim()) {
-        const cpfResult = cpfSchema.safeParse(cpf);
-        if (!cpfResult.success) {
-          setErrors({ cpf: cpfResult.error.errors[0].message });
-          return;
-        }
-      }
       setStep(2);
       return;
     }
