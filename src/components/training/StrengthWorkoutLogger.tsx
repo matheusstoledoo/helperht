@@ -7,8 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Plus, X, Trophy, Dumbbell, LayoutTemplate, Check } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from "@/components/ui/sheet";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, X, Trophy, Dumbbell, LayoutTemplate, Check, FileText, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { markDataUpdated } from "@/lib/healthDataEvents";
@@ -79,6 +80,13 @@ export default function StrengthWorkoutLogger({ userId, patientId, onSaved }: St
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Importação de ficha via Claude
+  const [showImportSheet, setShowImportSheet] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [extracting, setExtracting] = useState(false);
+  const [extractedSessions, setExtractedSessions] = useState<any[]>([]);
+  const [selectedSessionName, setSelectedSessionName] = useState<string>("");
 
   // Carregar nomes distintos para autocomplete e PRs
   useEffect(() => {
@@ -181,6 +189,77 @@ export default function StrengthWorkoutLogger({ userId, patientId, onSaved }: St
       .filter(Boolean) as ExerciseEntry[];
     setExercises((prev) => [...prev, ...mapped]);
     setTemplateSheetOpen(false);
+  };
+
+  const handleExtractWorkout = async () => {
+    if (!importFile) return;
+    setExtracting(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(importFile);
+      });
+
+      const { data, error } = await supabase.functions.invoke("extract-workout-template", {
+        body: { base64, mimeType: importFile.type },
+      });
+      if (error) throw error;
+      const extracted = data?.extracted;
+      if (!extracted?.sessions?.length) {
+        throw new Error("Nenhum exercício encontrado na ficha");
+      }
+
+      // Salvar como template
+      await supabase.from("workout_templates").insert({
+        user_id: userId,
+        patient_id: patientId,
+        name: extracted.template_name || "Ficha importada",
+        description: extracted.periodization_notes || null,
+        exercises: extracted.sessions,
+      });
+
+      // Recarregar lista de templates
+      const { data: tplData } = await supabase
+        .from("workout_templates")
+        .select("id, name, exercises")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (tplData) setTemplates(tplData as Template[]);
+
+      setExtractedSessions(extracted.sessions);
+
+      // Se só tem uma sessão, pré-popular direto
+      if (extracted.sessions.length === 1) {
+        const newExs = (extracted.sessions[0].exercises || []).map((ex: any) =>
+          newExercise(String(ex.name)),
+        );
+        setExercises((prev) => [...prev, ...newExs]);
+        setSelectedSessionName(extracted.sessions[0].name);
+      } else {
+        setSelectedSessionName("");
+      }
+
+      toast.success(
+        `Ficha importada! ${extracted.sessions.length} treino(s) salvo(s) como template.`,
+      );
+      setShowImportSheet(false);
+      setImportFile(null);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Erro ao extrair ficha");
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  const handlePickExtractedSession = (name: string) => {
+    setSelectedSessionName(name);
+    const session = extractedSessions.find((s) => s.name === name);
+    if (!session) return;
+    const newExs = (session.exercises || []).map((ex: any) => newExercise(String(ex.name)));
+    setExercises((prev) => [...prev, ...newExs]);
   };
 
   const handleFinalize = async () => {
@@ -357,36 +436,104 @@ export default function StrengthWorkoutLogger({ userId, patientId, onSaved }: St
           <Dumbbell className="h-4 w-4 text-blue-500" />
           Treino de Musculação
         </h3>
-        <Sheet open={templateSheetOpen} onOpenChange={setTemplateSheetOpen}>
-          <SheetTrigger asChild>
-            <Button size="sm" variant="outline">
-              <LayoutTemplate className="h-4 w-4 mr-1" />
-              Usar template
-            </Button>
-          </SheetTrigger>
-          <SheetContent>
-            <SheetHeader>
-              <SheetTitle>Templates de treino</SheetTitle>
-            </SheetHeader>
-            <div className="mt-4 space-y-2">
-              {templates.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhum template salvo ainda</p>
-              ) : (
-                templates.map((tpl) => (
-                  <Card key={tpl.id} className="cursor-pointer hover:bg-accent" onClick={() => applyTemplate(tpl)}>
-                    <CardContent className="p-3">
-                      <p className="font-medium text-sm">{tpl.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {Array.isArray(tpl.exercises) ? tpl.exercises.length : 0} exercícios
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-          </SheetContent>
-        </Sheet>
+        <div className="flex gap-2">
+          <Sheet open={showImportSheet} onOpenChange={setShowImportSheet}>
+            <SheetTrigger asChild>
+              <Button size="sm" variant="outline">
+                <FileText className="h-4 w-4 mr-1" />
+                📄 Importar ficha
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>Importar ficha de treino</SheetTitle>
+                <SheetDescription>
+                  Envie um PDF ou foto da sua ficha de academia. O sistema extrai os exercícios automaticamente.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-6 space-y-4">
+                <div className="space-y-2">
+                  <Label>Arquivo (PDF ou imagem)</Label>
+                  <Input
+                    type="file"
+                    accept=".pdf,image/*"
+                    onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                    disabled={extracting}
+                  />
+                  {importFile && (
+                    <p className="text-xs text-muted-foreground">{importFile.name}</p>
+                  )}
+                </div>
+                <Button
+                  onClick={handleExtractWorkout}
+                  disabled={!importFile || extracting}
+                  className="w-full"
+                >
+                  {extracting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Analisando documento...
+                    </>
+                  ) : (
+                    "Extrair treino"
+                  )}
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          <Sheet open={templateSheetOpen} onOpenChange={setTemplateSheetOpen}>
+            <SheetTrigger asChild>
+              <Button size="sm" variant="outline">
+                <LayoutTemplate className="h-4 w-4 mr-1" />
+                Usar template
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>Templates de treino</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4 space-y-2">
+                {templates.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum template salvo ainda</p>
+                ) : (
+                  templates.map((tpl) => (
+                    <Card key={tpl.id} className="cursor-pointer hover:bg-accent" onClick={() => applyTemplate(tpl)}>
+                      <CardContent className="p-3">
+                        <p className="font-medium text-sm">{tpl.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {Array.isArray(tpl.exercises) ? tpl.exercises.length : 0} exercícios
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
+
+      {extractedSessions.length > 1 && (
+        <Card>
+          <CardContent className="p-4 space-y-2">
+            <Label>Qual treino você quer fazer hoje?</Label>
+            <Select value={selectedSessionName} onValueChange={handlePickExtractedSession}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma sessão" />
+              </SelectTrigger>
+              <SelectContent>
+                {extractedSessions.map((s) => (
+                  <SelectItem key={s.name} value={s.name}>
+                    {s.name}
+                    {s.day ? ` — ${s.day}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Adicionar exercício */}
       <Card>

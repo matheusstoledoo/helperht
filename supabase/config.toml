@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.search-health-evidence]
 verify_jwt = false
+
+[functions.extract-workout-template]
+verify_jwt = false
