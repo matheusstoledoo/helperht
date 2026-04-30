@@ -145,7 +145,7 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
     setLoading(true);
     try {
       const normalizedEmail = email.trim().toLowerCase();
-      const cleanCpf = cpf.replace(/[^\d]/g, '');
+      const cleanCpf = role === "patient" ? cpf.replace(/[^\d]/g, '') : "";
 
       const { data: createData, error: createError } = await supabase.functions.invoke('create-user', {
         body: {
