@@ -31,7 +31,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import ManualTrainingPlanForm from "./ManualTrainingPlanForm";
-import ManualTrainingPlanForm from "./ManualTrainingPlanForm";
 
 interface TrainingHubProps {
   userId: string;
