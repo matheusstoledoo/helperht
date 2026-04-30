@@ -81,6 +81,13 @@ export default function StrengthWorkoutLogger({ userId, patientId, onSaved }: St
   const [templateName, setTemplateName] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Importação de ficha via Claude
+  const [showImportSheet, setShowImportSheet] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [extracting, setExtracting] = useState(false);
+  const [extractedSessions, setExtractedSessions] = useState<any[]>([]);
+  const [selectedSessionName, setSelectedSessionName] = useState<string>("");
+
   // Carregar nomes distintos para autocomplete e PRs
   useEffect(() => {
     (async () => {
