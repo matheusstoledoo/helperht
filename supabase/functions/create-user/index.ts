@@ -90,9 +90,21 @@ serve(async (req) => {
         name,
         role,
         cpf: cpfToSave,
+        ...(isProfessional
+          ? {
+              specialty: specialtyToSave,
+              subspecialty: subspecialtyToSave,
+              council_number: councilToSave,
+              onboarding_completed: !!specialtyToSave,
+            }
+          : {}),
       },
       { onConflict: "id" },
     );
+
+    if (userError) {
+      console.error("User table error:", userError);
+    }
 
     if (userError) {
       console.error("User table error:", userError);
