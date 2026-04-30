@@ -10,7 +10,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, name: string, role: 'patient' | 'professional', cpf: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
-  getActiveRole: () => Promise<'patient' | 'professional' | null>;
+  getActiveRole: (userId?: string) => Promise<'patient' | 'professional' | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -114,16 +114,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setSession(null);
   };
 
-  const getActiveRole = async (): Promise<'patient' | 'professional' | null> => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-    const { data: roles } = await supabase
+  const getActiveRole = async (userId?: string): Promise<'patient' | 'professional' | null> => {
+    let uid = userId;
+    if (!uid) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      uid = user.id;
+    }
+
+    const { data: rows } = await supabase
       .from('user_roles')
       .select('role')
-      .eq('user_id', user.id)
-      .limit(1)
+      .eq('user_id', uid)
+      .limit(5);
+
+    if (rows && rows.length > 0) {
+      const isProfessional = rows.some((r: any) => r.role === 'professional');
+      return isProfessional ? 'professional' : 'patient';
+    }
+
+    // Fallback: busca direto em users.role
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', uid)
       .maybeSingle();
-    return (roles?.role as 'patient' | 'professional') ?? null;
+
+    return (userRow?.role as 'patient' | 'professional') ?? null;
   };
 
   return (
