@@ -406,7 +406,7 @@ const parseGarminFit = (
   });
 };
 
-export default function TrainingHub({ userId, patientId, onBackfillGps, backfillingGps, hasGarminWithoutGps }: TrainingHubProps) {
+export default function TrainingHub({ userId, patientId, onBackfillGps, backfillingGps, hasGarminWithoutGps, readOnly = false }: TrainingHubProps) {
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [plans, setPlans] = useState<any[]>([]);
