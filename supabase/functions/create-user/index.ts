@@ -74,7 +74,7 @@ serve(async (req) => {
         email,
         name,
         role,
-        cpf: cpf || null,
+        cpf: cpfToSave,
       },
       { onConflict: "id" },
     );
