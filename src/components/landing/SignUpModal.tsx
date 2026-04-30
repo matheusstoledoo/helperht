@@ -154,6 +154,13 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
           name,
           role,
           cpf: cleanCpf,
+          ...(role === 'professional'
+            ? {
+                specialty,
+                subspecialty: subspecialty.trim() || null,
+                council_number: `${councilNumber.trim()}/${councilState}`,
+              }
+            : {}),
         },
       });
 
@@ -171,19 +178,6 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
           : (errorPayload?.message || createError?.message || 'Não foi possível criar a conta.');
         toast({ title: "Erro ao cadastrar", description: msg, variant: "destructive" });
         return;
-      }
-
-      // Atualizar perfil profissional na etapa 2
-      if (role === 'professional' && createData.userId) {
-        await supabase
-          .from('users')
-          .update({
-            specialty,
-            subspecialty: subspecialty.trim() || null,
-            council_number: `${councilNumber.trim()}/${councilState}`,
-            onboarding_completed: true,
-          } as any)
-          .eq('id', createData.userId);
       }
 
       // Login automático

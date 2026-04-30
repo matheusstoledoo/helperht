@@ -12,10 +12,25 @@ serve(async (req) => {
   }
 
   try {
-    const { email, password, name, role, cpf, requesting_professional_id } = await req.json();
+    const {
+      email,
+      password,
+      name,
+      role,
+      cpf,
+      requesting_professional_id,
+      specialty,
+      subspecialty,
+      council_number,
+    } = await req.json();
 
     const cleanCpf = cpf ? String(cpf).replace(/[^\d]/g, '') : null;
     const cpfToSave = cleanCpf && cleanCpf.length === 11 ? cleanCpf : null;
+
+    const isProfessional = role === "professional";
+    const specialtyToSave = isProfessional && specialty ? String(specialty).trim() || null : null;
+    const subspecialtyToSave = isProfessional && subspecialty ? String(subspecialty).trim() || null : null;
+    const councilToSave = isProfessional && council_number ? String(council_number).trim() || null : null;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -75,13 +90,17 @@ serve(async (req) => {
         name,
         role,
         cpf: cpfToSave,
+        ...(isProfessional
+          ? {
+              specialty: specialtyToSave,
+              subspecialty: subspecialtyToSave,
+              council_number: councilToSave,
+              onboarding_completed: !!specialtyToSave,
+            }
+          : {}),
       },
       { onConflict: "id" },
     );
-
-    if (userError) {
-      console.error("User table error:", userError);
-    }
 
     if (userError) {
       console.error("User table error:", userError);
