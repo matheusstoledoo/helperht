@@ -1063,9 +1063,11 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
               ))}
             </div>
 
-            <Button className="w-full sm:w-auto" onClick={() => setShowImportSheet(true)}>
-              <Plus className="h-4 w-4 mr-1" /> Adicionar atividade
-            </Button>
+            {!readOnly && (
+              <Button className="w-full sm:w-auto" onClick={() => setShowImportSheet(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Adicionar atividade
+              </Button>
+            )}
           </div>
         </div>
 
