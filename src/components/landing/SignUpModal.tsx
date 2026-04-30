@@ -306,20 +306,20 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
                   {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="signup-cpf">
-                    CPF {role === "professional" ? "(opcional)" : "*"}
-                  </Label>
-                  <Input
-                    id="signup-cpf"
-                    value={cpf}
-                    onChange={(e) => setCpf(e.target.value)}
-                    placeholder="000.000.000-00"
-                    disabled={loading}
-                    maxLength={14}
-                  />
-                  {errors.cpf && <p className="text-sm text-destructive">{errors.cpf}</p>}
-                </div>
+                {role === "patient" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-cpf">CPF *</Label>
+                    <Input
+                      id="signup-cpf"
+                      value={cpf}
+                      onChange={(e) => setCpf(e.target.value)}
+                      placeholder="000.000.000-00"
+                      disabled={loading}
+                      maxLength={14}
+                    />
+                    {errors.cpf && <p className="text-sm text-destructive">{errors.cpf}</p>}
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Senha *</Label>
