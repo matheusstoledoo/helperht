@@ -40,19 +40,38 @@ export const useUserRole = (): UseUserRoleReturn => {
 
         currentUserId = user.id;
 
+        const { data: roleRows } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .limit(5);
+
+        if (!isMounted) return;
+
+        if (roleRows && roleRows.length > 0) {
+          const isProfessional = roleRows.some((r: any) => r.role === 'professional' || r.role === 'admin');
+          const resolvedRole = isProfessional
+            ? (roleRows.find((r: any) => r.role === 'admin') ? 'admin' : 'professional')
+            : 'patient';
+          console.log('[UserRole] role from user_roles:', resolvedRole);
+          setRole(resolvedRole as UserRole);
+          return;
+        }
+
+        // Fallback: tabela users
         const { data, error } = await supabase
           .from('users')
           .select('role')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
         if (!isMounted) return;
 
-        if (error) {
-          console.error('[UserRole] Error fetching role:', error);
+        if (error || !data) {
+          console.error('[UserRole] Error fetching role, defaulting to patient:', error);
           setRole('patient');
         } else {
-          console.log('[UserRole] User role:', data?.role);
+          console.log('[UserRole] role from users table:', data?.role);
           setRole(data?.role as UserRole);
         }
       } catch (error) {
