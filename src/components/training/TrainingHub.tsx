@@ -1096,26 +1096,7 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
         )}
       </section>
 
-      {!readOnly && (
-        <section className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => setShowStrengthSheet(true)}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all"
-          >
-            <span className="text-3xl">🏋️</span>
-            <span className="text-sm font-medium">Musculação</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowAerobicSection(true)}
-            className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all"
-          >
-            <span className="text-3xl">🏃</span>
-            <span className="text-sm font-medium">Atividades Aeróbicas</span>
-          </button>
-        </section>
-      )}
+
 
       <section className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
