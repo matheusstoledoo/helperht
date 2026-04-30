@@ -1604,6 +1604,35 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
         </SheetContent>
       </Sheet>
       )}
+
+      {!readOnly && (
+        <Sheet open={showStrengthSheet} onOpenChange={setShowStrengthSheet}>
+          <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Musculação</SheetTitle>
+            </SheetHeader>
+            <Tabs defaultValue="register" className="mt-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="register">Registrar</TabsTrigger>
+                <TabsTrigger value="evolution">Evolução</TabsTrigger>
+              </TabsList>
+              <TabsContent value="register" className="mt-4">
+                <StrengthWorkoutLogger
+                  userId={userId}
+                  patientId={patientId}
+                  onSaved={() => {
+                    setShowStrengthSheet(false);
+                    fetchData();
+                  }}
+                />
+              </TabsContent>
+              <TabsContent value="evolution" className="mt-4">
+                <StrengthEvolutionDashboard userId={userId} />
+              </TabsContent>
+            </Tabs>
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }
