@@ -50,7 +50,7 @@ serve(async (req) => {
       user_metadata: {
         name,
         role,
-        cpf,
+        cpf: cpfToSave,
       },
     });
 
