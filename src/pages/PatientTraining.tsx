@@ -265,6 +265,48 @@ export default function PatientTraining() {
         {loading ? (
           <div className="text-center py-12 text-muted-foreground">Carregando...</div>
         ) : user ? (
+          section === 'home' ? (
+            <section className="grid grid-cols-2 gap-3 max-w-2xl mx-auto mt-4">
+              <button
+                type="button"
+                onClick={() => setSection('musculacao')}
+                className="flex flex-col items-center gap-2 p-6 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all"
+              >
+                <span className="text-4xl">🏋️</span>
+                <span className="text-sm font-medium">Musculação</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSection('aerobico')}
+                className="flex flex-col items-center gap-2 p-6 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all"
+              >
+                <span className="text-4xl">🏃</span>
+                <span className="text-sm font-medium">Atividades Aeróbicas</span>
+              </button>
+            </section>
+          ) : section === 'musculacao' ? (
+            <div className="space-y-4 mt-4">
+              <Button variant="ghost" size="sm" className="-ml-2" onClick={() => setSection('home')}>
+                <ChevronLeft className="h-4 w-4 mr-1" /> Voltar
+              </Button>
+              <Tabs defaultValue="register">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="register">Registrar</TabsTrigger>
+                  <TabsTrigger value="evolution">Evolução</TabsTrigger>
+                </TabsList>
+                <TabsContent value="register" className="mt-4">
+                  <StrengthWorkoutLogger userId={user.id} patientId={patientId} />
+                </TabsContent>
+                <TabsContent value="evolution" className="mt-4">
+                  <StrengthEvolutionDashboard userId={user.id} />
+                </TabsContent>
+              </Tabs>
+            </div>
+          ) : (
+          <div className="space-y-4 mt-4">
+            <Button variant="ghost" size="sm" className="-ml-2" onClick={() => setSection('home')}>
+              <ChevronLeft className="h-4 w-4 mr-1" /> Voltar
+            </Button>
           <Tabs defaultValue="treinos">
             <TabsList className="w-full">
               <TabsTrigger value="treinos" className="flex-1">Meus Treinos</TabsTrigger>
@@ -580,6 +622,8 @@ export default function PatientTraining() {
               <PerformanceEvolution userId={user.id} patientId={patientId} />
             </TabsContent>
           </Tabs>
+          </div>
+          )
         ) : (
           <Card>
             <CardContent className="p-8 text-center">
