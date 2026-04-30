@@ -436,36 +436,104 @@ export default function StrengthWorkoutLogger({ userId, patientId, onSaved }: St
           <Dumbbell className="h-4 w-4 text-blue-500" />
           Treino de Musculação
         </h3>
-        <Sheet open={templateSheetOpen} onOpenChange={setTemplateSheetOpen}>
-          <SheetTrigger asChild>
-            <Button size="sm" variant="outline">
-              <LayoutTemplate className="h-4 w-4 mr-1" />
-              Usar template
-            </Button>
-          </SheetTrigger>
-          <SheetContent>
-            <SheetHeader>
-              <SheetTitle>Templates de treino</SheetTitle>
-            </SheetHeader>
-            <div className="mt-4 space-y-2">
-              {templates.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhum template salvo ainda</p>
-              ) : (
-                templates.map((tpl) => (
-                  <Card key={tpl.id} className="cursor-pointer hover:bg-accent" onClick={() => applyTemplate(tpl)}>
-                    <CardContent className="p-3">
-                      <p className="font-medium text-sm">{tpl.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {Array.isArray(tpl.exercises) ? tpl.exercises.length : 0} exercícios
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-          </SheetContent>
-        </Sheet>
+        <div className="flex gap-2">
+          <Sheet open={showImportSheet} onOpenChange={setShowImportSheet}>
+            <SheetTrigger asChild>
+              <Button size="sm" variant="outline">
+                <FileText className="h-4 w-4 mr-1" />
+                📄 Importar ficha
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>Importar ficha de treino</SheetTitle>
+                <SheetDescription>
+                  Envie um PDF ou foto da sua ficha de academia. O sistema extrai os exercícios automaticamente.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-6 space-y-4">
+                <div className="space-y-2">
+                  <Label>Arquivo (PDF ou imagem)</Label>
+                  <Input
+                    type="file"
+                    accept=".pdf,image/*"
+                    onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                    disabled={extracting}
+                  />
+                  {importFile && (
+                    <p className="text-xs text-muted-foreground">{importFile.name}</p>
+                  )}
+                </div>
+                <Button
+                  onClick={handleExtractWorkout}
+                  disabled={!importFile || extracting}
+                  className="w-full"
+                >
+                  {extracting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Analisando documento...
+                    </>
+                  ) : (
+                    "Extrair treino"
+                  )}
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          <Sheet open={templateSheetOpen} onOpenChange={setTemplateSheetOpen}>
+            <SheetTrigger asChild>
+              <Button size="sm" variant="outline">
+                <LayoutTemplate className="h-4 w-4 mr-1" />
+                Usar template
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>Templates de treino</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4 space-y-2">
+                {templates.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum template salvo ainda</p>
+                ) : (
+                  templates.map((tpl) => (
+                    <Card key={tpl.id} className="cursor-pointer hover:bg-accent" onClick={() => applyTemplate(tpl)}>
+                      <CardContent className="p-3">
+                        <p className="font-medium text-sm">{tpl.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {Array.isArray(tpl.exercises) ? tpl.exercises.length : 0} exercícios
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
+
+      {extractedSessions.length > 1 && (
+        <Card>
+          <CardContent className="p-4 space-y-2">
+            <Label>Qual treino você quer fazer hoje?</Label>
+            <Select value={selectedSessionName} onValueChange={handlePickExtractedSession}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma sessão" />
+              </SelectTrigger>
+              <SelectContent>
+                {extractedSessions.map((s) => (
+                  <SelectItem key={s.name} value={s.name}>
+                    {s.name}
+                    {s.day ? ` — ${s.day}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Adicionar exercício */}
       <Card>
