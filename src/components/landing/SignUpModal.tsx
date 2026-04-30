@@ -112,14 +112,6 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
     // Professional step 1 → advance to step 2
     if (role === "professional" && step === 1) {
       if (!validateBaseFields()) return;
-      // CPF é opcional para profissional, mas se preenchido valida
-      if (cpf.trim()) {
-        const cpfResult = cpfSchema.safeParse(cpf);
-        if (!cpfResult.success) {
-          setErrors({ cpf: cpfResult.error.errors[0].message });
-          return;
-        }
-      }
       setStep(2);
       return;
     }
@@ -153,7 +145,7 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
     setLoading(true);
     try {
       const normalizedEmail = email.trim().toLowerCase();
-      const cleanCpf = cpf.replace(/[^\d]/g, '');
+      const cleanCpf = role === "patient" ? cpf.replace(/[^\d]/g, '') : "";
 
       const { data: createData, error: createError } = await supabase.functions.invoke('create-user', {
         body: {
@@ -314,20 +306,20 @@ export function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
                   {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="signup-cpf">
-                    CPF {role === "professional" ? "(opcional)" : "*"}
-                  </Label>
-                  <Input
-                    id="signup-cpf"
-                    value={cpf}
-                    onChange={(e) => setCpf(e.target.value)}
-                    placeholder="000.000.000-00"
-                    disabled={loading}
-                    maxLength={14}
-                  />
-                  {errors.cpf && <p className="text-sm text-destructive">{errors.cpf}</p>}
-                </div>
+                {role === "patient" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-cpf">CPF *</Label>
+                    <Input
+                      id="signup-cpf"
+                      value={cpf}
+                      onChange={(e) => setCpf(e.target.value)}
+                      placeholder="000.000.000-00"
+                      disabled={loading}
+                      maxLength={14}
+                    />
+                    {errors.cpf && <p className="text-sm text-destructive">{errors.cpf}</p>}
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Senha *</Label>
