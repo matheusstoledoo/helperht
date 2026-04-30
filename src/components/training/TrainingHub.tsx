@@ -888,7 +888,7 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
             <Dumbbell className="h-4 w-4 text-primary" />
             Plano ativo
           </h3>
-          {!showCreateForm && activePlan && (
+          {!readOnly && !showCreateForm && activePlan && (
             <Button variant="ghost" size="sm" onClick={() => setShowCreateForm(true)}>
               <Plus className="h-4 w-4 mr-1" />
               Novo plano
