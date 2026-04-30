@@ -31,9 +31,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import ManualTrainingPlanForm from "./ManualTrainingPlanForm";
-import StrengthWorkoutLogger from "@/components/training/StrengthWorkoutLogger";
-import StrengthEvolutionDashboard from "@/components/training/StrengthEvolutionDashboard";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ManualTrainingPlanForm from "./ManualTrainingPlanForm";
 
 interface TrainingHubProps {
   userId: string;
