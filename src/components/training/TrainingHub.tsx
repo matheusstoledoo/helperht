@@ -38,6 +38,7 @@ interface TrainingHubProps {
   onBackfillGps?: () => void | Promise<void>;
   backfillingGps?: boolean;
   hasGarminWithoutGps?: boolean;
+  readOnly?: boolean;
 }
 
 interface TrainingPlan {
@@ -405,7 +406,7 @@ const parseGarminFit = (
   });
 };
 
-export default function TrainingHub({ userId, patientId, onBackfillGps, backfillingGps, hasGarminWithoutGps }: TrainingHubProps) {
+export default function TrainingHub({ userId, patientId, onBackfillGps, backfillingGps, hasGarminWithoutGps, readOnly = false }: TrainingHubProps) {
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [plans, setPlans] = useState<any[]>([]);
@@ -887,7 +888,7 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
             <Dumbbell className="h-4 w-4 text-primary" />
             Plano ativo
           </h3>
-          {!showCreateForm && activePlan && (
+          {!readOnly && !showCreateForm && activePlan && (
             <Button variant="ghost" size="sm" onClick={() => setShowCreateForm(true)}>
               <Plus className="h-4 w-4 mr-1" />
               Novo plano
@@ -956,17 +957,21 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
                     <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => setShowSessions((prev) => !prev)}>
                       {showSessions ? "Ocultar sessões" : "Ver sessões"}
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setEditingPlan(activePlan)}>
-                      Editar
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => setShowDeleteConfirm(true)}
-                    >
-                      Excluir
-                    </Button>
+                    {!readOnly && (
+                      <>
+                        <Button variant="ghost" size="sm" onClick={() => setEditingPlan(activePlan)}>
+                          Editar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => setShowDeleteConfirm(true)}
+                        >
+                          Excluir
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
                 {activePlan.periodization_notes && (
@@ -1021,9 +1026,11 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
             <CardContent className="p-8 text-center space-y-3">
               <Dumbbell className="h-10 w-10 mx-auto text-muted-foreground/50" />
               <p className="text-muted-foreground">Nenhum plano de treino ativo</p>
-              <Button variant="outline" onClick={() => setShowCreateForm(true)}>
-                Criar plano
-              </Button>
+              {!readOnly && (
+                <Button variant="outline" onClick={() => setShowCreateForm(true)}>
+                  Criar plano
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}
@@ -1056,9 +1063,11 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
               ))}
             </div>
 
-            <Button className="w-full sm:w-auto" onClick={() => setShowImportSheet(true)}>
-              <Plus className="h-4 w-4 mr-1" /> Adicionar atividade
-            </Button>
+            {!readOnly && (
+              <Button className="w-full sm:w-auto" onClick={() => setShowImportSheet(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Adicionar atividade
+              </Button>
+            )}
           </div>
         </div>
 
@@ -1217,7 +1226,11 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
                                         className="h-7 text-xs text-primary hover:text-primary"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          navigate(`/pac/atividade/${log.id}`);
+                                          if (readOnly && patientId) {
+                                            navigate(`/prof/paciente/${patientId}/atividade/${log.id}`);
+                                          } else {
+                                            navigate(`/pac/atividade/${log.id}`);
+                                          }
                                         }}
                                       >
                                         Ver análise →
@@ -1317,6 +1330,7 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
         </section>
       )}
 
+      {!readOnly && (
       <Sheet open={showImportSheet} onOpenChange={setShowImportSheet}>
         <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
           <SheetHeader>
@@ -1563,6 +1577,7 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
           </div>
         </SheetContent>
       </Sheet>
+      )}
     </div>
   );
 }
