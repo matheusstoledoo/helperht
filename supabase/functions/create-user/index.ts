@@ -106,14 +106,6 @@ serve(async (req) => {
       console.error("User table error:", userError);
     }
 
-    if (userError) {
-      console.error("User table error:", userError);
-    }
-
-    if (userError) {
-      console.error("User table error:", userError);
-    }
-
     // Create user role
     const { error: roleError } = await supabaseAdmin.from("user_roles").upsert({
       user_id: userId,
