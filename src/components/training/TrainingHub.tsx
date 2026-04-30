@@ -1330,6 +1330,7 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
         </section>
       )}
 
+      {!readOnly && (
       <Sheet open={showImportSheet} onOpenChange={setShowImportSheet}>
         <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
           <SheetHeader>
@@ -1576,6 +1577,7 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
           </div>
         </SheetContent>
       </Sheet>
+      )}
     </div>
   );
 }
