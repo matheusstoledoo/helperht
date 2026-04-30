@@ -957,17 +957,21 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
                     <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => setShowSessions((prev) => !prev)}>
                       {showSessions ? "Ocultar sessões" : "Ver sessões"}
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setEditingPlan(activePlan)}>
-                      Editar
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => setShowDeleteConfirm(true)}
-                    >
-                      Excluir
-                    </Button>
+                    {!readOnly && (
+                      <>
+                        <Button variant="ghost" size="sm" onClick={() => setEditingPlan(activePlan)}>
+                          Editar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => setShowDeleteConfirm(true)}
+                        >
+                          Excluir
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
                 {activePlan.periodization_notes && (
