@@ -14,6 +14,9 @@ serve(async (req) => {
   try {
     const { email, password, name, role, cpf, requesting_professional_id } = await req.json();
 
+    const cleanCpf = cpf ? String(cpf).replace(/[^\d]/g, '') : null;
+    const cpfToSave = cleanCpf && cleanCpf.length === 11 ? cleanCpf : null;
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
