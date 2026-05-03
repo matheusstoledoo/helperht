@@ -18,7 +18,7 @@ export default function ProfPatientHealthSummary() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { isProfessional, isAdmin, loading: roleLoading } = useUserRole();
+  const { role, isProfessional, isAdmin, loading: roleLoading } = useUserRole();
   const [tab, setTab] = useState<Tab>("resumo");
   const [patientName, setPatientName] = useState("");
   const [allergies, setAllergies] = useState<string[] | null>(null);
@@ -33,7 +33,7 @@ export default function ProfPatientHealthSummary() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { if (!authLoading && !user) navigate("/auth"); }, [user, authLoading, navigate]);
-  useEffect(() => { if (!roleLoading && !isProfessional && !isAdmin) navigate("/dashboard"); }, [isProfessional, isAdmin, roleLoading, navigate]);
+  useEffect(() => { if (!roleLoading && role !== null && !isProfessional && !isAdmin) navigate("/dashboard"); }, [isProfessional, isAdmin, roleLoading, navigate]);
 
   useEffect(() => {
     if (!id || !user || (!isProfessional && !isAdmin)) return;

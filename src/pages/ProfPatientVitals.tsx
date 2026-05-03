@@ -63,7 +63,7 @@ export default function ProfPatientVitals() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { isProfessional, isAdmin, loading: roleLoading } = useUserRole();
+  const { role, isProfessional, isAdmin, loading: roleLoading } = useUserRole();
   const [isLoading, setIsLoading] = useState(true);
   const [patientName, setPatientName] = useState("");
   const [records, setRecords] = useState<any[]>([]);
@@ -78,7 +78,7 @@ export default function ProfPatientVitals() {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (!roleLoading && !isProfessional && !isAdmin) navigate("/dashboard");
+    if (!roleLoading && role !== null && !isProfessional && !isAdmin) navigate("/dashboard");
   }, [isProfessional, isAdmin, roleLoading, navigate]);
 
   useEffect(() => {

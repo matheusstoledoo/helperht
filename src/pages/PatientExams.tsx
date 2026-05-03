@@ -130,7 +130,7 @@ const PatientExams = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const { isProfessional, isAdmin, loading: roleLoading } = useUserRole();
+  const { role, isProfessional, isAdmin, loading: roleLoading } = useUserRole();
   const { toast } = useToast();
 
   const [patient, setPatient] = useState<PatientData | null>(null);
@@ -164,7 +164,7 @@ const PatientExams = () => {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (!roleLoading && !isProfessional && !isAdmin) {
+    if (!roleLoading && role !== null && !isProfessional && !isAdmin) {
       navigate("/dashboard");
     }
   }, [isProfessional, isAdmin, roleLoading, navigate]);
