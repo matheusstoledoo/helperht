@@ -1,12 +1,13 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  role: 'patient' | 'professional' | 'admin' | null;
+  roleLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, name: string, role: 'patient' | 'professional', cpf: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -19,6 +20,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [role, setRole] = useState<'patient' | 'professional' | 'admin' | null>(null);
+  const [roleLoading, setRoleLoading] = useState(true);
+
+  const fetchRole = async (userId: string) => {
+    setRoleLoading(true);
+    try {
+      const { data: roleRows } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .limit(5);
+
+      if (roleRows && roleRows.length > 0) {
+        const isAdmin = roleRows.some((r: any) => r.role === 'admin');
+        const isProfessional = roleRows.some((r: any) => r.role === 'professional' || r.role === 'admin');
+        setRole(isAdmin ? 'admin' : isProfessional ? 'professional' : 'patient');
+        return;
+      }
+
+      const { data } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle();
+
+      setRole((data?.role as any) ?? null);
+    } finally {
+      setRoleLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -27,6 +58,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        if (session?.user) {
+          fetchRole(session.user.id);
+        } else {
+          setRole(null);
+          setRoleLoading(false);
+        }
       }
     );
 
@@ -35,6 +72,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      if (session?.user) {
+        fetchRole(session.user.id);
+      } else {
+        setRole(null);
+        setRoleLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -73,10 +116,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     console.log('[SignUp] Auth result:', { userId: data?.user?.id, error });
 
-    // Se o cadastro foi bem-sucedido, usar função segura para criar perfil e role
     if (!error && data.user) {
-      // Aguardar sessão estar pronta antes de chamar RPC
-      // O auto-confirm garante que a sessão já está disponível
       const { error: bootstrapError } = await supabase.rpc('bootstrap_user_profile', {
         _name: name,
         _cpf: cpf,
@@ -85,7 +125,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (bootstrapError) {
         console.error('[SignUp] Error bootstrapping profile:', bootstrapError);
-        // Fallback: tentar insert direto na tabela users
         const { error: directInsertError } = await supabase
           .from('users')
           .upsert({
@@ -105,51 +144,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }
 
-    return { error, role };
+    return { error, role } as any;
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
+    setRole(null);
   };
 
   const getActiveRole = async (userId?: string): Promise<'patient' | 'professional' | null> => {
     let uid = userId;
     if (!uid) {
       const { data: { user } } = await supabase.auth.getUser();
-      console.log('[getActiveRole] getUser result:', user?.id);
       if (!user) return null;
       uid = user.id;
     }
-    console.log('[getActiveRole] using uid:', uid);
 
-    const { data: rows, error } = await supabase
+    const { data: rows } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', uid)
       .limit(5);
 
-    console.log('[getActiveRole] user_roles rows:', rows, 'error:', error);
-
     if (rows && rows.length > 0) {
       const isProfessional = rows.some((r: any) => r.role === 'professional');
-      console.log('[getActiveRole] isProfessional:', isProfessional);
       return isProfessional ? 'professional' : 'patient';
     }
 
-    const { data: userRow, error: userError } = await supabase
+    const { data: userRow } = await supabase
       .from('users')
       .select('role')
       .eq('id', uid)
       .maybeSingle();
 
-    console.log('[getActiveRole] users.role fallback:', userRow, 'error:', userError);
     return (userRow?.role as 'patient' | 'professional') ?? null;
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, getActiveRole }}>
+    <AuthContext.Provider value={{ user, session, loading, role, roleLoading, signIn, signUp, signOut, getActiveRole }}>
       {children}
     </AuthContext.Provider>
   );
