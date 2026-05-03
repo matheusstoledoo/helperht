@@ -504,6 +504,7 @@ const ProfessionalPatientView = () => {
               <Card
                 className="cursor-pointer hover:bg-accent/50 transition-colors"
                 onClick={() => navigate(`${basePath}/resumo`)}
+                onMouseEnter={() => import("../pages/ProfPatientHealthSummary")}
               >
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -521,6 +522,7 @@ const ProfessionalPatientView = () => {
               <Card
                 className="cursor-pointer hover:bg-accent/50 transition-colors"
                 onClick={() => navigate(`${basePath}/diagnosticos`)}
+                onMouseEnter={() => import("../pages/PatientDiagnoses")}
               >
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -538,6 +540,7 @@ const ProfessionalPatientView = () => {
               <Card
                 className="cursor-pointer hover:bg-accent/50 transition-colors"
                 onClick={() => navigate(`${basePath}/tratamentos`)}
+                onMouseEnter={() => import("../pages/PatientTreatments")}
               >
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -555,6 +558,7 @@ const ProfessionalPatientView = () => {
               <Card
                 className="cursor-pointer hover:bg-accent/50 transition-colors"
                 onClick={() => navigate(`${basePath}/documentos`)}
+                onMouseEnter={() => import("../pages/PatientDocuments")}
               >
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -572,6 +576,7 @@ const ProfessionalPatientView = () => {
               <Card
                 className="cursor-pointer hover:bg-accent/50 transition-colors"
                 onClick={() => navigate(`${basePath}/sinais-vitais`)}
+                onMouseEnter={() => import("../pages/ProfPatientVitals")}
               >
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -589,6 +594,7 @@ const ProfessionalPatientView = () => {
               <Card
                 className="cursor-pointer hover:bg-accent/50 transition-colors"
                 onClick={() => navigate(`${basePath}/treinos`)}
+                onMouseEnter={() => import("../pages/ProfPatientTraining")}
               >
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -606,6 +612,7 @@ const ProfessionalPatientView = () => {
               <Card
                 className="cursor-pointer hover:bg-accent/50 transition-colors"
                 onClick={() => navigate(`${basePath}/nutricao`)}
+                onMouseEnter={() => import("../pages/ProfPatientNutrition")}
               >
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
