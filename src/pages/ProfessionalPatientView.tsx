@@ -131,30 +131,33 @@ const ProfessionalPatientView = () => {
       
       setIsLoading(true);
       try {
-        const { data: patientData, error: patientError } = await supabase
-          .from("patients")
-          .select(`
-            id,
-            user_id,
-            birthdate,
-            users (
-              name,
-              email,
-              cpf
-            )
-          `)
-          .eq("id", id)
-          .maybeSingle();
+        const [patientRes, consultationRes] = await Promise.all([
+          supabase
+            .from("patients")
+            .select(`
+              id,
+              user_id,
+              birthdate,
+              users (
+                name,
+                email,
+                cpf
+              )
+            `)
+            .eq("id", id)
+            .maybeSingle(),
+          supabase
+            .from("consultations")
+            .select("*")
+            .eq("patient_id", id)
+            .order("consultation_date", { ascending: false }),
+        ]);
 
-        if (patientError) throw patientError;
+        if (patientRes.error) throw patientRes.error;
+        const patientData = patientRes.data;
+        const consultationData = consultationRes.data;
+
         setPatient(patientData);
-
-        const { data: consultationData } = await supabase
-          .from("consultations")
-          .select("*")
-          .eq("patient_id", id)
-          .order("consultation_date", { ascending: false });
-
         setConsultations(consultationData || []);
 
         const patientUserId = (patientData as any)?.user_id;
