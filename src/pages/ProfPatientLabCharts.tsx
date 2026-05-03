@@ -30,7 +30,7 @@ export default function ProfPatientLabCharts() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { isProfessional, isAdmin, loading: roleLoading } = useUserRole();
+  const { role, isProfessional, isAdmin, loading: roleLoading } = useUserRole();
   const [results, setResults] = useState<RawLabResult[]>([]);
   const [patientName, setPatientName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -40,7 +40,7 @@ export default function ProfPatientLabCharts() {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (!roleLoading && !isProfessional && !isAdmin) navigate("/dashboard");
+    if (!roleLoading && role !== null && !isProfessional && !isAdmin) navigate("/dashboard");
   }, [isProfessional, isAdmin, roleLoading, navigate]);
 
   useEffect(() => {
