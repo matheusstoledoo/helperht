@@ -41,6 +41,7 @@ const PatientTreatmentsView = lazy(() => import("./pages/PatientTreatmentsView")
 const PatientDocumentsView = lazy(() => import("./pages/PatientDocumentsView"));
 const PatientSettings = lazy(() => import("./pages/PatientSettings"));
 const PatientCareTrails = lazy(() => import("./pages/PatientCareTrails"));
+const TrailReport = lazy(() => import("./pages/TrailReport"));
 const PatientLabCharts = lazy(() => import("./pages/PatientLabCharts"));
 const ProfPatientNutrition = lazy(() => import("./pages/ProfPatientNutrition"));
 const ProfPatientTraining = lazy(() => import("./pages/ProfPatientTraining"));
@@ -121,6 +122,7 @@ const App = () => (
               <Route path="/admin/profissionais" element={<AdminProfessionals />} />
               <Route path="/admin/pacientes" element={<AdminPatients />} />
               <Route path="/prof/trilhas" element={<PatientCareTrails />} />
+              <Route path="/prof/trilhas/:id/relatorio" element={<TrailReport />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
               </Routes>

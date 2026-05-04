@@ -156,7 +156,7 @@ export default function PatientCareTrails() {
   };
 
   const handleViewReport = (trailId: string) => {
-    console.log("View report for trail:", trailId);
+    navigate(`/prof/trilhas/${trailId}/relatorio`);
   };
 
   const handleToggleStatus = async (trailId: string, newStatus: TrailStatus) => {
