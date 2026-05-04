@@ -143,6 +143,13 @@ export type Database = {
             foreignKeyName: "clinical_events_enrollment_id_fkey"
             columns: ["enrollment_id"]
             isOneToOne: false
+            referencedRelation: "track_patient_evolution"
+            referencedColumns: ["enrollment_id"]
+          },
+          {
+            foreignKeyName: "clinical_events_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
             referencedRelation: "trail_enrollments"
             referencedColumns: ["id"]
           },
@@ -159,6 +166,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_events_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
           },
           {
             foreignKeyName: "clinical_events_response_id_fkey"
@@ -179,10 +193,12 @@ export type Database = {
           id: string
           notes: string | null
           patient_id: string
+          patient_summary: string | null
           physical_examination: string | null
           plan: string | null
           professional_id: string
           updated_at: string
+          visible_to_patient: boolean | null
         }
         Insert: {
           assessment?: string | null
@@ -193,10 +209,12 @@ export type Database = {
           id?: string
           notes?: string | null
           patient_id: string
+          patient_summary?: string | null
           physical_examination?: string | null
           plan?: string | null
           professional_id: string
           updated_at?: string
+          visible_to_patient?: boolean | null
         }
         Update: {
           assessment?: string | null
@@ -207,10 +225,12 @@ export type Database = {
           id?: string
           notes?: string | null
           patient_id?: string
+          patient_summary?: string | null
           physical_examination?: string | null
           plan?: string | null
           professional_id?: string
           updated_at?: string
+          visible_to_patient?: boolean | null
         }
         Relationships: [
           {
@@ -226,6 +246,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultations_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
           },
           {
             foreignKeyName: "consultations_professional_id_fkey"
@@ -315,6 +342,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diagnoses_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
           },
           {
             foreignKeyName: "diagnoses_previous_diagnosis_id_fkey"
@@ -514,6 +548,13 @@ export type Database = {
             foreignKeyName: "documents_source_enrollment_id_fkey"
             columns: ["source_enrollment_id"]
             isOneToOne: false
+            referencedRelation: "track_patient_evolution"
+            referencedColumns: ["enrollment_id"]
+          },
+          {
+            foreignKeyName: "documents_source_enrollment_id_fkey"
+            columns: ["source_enrollment_id"]
+            isOneToOne: false
             referencedRelation: "trail_enrollments"
             referencedColumns: ["id"]
           },
@@ -523,6 +564,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "care_trails"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_source_trail_id_fkey"
+            columns: ["source_trail_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["trail_id"]
           },
         ]
       }
@@ -721,6 +769,13 @@ export type Database = {
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "evidence_quality_analyses_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
         ]
       }
       evidence_results: {
@@ -874,6 +929,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "evidence_searches_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
+          {
             foreignKeyName: "evidence_searches_professional_id_fkey"
             columns: ["professional_id"]
             isOneToOne: false
@@ -961,6 +1023,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exams_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
           },
           {
             foreignKeyName: "exams_requested_by_fkey"
@@ -1109,11 +1178,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "goals_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
+          {
             foreignKeyName: "goals_source_trail_id_fkey"
             columns: ["source_trail_id"]
             isOneToOne: false
             referencedRelation: "care_trails"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goals_source_trail_id_fkey"
+            columns: ["source_trail_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["trail_id"]
           },
         ]
       }
@@ -1186,6 +1269,101 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insight_feedback_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
+        ]
+      }
+      instance_checkpoints: {
+        Row: {
+          completed_by: string | null
+          completed_date: string | null
+          created_at: string | null
+          enrollment_id: string | null
+          id: string
+          label: string
+          notes: string | null
+          patient_id: string | null
+          scheduled_date: string
+          status: string | null
+          template_checkpoint_id: string | null
+          week_number: number
+        }
+        Insert: {
+          completed_by?: string | null
+          completed_date?: string | null
+          created_at?: string | null
+          enrollment_id?: string | null
+          id?: string
+          label: string
+          notes?: string | null
+          patient_id?: string | null
+          scheduled_date: string
+          status?: string | null
+          template_checkpoint_id?: string | null
+          week_number: number
+        }
+        Update: {
+          completed_by?: string | null
+          completed_date?: string | null
+          created_at?: string | null
+          enrollment_id?: string | null
+          id?: string
+          label?: string
+          notes?: string | null
+          patient_id?: string | null
+          scheduled_date?: string
+          status?: string | null
+          template_checkpoint_id?: string | null
+          week_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instance_checkpoints_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "track_patient_evolution"
+            referencedColumns: ["enrollment_id"]
+          },
+          {
+            foreignKeyName: "instance_checkpoints_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "trail_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instance_checkpoints_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "instance_checkpoints_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instance_checkpoints_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "instance_checkpoints_template_checkpoint_id_fkey"
+            columns: ["template_checkpoint_id"]
+            isOneToOne: false
+            referencedRelation: "template_checkpoints"
             referencedColumns: ["id"]
           },
         ]
@@ -1366,6 +1544,13 @@ export type Database = {
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "lab_results_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
         ]
       }
       meal_logs: {
@@ -1430,6 +1615,13 @@ export type Database = {
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "meal_logs_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
         ]
       }
       messages: {
@@ -1478,7 +1670,56 @@ export type Database = {
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "messages_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
         ]
+      }
+      metric_catalog: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          higher_is_better: boolean | null
+          id: string
+          key: string
+          label: string
+          reference_max: number | null
+          reference_min: number | null
+          source: string | null
+          unit: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          higher_is_better?: boolean | null
+          id?: string
+          key: string
+          label: string
+          reference_max?: number | null
+          reference_min?: number | null
+          source?: string | null
+          unit?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          higher_is_better?: boolean | null
+          id?: string
+          key?: string
+          label?: string
+          reference_max?: number | null
+          reference_min?: number | null
+          source?: string | null
+          unit?: string | null
+        }
+        Relationships: []
       }
       normalized_clinical_data: {
         Row: {
@@ -1635,6 +1876,13 @@ export type Database = {
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "nutrition_plans_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
         ]
       }
       patient_goals: {
@@ -1691,6 +1939,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_goals_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
           },
         ]
       }
@@ -1768,6 +2023,13 @@ export type Database = {
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "patient_insights_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
         ]
       }
       patient_outcomes: {
@@ -1830,6 +2092,13 @@ export type Database = {
             foreignKeyName: "patient_outcomes_enrollment_id_fkey"
             columns: ["enrollment_id"]
             isOneToOne: false
+            referencedRelation: "track_patient_evolution"
+            referencedColumns: ["enrollment_id"]
+          },
+          {
+            foreignKeyName: "patient_outcomes_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
             referencedRelation: "trail_enrollments"
             referencedColumns: ["id"]
           },
@@ -1846,6 +2115,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_outcomes_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
           },
           {
             foreignKeyName: "patient_outcomes_recorded_by_fkey"
@@ -1933,6 +2209,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "patient_protocols_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
+          {
             foreignKeyName: "patient_protocols_protocol_id_fkey"
             columns: ["protocol_id"]
             isOneToOne: false
@@ -1992,6 +2275,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_reminders_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
           },
         ]
       }
@@ -2101,6 +2391,46 @@ export type Database = {
           },
         ]
       }
+      professional_patient_last_seen: {
+        Row: {
+          last_seen_at: string | null
+          patient_id: string
+          professional_id: string
+        }
+        Insert: {
+          last_seen_at?: string | null
+          patient_id: string
+          professional_id: string
+        }
+        Update: {
+          last_seen_at?: string | null
+          patient_id?: string
+          professional_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_patient_last_seen_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "professional_patient_last_seen_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_patient_last_seen_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
+        ]
+      }
       professional_patient_links: {
         Row: {
           created_at: string
@@ -2140,6 +2470,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_patient_links_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
           },
           {
             foreignKeyName: "professional_patient_links_professional_id_fkey"
@@ -2207,6 +2544,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_recommendations_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
           },
           {
             foreignKeyName: "professional_recommendations_race_event_id_fkey"
@@ -2435,6 +2779,13 @@ export type Database = {
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "race_events_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
         ]
       }
       recovery_logs: {
@@ -2506,6 +2857,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recovery_logs_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
           },
         ]
       }
@@ -2592,6 +2950,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "supplements_log_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
+          {
             foreignKeyName: "supplements_log_training_plan_id_fkey"
             columns: ["training_plan_id"]
             isOneToOne: false
@@ -2599,6 +2964,226 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      template_checkpoints: {
+        Row: {
+          description: string | null
+          display_order: number | null
+          id: string
+          is_required: boolean | null
+          label: string
+          template_id: string | null
+          week_number: number
+        }
+        Insert: {
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_required?: boolean | null
+          label: string
+          template_id?: string | null
+          week_number: number
+        }
+        Update: {
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          is_required?: boolean | null
+          label?: string
+          template_id?: string | null
+          week_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_checkpoints_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "track_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_metrics: {
+        Row: {
+          collection_frequency: string | null
+          display_order: number | null
+          goal_direction: string | null
+          id: string
+          is_required: boolean | null
+          metric_key: string | null
+          template_id: string | null
+        }
+        Insert: {
+          collection_frequency?: string | null
+          display_order?: number | null
+          goal_direction?: string | null
+          id?: string
+          is_required?: boolean | null
+          metric_key?: string | null
+          template_id?: string | null
+        }
+        Update: {
+          collection_frequency?: string | null
+          display_order?: number | null
+          goal_direction?: string | null
+          id?: string
+          is_required?: boolean | null
+          metric_key?: string | null
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_metrics_metric_key_fkey"
+            columns: ["metric_key"]
+            isOneToOne: false
+            referencedRelation: "metric_catalog"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "template_metrics_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "track_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      track_measurements: {
+        Row: {
+          checkpoint_id: string | null
+          collected_at: string | null
+          collected_by: string | null
+          enrollment_id: string | null
+          id: string
+          metric_key: string | null
+          patient_id: string | null
+          source: string | null
+          source_record_id: string | null
+          text_value: string | null
+          value: number | null
+        }
+        Insert: {
+          checkpoint_id?: string | null
+          collected_at?: string | null
+          collected_by?: string | null
+          enrollment_id?: string | null
+          id?: string
+          metric_key?: string | null
+          patient_id?: string | null
+          source?: string | null
+          source_record_id?: string | null
+          text_value?: string | null
+          value?: number | null
+        }
+        Update: {
+          checkpoint_id?: string | null
+          collected_at?: string | null
+          collected_by?: string | null
+          enrollment_id?: string | null
+          id?: string
+          metric_key?: string | null
+          patient_id?: string | null
+          source?: string | null
+          source_record_id?: string | null
+          text_value?: string | null
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "track_measurements_checkpoint_id_fkey"
+            columns: ["checkpoint_id"]
+            isOneToOne: false
+            referencedRelation: "instance_checkpoints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "track_measurements_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "track_patient_evolution"
+            referencedColumns: ["enrollment_id"]
+          },
+          {
+            foreignKeyName: "track_measurements_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "trail_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "track_measurements_metric_key_fkey"
+            columns: ["metric_key"]
+            isOneToOne: false
+            referencedRelation: "metric_catalog"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "track_measurements_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "track_measurements_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "track_measurements_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
+        ]
+      }
+      track_templates: {
+        Row: {
+          category: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          duration_weeks: number | null
+          evidence_refs: string[] | null
+          id: string
+          is_active: boolean | null
+          is_system: boolean | null
+          name: string
+          slug: string
+          subcategory: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          duration_weeks?: number | null
+          evidence_refs?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          name: string
+          slug: string
+          subcategory?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          duration_weeks?: number | null
+          evidence_refs?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          name?: string
+          slug?: string
+          subcategory?: string | null
+        }
+        Relationships: []
       }
       trail_alerts: {
         Row: {
@@ -2656,6 +3241,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "trail_contact_points"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trail_alerts_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "track_patient_evolution"
+            referencedColumns: ["enrollment_id"]
           },
           {
             foreignKeyName: "trail_alerts_enrollment_id_fkey"
@@ -2811,6 +3403,13 @@ export type Database = {
             referencedRelation: "care_trails"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "trail_contact_points_trail_id_fkey"
+            columns: ["trail_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["trail_id"]
+          },
         ]
       }
       trail_enrollments: {
@@ -2820,15 +3419,18 @@ export type Database = {
           context_id: string | null
           created_at: string
           current_day: number
+          custom_notes: string | null
           enrolled_by: string
           exit_reason: string | null
           exited_at: string | null
           expected_end_date: string | null
+          goals_override: Json | null
           id: string
           last_interaction_at: string | null
           patient_id: string
           started_at: string
           status: Database["public"]["Enums"]["trail_enrollment_status"]
+          template_id: string | null
           trail_id: string
           updated_at: string
         }
@@ -2838,15 +3440,18 @@ export type Database = {
           context_id?: string | null
           created_at?: string
           current_day?: number
+          custom_notes?: string | null
           enrolled_by: string
           exit_reason?: string | null
           exited_at?: string | null
           expected_end_date?: string | null
+          goals_override?: Json | null
           id?: string
           last_interaction_at?: string | null
           patient_id: string
           started_at?: string
           status?: Database["public"]["Enums"]["trail_enrollment_status"]
+          template_id?: string | null
           trail_id: string
           updated_at?: string
         }
@@ -2856,15 +3461,18 @@ export type Database = {
           context_id?: string | null
           created_at?: string
           current_day?: number
+          custom_notes?: string | null
           enrolled_by?: string
           exit_reason?: string | null
           exited_at?: string | null
           expected_end_date?: string | null
+          goals_override?: Json | null
           id?: string
           last_interaction_at?: string | null
           patient_id?: string
           started_at?: string
           status?: Database["public"]["Enums"]["trail_enrollment_status"]
+          template_id?: string | null
           trail_id?: string
           updated_at?: string
         }
@@ -2891,11 +3499,32 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "trail_enrollments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "trail_enrollments_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "track_templates"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "trail_enrollments_trail_id_fkey"
             columns: ["trail_id"]
             isOneToOne: false
             referencedRelation: "care_trails"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trail_enrollments_trail_id_fkey"
+            columns: ["trail_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["trail_id"]
           },
         ]
       }
@@ -2928,6 +3557,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "care_trails"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trail_exit_conditions_trail_id_fkey"
+            columns: ["trail_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["trail_id"]
           },
         ]
       }
@@ -2995,6 +3631,13 @@ export type Database = {
             foreignKeyName: "trail_responses_enrollment_id_fkey"
             columns: ["enrollment_id"]
             isOneToOne: false
+            referencedRelation: "track_patient_evolution"
+            referencedColumns: ["enrollment_id"]
+          },
+          {
+            foreignKeyName: "trail_responses_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
             referencedRelation: "trail_enrollments"
             referencedColumns: ["id"]
           },
@@ -3038,6 +3681,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "trail_contact_points"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trail_scheduled_dispatches_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "track_patient_evolution"
+            referencedColumns: ["enrollment_id"]
           },
           {
             foreignKeyName: "trail_scheduled_dispatches_enrollment_id_fkey"
@@ -3121,6 +3771,13 @@ export type Database = {
             foreignKeyName: "trail_task_instances_enrollment_id_fkey"
             columns: ["enrollment_id"]
             isOneToOne: false
+            referencedRelation: "track_patient_evolution"
+            referencedColumns: ["enrollment_id"]
+          },
+          {
+            foreignKeyName: "trail_task_instances_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
             referencedRelation: "trail_enrollments"
             referencedColumns: ["id"]
           },
@@ -3137,6 +3794,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trail_task_instances_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
           },
           {
             foreignKeyName: "trail_task_instances_professional_id_fkey"
@@ -3176,6 +3840,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "care_trails"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trail_triggers_trail_id_fkey"
+            columns: ["trail_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["trail_id"]
           },
         ]
       }
@@ -3221,6 +3892,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "care_trails"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trail_version_history_trail_id_fkey"
+            columns: ["trail_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["trail_id"]
           },
         ]
       }
@@ -3303,6 +3981,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_plans_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
           },
         ]
       }
@@ -3425,6 +4110,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treatments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
           },
           {
             foreignKeyName: "treatments_prescribed_by_fkey"
@@ -3575,6 +4267,13 @@ export type Database = {
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "vital_signs_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
         ]
       }
       vitals_alerts: {
@@ -3625,6 +4324,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vitals_alerts_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
           },
           {
             foreignKeyName: "vitals_alerts_vital_log_id_fkey"
@@ -3702,6 +4408,13 @@ export type Database = {
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "vitals_log_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
         ]
       }
       workout_laps: {
@@ -3776,6 +4489,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_laps_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
           },
           {
             foreignKeyName: "workout_laps_workout_log_id_fkey"
@@ -3911,6 +4631,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "workout_logs_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
+          {
             foreignKeyName: "workout_logs_race_event_id_fkey"
             columns: ["race_event_id"]
             isOneToOne: false
@@ -3986,6 +4713,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_records_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
           },
           {
             foreignKeyName: "workout_records_workout_log_id_fkey"
@@ -4067,6 +4801,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "workout_sets_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
+          {
             foreignKeyName: "workout_sets_workout_log_id_fkey"
             columns: ["workout_log_id"]
             isOneToOne: false
@@ -4121,6 +4862,13 @@ export type Database = {
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "workout_templates_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
         ]
       }
     }
@@ -4148,6 +4896,75 @@ export type Database = {
           patient_id?: string | null
         }
         Relationships: []
+      }
+      professional_patient_alerts: {
+        Row: {
+          days_inactive: number | null
+          last_workout: string | null
+          new_consultations: number | null
+          patient_id: string | null
+          patient_name: string | null
+          professional_id: string | null
+          track_name: string | null
+          trail_id: string | null
+          upcoming_checkpoint_date: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_patient_links_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      track_patient_evolution: {
+        Row: {
+          baseline_value: number | null
+          category: string | null
+          checkpoint_label: string | null
+          delta_from_baseline: number | null
+          enrollment_id: string | null
+          metric_key: string | null
+          metric_label: string | null
+          patient_id: string | null
+          scheduled_date: string | null
+          track_name: string | null
+          unit: string | null
+          value: number | null
+          week_number: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "track_measurements_metric_key_fkey"
+            columns: ["metric_key"]
+            isOneToOne: false
+            referencedRelation: "metric_catalog"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "trail_enrollments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patient_ai_context"
+            referencedColumns: ["patient_id"]
+          },
+          {
+            foreignKeyName: "trail_enrollments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trail_enrollments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
+          },
+        ]
       }
       workout_tonnage: {
         Row: {
@@ -4177,6 +4994,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_sets_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "professional_patient_alerts"
+            referencedColumns: ["patient_id"]
           },
           {
             foreignKeyName: "workout_sets_workout_log_id_fkey"
