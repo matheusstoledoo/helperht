@@ -104,7 +104,9 @@ export default function ProfPatientLabCharts() {
     LAB_PANELS.forEach((p) => panelMap.set(p.key, []));
     panelMap.set("outros", []);
     groupedByMarker.forEach((dataPoints, markerName) => {
-      panelMap.get(classifyMarker(markerName))!.push({ markerName, dataPoints });
+      const panelKey = classifyMarker(markerName);
+      if (panelKey === "hemograma" && !isHemogramaMarkerAllowed(markerName)) return;
+      panelMap.get(panelKey)!.push({ markerName, dataPoints });
     });
     return panelMap;
   }, [groupedByMarker]);
