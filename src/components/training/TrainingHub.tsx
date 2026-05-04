@@ -1383,6 +1383,23 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
                   </div>
                 </button>
 
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowImportSheet(false);
+                    setShowSamsungImport(true);
+                  }}
+                  className="w-full flex items-center gap-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors text-left"
+                >
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Activity className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Samsung Health</p>
+                    <p className="text-sm text-muted-foreground">Importar arquivo ZIP exportado do app</p>
+                  </div>
+                </button>
+
                 <div className="w-full flex items-center gap-3 p-4 rounded-lg border bg-muted/20 opacity-70 text-left">
                   <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
                     <Activity className="h-5 w-5 text-muted-foreground" />
