@@ -860,6 +860,31 @@ const PatientDocumentsView = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          <Dialog open={!!viewerDoc} onOpenChange={(open) => { if (!open) { setViewerDoc(null); setViewerUrl(""); } }}>
+            <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0">
+              <DialogHeader className="p-4 border-b">
+                <DialogTitle>{viewerDoc?.file_name}</DialogTitle>
+              </DialogHeader>
+              <div className="flex-1 overflow-hidden">
+                {viewerDoc?.file_type?.includes("pdf") ? (
+                  <iframe
+                    src={viewerUrl}
+                    className="w-full h-full border-0"
+                    title={viewerDoc?.file_name}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center overflow-auto p-4">
+                    <img
+                      src={viewerUrl}
+                      alt={viewerDoc?.file_name}
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {loading ? (
