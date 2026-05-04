@@ -416,6 +416,7 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
   const [editingPlan, setEditingPlan] = useState<any | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showImportSheet, setShowImportSheet] = useState(false);
+  const [showSamsungImport, setShowSamsungImport] = useState(false);
   
   const [timePeriod, setTimePeriod] = useState<"4s" | "1m" | "3m">("4s");
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
