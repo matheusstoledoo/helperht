@@ -64,6 +64,7 @@ const Dashboard = () => {
   const { toast } = useToast();
 
   const [patients, setPatients] = useState<PatientWithUser[]>([]);
+  const [statuses, setStatuses] = useState<Record<string, PatientStatus>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState<"name" | "created_at" | "updated_at">("updated_at");
   const [isLoading, setIsLoading] = useState(true);
