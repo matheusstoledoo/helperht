@@ -172,6 +172,97 @@ const Dashboard = () => {
     }
   }, [user, isProfessional, isAdmin, toast]);
 
+  useEffect(() => {
+    const fetchStatuses = async () => {
+      if (!user || patients.length === 0) {
+        setStatuses({});
+        return;
+      }
+      const patientIds = patients.map((p) => p.id);
+      const today = new Date();
+      const sevenDaysAgo = new Date(today);
+      sevenDaysAgo.setDate(today.getDate() - 7);
+      const threeDaysAhead = new Date(today);
+      threeDaysAhead.setDate(today.getDate() + 3);
+
+      const [workoutsRes, lastSeenRes, consultsRes, checkpointsRes] = await Promise.all([
+        supabase
+          .from("workout_logs")
+          .select("patient_id, activity_date")
+          .in("patient_id", patientIds)
+          .order("activity_date", { ascending: false }),
+        supabase
+          .from("professional_patient_last_seen")
+          .select("patient_id, last_seen_at")
+          .eq("professional_id", user.id)
+          .in("patient_id", patientIds),
+        supabase
+          .from("consultations")
+          .select("patient_id, professional_id, created_at")
+          .in("patient_id", patientIds)
+          .neq("professional_id", user.id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("instance_checkpoints")
+          .select("patient_id, status, scheduled_date")
+          .in("patient_id", patientIds)
+          .eq("status", "pending")
+          .lte("scheduled_date", threeDaysAhead.toISOString().slice(0, 10)),
+      ]);
+
+      const lastWorkout = new Map<string, string>();
+      (workoutsRes.data || []).forEach((w: any) => {
+        if (!lastWorkout.has(w.patient_id)) lastWorkout.set(w.patient_id, w.activity_date);
+      });
+
+      const lastSeen = new Map<string, string>();
+      (lastSeenRes.data || []).forEach((s: any) => {
+        lastSeen.set(s.patient_id, s.last_seen_at);
+      });
+
+      const newNoteSet = new Set<string>();
+      (consultsRes.data || []).forEach((c: any) => {
+        const seenAt = lastSeen.get(c.patient_id);
+        if (!seenAt || new Date(c.created_at) > new Date(seenAt)) {
+          newNoteSet.add(c.patient_id);
+        }
+      });
+
+      const checkpointSet = new Set<string>(
+        (checkpointsRes.data || []).map((c: any) => c.patient_id)
+      );
+
+      const next: Record<string, PatientStatus> = {};
+      patients.forEach((p) => {
+        const lw = lastWorkout.get(p.id);
+        let noWorkoutDays: number | null = null;
+        if (lw) {
+          const diff = Math.floor((today.getTime() - new Date(lw).getTime()) / (1000 * 60 * 60 * 24));
+          if (diff > 7) noWorkoutDays = diff;
+        }
+        next[p.id] = {
+          noWorkoutDays,
+          hasNewNote: newNoteSet.has(p.id),
+          hasUpcomingCheckpoint: checkpointSet.has(p.id),
+        };
+      });
+      setStatuses(next);
+    };
+    fetchStatuses();
+  }, [patients, user]);
+
+  const handleViewPatient = async (patientId: string) => {
+    if (user) {
+      await supabase
+        .from("professional_patient_last_seen")
+        .upsert(
+          { professional_id: user.id, patient_id: patientId, last_seen_at: new Date().toISOString() },
+          { onConflict: "professional_id,patient_id" }
+        );
+    }
+    navigate(`/prof/paciente/${patientId}`);
+  };
+
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
