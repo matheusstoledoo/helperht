@@ -86,6 +86,8 @@ const PatientDocumentsView = () => {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [viewerDoc, setViewerDoc] = useState<Document | null>(null);
+  const [viewerUrl, setViewerUrl] = useState<string>("");
   const [patientId, setPatientId] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>("");
 
@@ -535,21 +537,13 @@ const PatientDocumentsView = () => {
   };
 
   const handleOpenInNewTab = async (doc: Document) => {
-    try {
-      const { data, error } = await supabase.storage
-        .from("patient-documents")
-        .createSignedUrl(doc.file_path, 300);
+    const { data } = await supabase.storage
+      .from("patient-documents")
+      .createSignedUrl(doc.file_path, 300);
 
-      if (error || !data?.signedUrl) {
-        toast.error("Erro ao abrir documento");
-        return;
-      }
-
-      // Força abertura inline adicionando responseContentDisposition
-      const inlineUrl = data.signedUrl + "&responseContentDisposition=inline";
-      window.open(inlineUrl, "_blank", "noopener,noreferrer");
-    } catch (error) {
-      toast.error("Erro ao abrir documento");
+    if (data?.signedUrl) {
+      setViewerUrl(data.signedUrl);
+      setViewerDoc(doc);
     }
   };
 
@@ -864,6 +858,31 @@ const PatientDocumentsView = () => {
                   Enviar
                 </Button>
               </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={!!viewerDoc} onOpenChange={(open) => { if (!open) { setViewerDoc(null); setViewerUrl(""); } }}>
+            <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0">
+              <DialogHeader className="p-4 border-b">
+                <DialogTitle>{viewerDoc?.file_name}</DialogTitle>
+              </DialogHeader>
+              <div className="flex-1 overflow-hidden">
+                {viewerDoc?.file_type?.includes("pdf") ? (
+                  <iframe
+                    src={viewerUrl}
+                    className="w-full h-full border-0"
+                    title={viewerDoc?.file_name}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center overflow-auto p-4">
+                    <img
+                      src={viewerUrl}
+                      alt={viewerDoc?.file_name}
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  </div>
+                )}
+              </div>
             </DialogContent>
           </Dialog>
         </div>
