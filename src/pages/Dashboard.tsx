@@ -36,8 +36,15 @@ import { useToast } from "@/hooks/use-toast";
 import { Search, UserPlus, Eye, Users, LogOut, Settings, ArrowUpDown, Route, UserSearch } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Badge } from "@/components/ui/badge";
 import { DailyTasksList } from "@/components/trails/DailyTasksList";
 import { RequestPatientAccessModal } from "@/components/professional/RequestPatientAccessModal";
+
+interface PatientStatus {
+  noWorkoutDays: number | null;
+  hasNewNote: boolean;
+  hasUpcomingCheckpoint: boolean;
+}
 
 interface PatientWithUser {
   id: string;
@@ -57,6 +64,7 @@ const Dashboard = () => {
   const { toast } = useToast();
 
   const [patients, setPatients] = useState<PatientWithUser[]>([]);
+  const [statuses, setStatuses] = useState<Record<string, PatientStatus>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState<"name" | "created_at" | "updated_at">("updated_at");
   const [isLoading, setIsLoading] = useState(true);
@@ -163,6 +171,97 @@ const Dashboard = () => {
       fetchPatients();
     }
   }, [user, isProfessional, isAdmin, toast]);
+
+  useEffect(() => {
+    const fetchStatuses = async () => {
+      if (!user || patients.length === 0) {
+        setStatuses({});
+        return;
+      }
+      const patientIds = patients.map((p) => p.id);
+      const today = new Date();
+      const sevenDaysAgo = new Date(today);
+      sevenDaysAgo.setDate(today.getDate() - 7);
+      const threeDaysAhead = new Date(today);
+      threeDaysAhead.setDate(today.getDate() + 3);
+
+      const [workoutsRes, lastSeenRes, consultsRes, checkpointsRes] = await Promise.all([
+        supabase
+          .from("workout_logs")
+          .select("patient_id, activity_date")
+          .in("patient_id", patientIds)
+          .order("activity_date", { ascending: false }),
+        supabase
+          .from("professional_patient_last_seen")
+          .select("patient_id, last_seen_at")
+          .eq("professional_id", user.id)
+          .in("patient_id", patientIds),
+        supabase
+          .from("consultations")
+          .select("patient_id, professional_id, created_at")
+          .in("patient_id", patientIds)
+          .neq("professional_id", user.id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("instance_checkpoints")
+          .select("patient_id, status, scheduled_date")
+          .in("patient_id", patientIds)
+          .eq("status", "pending")
+          .lte("scheduled_date", threeDaysAhead.toISOString().slice(0, 10)),
+      ]);
+
+      const lastWorkout = new Map<string, string>();
+      (workoutsRes.data || []).forEach((w: any) => {
+        if (!lastWorkout.has(w.patient_id)) lastWorkout.set(w.patient_id, w.activity_date);
+      });
+
+      const lastSeen = new Map<string, string>();
+      (lastSeenRes.data || []).forEach((s: any) => {
+        lastSeen.set(s.patient_id, s.last_seen_at);
+      });
+
+      const newNoteSet = new Set<string>();
+      (consultsRes.data || []).forEach((c: any) => {
+        const seenAt = lastSeen.get(c.patient_id);
+        if (!seenAt || new Date(c.created_at) > new Date(seenAt)) {
+          newNoteSet.add(c.patient_id);
+        }
+      });
+
+      const checkpointSet = new Set<string>(
+        (checkpointsRes.data || []).map((c: any) => c.patient_id)
+      );
+
+      const next: Record<string, PatientStatus> = {};
+      patients.forEach((p) => {
+        const lw = lastWorkout.get(p.id);
+        let noWorkoutDays: number | null = null;
+        if (lw) {
+          const diff = Math.floor((today.getTime() - new Date(lw).getTime()) / (1000 * 60 * 60 * 24));
+          if (diff > 7) noWorkoutDays = diff;
+        }
+        next[p.id] = {
+          noWorkoutDays,
+          hasNewNote: newNoteSet.has(p.id),
+          hasUpcomingCheckpoint: checkpointSet.has(p.id),
+        };
+      });
+      setStatuses(next);
+    };
+    fetchStatuses();
+  }, [patients, user]);
+
+  const handleViewPatient = async (patientId: string) => {
+    if (user) {
+      await supabase
+        .from("professional_patient_last_seen")
+        .upsert(
+          { professional_id: user.id, patient_id: patientId, last_seen_at: new Date().toISOString() },
+          { onConflict: "professional_id,patient_id" }
+        );
+    }
+    navigate(`/prof/paciente/${patientId}`);
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -316,33 +415,69 @@ const Dashboard = () => {
                         <TableHead>Nome do paciente</TableHead>
                         <TableHead>Data de cadastro</TableHead>
                         <TableHead>Última atualização</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead className="text-right">Ação</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredPatients.map((patient) => (
-                        <TableRow key={patient.id}>
-                          <TableCell className="font-medium">
-                            {patient.users?.name || "Sem nome"}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {format(new Date(patient.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {format(new Date(patient.updated_at), "dd/MM/yyyy", { locale: ptBR })}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => navigate(`/prof/paciente/${patient.id}`)}
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              Ver paciente
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {filteredPatients.map((patient) => {
+                        const st = statuses[patient.id];
+                        const badges: JSX.Element[] = [];
+                        if (st?.noWorkoutDays != null) {
+                          badges.push(
+                            <Badge key="w" className="bg-red-100 text-red-800 hover:bg-red-100 border-red-200">
+                              Sem treino {st.noWorkoutDays} dias
+                            </Badge>
+                          );
+                        }
+                        if (st?.hasNewNote) {
+                          badges.push(
+                            <Badge key="n" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200">
+                              Nova nota
+                            </Badge>
+                          );
+                        }
+                        if (st?.hasUpcomingCheckpoint) {
+                          badges.push(
+                            <Badge key="c" className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200">
+                              Checkpoint próximo
+                            </Badge>
+                          );
+                        }
+                        if (badges.length === 0 && st) {
+                          badges.push(
+                            <Badge key="ok" className="bg-green-100 text-green-800 hover:bg-green-100 border-green-200">
+                              Em dia
+                            </Badge>
+                          );
+                        }
+                        return (
+                          <TableRow key={patient.id}>
+                            <TableCell className="font-medium">
+                              {patient.users?.name || "Sem nome"}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {format(new Date(patient.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {format(new Date(patient.updated_at), "dd/MM/yyyy", { locale: ptBR })}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">{badges}</div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewPatient(patient.id)}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                Ver paciente
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
@@ -353,7 +488,7 @@ const Dashboard = () => {
                     <Card
                       key={patient.id}
                       className="cursor-pointer active:bg-accent/10 transition-colors"
-                      onClick={() => navigate(`/prof/paciente/${patient.id}`)}
+                      onClick={() => handleViewPatient(patient.id)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
