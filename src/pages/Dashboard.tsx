@@ -249,7 +249,7 @@ const Dashboard = () => {
       patients.forEach((p) => {
         const lw = lastWorkout.get(p.id);
         let noWorkoutDays: number | null = null;
-        if (lw) {
+        if (lw && workoutTrailSet.has(p.id)) {
           const diff = Math.floor((today.getTime() - new Date(lw).getTime()) / (1000 * 60 * 60 * 24));
           if (diff > 7) noWorkoutDays = diff;
         }
