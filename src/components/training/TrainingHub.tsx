@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import ManualTrainingPlanForm from "./ManualTrainingPlanForm";
+import SamsungHealthImport from "./SamsungHealthImport";
 
 interface TrainingHubProps {
   userId: string;
@@ -415,6 +416,7 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
   const [editingPlan, setEditingPlan] = useState<any | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showImportSheet, setShowImportSheet] = useState(false);
+  const [showSamsungImport, setShowSamsungImport] = useState(false);
   
   const [timePeriod, setTimePeriod] = useState<"4s" | "1m" | "3m">("4s");
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
@@ -1381,6 +1383,23 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
                   </div>
                 </button>
 
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowImportSheet(false);
+                    setShowSamsungImport(true);
+                  }}
+                  className="w-full flex items-center gap-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors text-left"
+                >
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Activity className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Samsung Health</p>
+                    <p className="text-sm text-muted-foreground">Importar arquivo ZIP exportado do app</p>
+                  </div>
+                </button>
+
                 <div className="w-full flex items-center gap-3 p-4 rounded-lg border bg-muted/20 opacity-70 text-left">
                   <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
                     <Activity className="h-5 w-5 text-muted-foreground" />
@@ -1580,6 +1599,16 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
           </div>
         </SheetContent>
       </Sheet>
+      )}
+
+      {!readOnly && patientId && (
+        <SamsungHealthImport
+          open={showSamsungImport}
+          onOpenChange={setShowSamsungImport}
+          userId={userId}
+          patientId={patientId}
+          onImported={fetchData}
+        />
       )}
 
     </div>
