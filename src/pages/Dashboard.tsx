@@ -415,33 +415,69 @@ const Dashboard = () => {
                         <TableHead>Nome do paciente</TableHead>
                         <TableHead>Data de cadastro</TableHead>
                         <TableHead>Última atualização</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead className="text-right">Ação</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredPatients.map((patient) => (
-                        <TableRow key={patient.id}>
-                          <TableCell className="font-medium">
-                            {patient.users?.name || "Sem nome"}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {format(new Date(patient.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {format(new Date(patient.updated_at), "dd/MM/yyyy", { locale: ptBR })}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => navigate(`/prof/paciente/${patient.id}`)}
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              Ver paciente
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {filteredPatients.map((patient) => {
+                        const st = statuses[patient.id];
+                        const badges: JSX.Element[] = [];
+                        if (st?.noWorkoutDays != null) {
+                          badges.push(
+                            <Badge key="w" className="bg-red-100 text-red-800 hover:bg-red-100 border-red-200">
+                              Sem treino {st.noWorkoutDays} dias
+                            </Badge>
+                          );
+                        }
+                        if (st?.hasNewNote) {
+                          badges.push(
+                            <Badge key="n" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200">
+                              Nova nota
+                            </Badge>
+                          );
+                        }
+                        if (st?.hasUpcomingCheckpoint) {
+                          badges.push(
+                            <Badge key="c" className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200">
+                              Checkpoint próximo
+                            </Badge>
+                          );
+                        }
+                        if (badges.length === 0 && st) {
+                          badges.push(
+                            <Badge key="ok" className="bg-green-100 text-green-800 hover:bg-green-100 border-green-200">
+                              Em dia
+                            </Badge>
+                          );
+                        }
+                        return (
+                          <TableRow key={patient.id}>
+                            <TableCell className="font-medium">
+                              {patient.users?.name || "Sem nome"}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {format(new Date(patient.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {format(new Date(patient.updated_at), "dd/MM/yyyy", { locale: ptBR })}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">{badges}</div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewPatient(patient.id)}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                Ver paciente
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
