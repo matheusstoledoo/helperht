@@ -36,8 +36,15 @@ import { useToast } from "@/hooks/use-toast";
 import { Search, UserPlus, Eye, Users, LogOut, Settings, ArrowUpDown, Route, UserSearch } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Badge } from "@/components/ui/badge";
 import { DailyTasksList } from "@/components/trails/DailyTasksList";
 import { RequestPatientAccessModal } from "@/components/professional/RequestPatientAccessModal";
+
+interface PatientStatus {
+  noWorkoutDays: number | null;
+  hasNewNote: boolean;
+  hasUpcomingCheckpoint: boolean;
+}
 
 interface PatientWithUser {
   id: string;
