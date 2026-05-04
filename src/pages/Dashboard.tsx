@@ -185,7 +185,7 @@ const Dashboard = () => {
       const threeDaysAhead = new Date(today);
       threeDaysAhead.setDate(today.getDate() + 3);
 
-      const [workoutsRes, lastSeenRes, consultsRes, checkpointsRes] = await Promise.all([
+      const [workoutsRes, lastSeenRes, consultsRes, checkpointsRes, enrollmentsRes] = await Promise.all([
         supabase
           .from("workout_logs")
           .select("patient_id, activity_date")
