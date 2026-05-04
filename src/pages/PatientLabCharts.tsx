@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import PatientLayout from "@/components/patient/PatientLayout";
-import { LabPanelSection, LAB_PANELS, classifyMarker } from "@/components/lab-charts/LabPanelSection";
+import { LabPanelSection, LAB_PANELS, classifyMarker, isHemogramaMarkerAllowed } from "@/components/lab-charts/LabPanelSection";
 import type { LabDataPoint } from "@/components/lab-charts/LabMarkerChart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FlaskConical } from "lucide-react";
