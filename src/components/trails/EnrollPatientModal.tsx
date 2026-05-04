@@ -344,6 +344,54 @@ export const EnrollPatientModal = ({
                     </button>
                   </div>
                 </section>
+
+                {/* Minhas Trilhas (care_trails do profissional) */}
+                {myCareTrails.length > 0 && (
+                  <section>
+                    <h3 className="text-sm font-semibold mb-2 text-foreground">
+                      Minhas Trilhas
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {myCareTrails.map((ct) => {
+                        const weeks = Math.max(1, Math.round((ct.duration_days || 0) / 7));
+                        return (
+                          <button
+                            key={ct.id}
+                            onClick={() =>
+                              setSelected({
+                                slug: `care-trail-${ct.id}`,
+                                name: ct.name,
+                                description: ct.description ?? "",
+                                duration_weeks: weeks,
+                                category: ct.clinical_condition ?? "custom",
+                                isCustom: true,
+                              })
+                            }
+                            className="text-left rounded-lg border bg-muted/40 hover:bg-muted p-3 transition-colors"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="font-medium text-sm flex items-center gap-1">
+                                  <Route className="h-3 w-3" />
+                                  {ct.name}
+                                </p>
+                                {ct.clinical_condition && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {ct.clinical_condition}
+                                  </p>
+                                )}
+                              </div>
+                              <span className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
+                                <Clock className="h-3 w-3" />
+                                {weeks}sem
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )}
               </div>
             </ScrollArea>
           ) : (
