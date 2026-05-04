@@ -185,7 +185,7 @@ const Dashboard = () => {
       const threeDaysAhead = new Date(today);
       threeDaysAhead.setDate(today.getDate() + 3);
 
-      const [workoutsRes, lastSeenRes, consultsRes, checkpointsRes] = await Promise.all([
+      const [workoutsRes, lastSeenRes, consultsRes, checkpointsRes, enrollmentsRes] = await Promise.all([
         supabase
           .from("workout_logs")
           .select("patient_id, activity_date")
@@ -208,7 +208,20 @@ const Dashboard = () => {
           .in("patient_id", patientIds)
           .eq("status", "pending")
           .lte("scheduled_date", threeDaysAhead.toISOString().slice(0, 10)),
+        supabase
+          .from("trail_enrollments")
+          .select("patient_id, care_trails!inner(clinical_condition)")
+          .in("patient_id", patientIds)
+          .eq("status", "active"),
       ]);
+
+      const workoutTrailSet = new Set<string>();
+      (enrollmentsRes.data || []).forEach((e: any) => {
+        const cond = (e.care_trails?.clinical_condition || "").toString().toLowerCase();
+        if (cond === "performance" || cond === "composição corporal" || cond === "composicao_corporal" || cond === "composicao corporal") {
+          workoutTrailSet.add(e.patient_id);
+        }
+      });
 
       const lastWorkout = new Map<string, string>();
       (workoutsRes.data || []).forEach((w: any) => {
@@ -236,7 +249,7 @@ const Dashboard = () => {
       patients.forEach((p) => {
         const lw = lastWorkout.get(p.id);
         let noWorkoutDays: number | null = null;
-        if (lw) {
+        if (lw && workoutTrailSet.has(p.id)) {
           const diff = Math.floor((today.getTime() - new Date(lw).getTime()) / (1000 * 60 * 60 * 24));
           if (diff > 7) noWorkoutDays = diff;
         }
