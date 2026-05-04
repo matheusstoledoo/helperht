@@ -8,6 +8,8 @@ import { Route, MessageCircle } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+const weekday = (d: string) => format(new Date(d), "EEEE", { locale: ptBR });
+
 interface ActiveTrail {
   name: string;
   duration_days: number;
@@ -23,6 +25,7 @@ interface TeamItem {
   texto: string;
   profissional: string | null;
   specialty: string | null;
+  workout_date?: string | null;
 }
 
 const specialtyColor = (specialty: string | null): string => {
@@ -74,36 +77,67 @@ export const PatientHomeExtras = () => {
         });
       }
 
-      // Team activity (last 14 days) — consultations only (workout_log_comments table not present)
+      // Team activity (last 14 days) — consultations + workout recommendations
       const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
-      const { data: consults } = await supabase
-        .from("consultations")
-        .select("id, created_at, patient_summary, professional_id")
-        .eq("patient_id", pid)
-        .eq("visible_to_patient", true)
-        .not("patient_summary", "is", null)
-        .gt("created_at", since)
-        .order("created_at", { ascending: false })
-        .limit(7);
+      const [{ data: consults }, { data: recs }] = await Promise.all([
+        supabase
+          .from("consultations")
+          .select("id, created_at, patient_summary, professional_id")
+          .eq("patient_id", pid)
+          .eq("visible_to_patient", true)
+          .not("patient_summary", "is", null)
+          .gt("created_at", since)
+          .order("created_at", { ascending: false })
+          .limit(7),
+        supabase
+          .from("professional_recommendations")
+          .select("id, created_at, recommendation, professional_id, workout_log_id, workout_logs:workout_log_id(activity_date)")
+          .eq("patient_id", pid)
+          .eq("visible_to_patient", true)
+          .gt("created_at", since)
+          .order("created_at", { ascending: false })
+          .limit(7),
+      ]);
 
-      const list = consults || [];
-      let enriched: TeamItem[] = [];
-      if (list.length > 0) {
-        const ids = Array.from(new Set(list.map((c: any) => c.professional_id)));
+      const consultList = consults || [];
+      const recList = recs || [];
+      const ids = Array.from(new Set([
+        ...consultList.map((c: any) => c.professional_id),
+        ...recList.map((r: any) => r.professional_id),
+      ].filter(Boolean)));
+
+      let usersMap = new Map<string, any>();
+      if (ids.length > 0) {
         const { data: users } = await supabase
           .from("users")
           .select("id, name, specialty")
           .in("id", ids);
-        const map = new Map((users || []).map((u: any) => [u.id, u]));
-        enriched = list.map((c: any) => ({
-          id: c.id,
-          tipo: "consulta" as const,
-          created_at: c.created_at,
-          texto: c.patient_summary,
-          profissional: map.get(c.professional_id)?.name ?? null,
-          specialty: map.get(c.professional_id)?.specialty ?? null,
-        }));
+        usersMap = new Map((users || []).map((u: any) => [u.id, u]));
       }
+
+      const consultItems: TeamItem[] = consultList.map((c: any) => ({
+        id: c.id,
+        tipo: "consulta" as const,
+        created_at: c.created_at,
+        texto: c.patient_summary,
+        profissional: usersMap.get(c.professional_id)?.name ?? null,
+        specialty: usersMap.get(c.professional_id)?.specialty ?? null,
+      }));
+
+      const recItems: TeamItem[] = recList.map((r: any) => ({
+        id: r.id,
+        tipo: "comentario_treino" as const,
+        created_at: r.created_at,
+        texto: r.recommendation,
+        profissional: usersMap.get(r.professional_id)?.name ?? null,
+        specialty: usersMap.get(r.professional_id)?.specialty ?? null,
+        workout_date: r.workout_logs?.activity_date ?? null,
+      }));
+
+      const enriched = [...consultItems, ...recItems]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 7);
+
       if (!cancelled) setItems(enriched);
     })();
     return () => { cancelled = true; };
@@ -177,7 +211,11 @@ export const PatientHomeExtras = () => {
                     }`}
                   />
                   <span>
-                    {it.tipo === "consulta" ? "Registrado em consulta" : "Comentário no treino"}
+                    {it.tipo === "consulta"
+                      ? "Registrado em consulta"
+                      : it.workout_date
+                        ? `Comentário no treino de ${weekday(it.workout_date)}`
+                        : "Comentário no treino"}
                   </span>
                 </div>
               </div>
