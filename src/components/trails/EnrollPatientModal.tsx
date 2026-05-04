@@ -83,6 +83,24 @@ export const EnrollPatientModal = ({
     },
   });
 
+  // Trilhas (care_trails) criadas pelo profissional
+  const { data: myCareTrails = [] } = useQuery<
+    { id: string; name: string; description: string | null; duration_days: number; clinical_condition: string | null }[]
+  >({
+    queryKey: ["care-trails", "mine", user?.id],
+    enabled: !!user?.id && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("care_trails")
+        .select("id, name, description, duration_days, clinical_condition")
+        .eq("professional_id", user!.id)
+        .eq("is_template", false)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   // Slugs já existentes no banco (para resolver template_id da biblioteca quando já tiver sido seedada)
   const librarySlugs = useMemo(() => TRAIL_LIBRARY.map((t) => t.slug), []);
   const { data: existingLibraryRows = [] } = useQuery<{ id: string; slug: string }[]>({
