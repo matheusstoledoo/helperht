@@ -536,7 +536,7 @@ const PatientDocumentsView = () => {
 
   const handleOpenInNewTab = (doc: Document) => {
     const { data } = supabase.storage
-      .from("patient-documents")
+      .from("documents")
       .getPublicUrl(doc.file_path);
     if (!data?.publicUrl) {
       toast.error("Erro ao abrir documento");
