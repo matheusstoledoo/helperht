@@ -41,6 +41,7 @@ const PatientTreatmentsView = lazy(() => import("./pages/PatientTreatmentsView")
 const PatientDocumentsView = lazy(() => import("./pages/PatientDocumentsView"));
 const PatientSettings = lazy(() => import("./pages/PatientSettings"));
 const PatientCareTrails = lazy(() => import("./pages/PatientCareTrails"));
+const TrailReport = lazy(() => import("./pages/TrailReport"));
 const PatientLabCharts = lazy(() => import("./pages/PatientLabCharts"));
 const ProfPatientNutrition = lazy(() => import("./pages/ProfPatientNutrition"));
 const ProfPatientTraining = lazy(() => import("./pages/ProfPatientTraining"));
