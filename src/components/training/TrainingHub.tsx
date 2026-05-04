@@ -1601,6 +1601,16 @@ export default function TrainingHub({ userId, patientId, onBackfillGps, backfill
       </Sheet>
       )}
 
+      {!readOnly && patientId && (
+        <SamsungHealthImport
+          open={showSamsungImport}
+          onOpenChange={setShowSamsungImport}
+          userId={userId}
+          patientId={patientId}
+          onImported={fetchData}
+        />
+      )}
+
     </div>
   );
 }
