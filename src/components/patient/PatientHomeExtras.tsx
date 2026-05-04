@@ -8,6 +8,8 @@ import { Route, MessageCircle } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+const weekday = (d: string) => format(new Date(d), "EEEE", { locale: ptBR });
+
 interface ActiveTrail {
   name: string;
   duration_days: number;
