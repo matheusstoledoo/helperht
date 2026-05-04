@@ -868,17 +868,11 @@ const PatientDocumentsView = () => {
               </DialogHeader>
               <div className="flex-1 overflow-hidden">
                 {viewerDoc?.file_type?.includes("pdf") ? (
-                  <object
-                    data={viewerUrl}
-                    type="application/pdf"
-                    className="w-full h-full"
-                  >
-                    <embed
-                      src={viewerUrl}
-                      type="application/pdf"
-                      className="w-full h-full"
-                    />
-                  </object>
+                  <iframe
+                    src={`https://docs.google.com/viewer?url=${encodeURIComponent(viewerUrl)}&embedded=true`}
+                    className="w-full h-full border-0"
+                    title={viewerDoc?.file_name}
+                  />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center overflow-auto p-4">
                     <img
