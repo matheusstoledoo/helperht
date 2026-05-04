@@ -25,6 +25,7 @@ interface TeamItem {
   texto: string;
   profissional: string | null;
   specialty: string | null;
+  workout_date?: string | null;
 }
 
 const specialtyColor = (specialty: string | null): string => {
