@@ -534,25 +534,15 @@ const PatientDocumentsView = () => {
     }
   };
 
-  const handleOpenInNewTab = async (doc: Document) => {
-    try {
-      const { data, error } = await supabase.storage
-        .from("patient-documents")
-        .createSignedUrl(doc.file_path, 300);
-
-      if (error || !data?.signedUrl) {
-        toast.error("Erro ao abrir documento");
-        return;
-      }
-
-      const response = await fetch(data.signedUrl);
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, "_blank");
-    } catch (error) {
-      console.error("Open error:", error);
+  const handleOpenInNewTab = (doc: Document) => {
+    const { data } = supabase.storage
+      .from("patient-documents")
+      .getPublicUrl(doc.file_path);
+    if (!data?.publicUrl) {
       toast.error("Erro ao abrir documento");
+      return;
     }
+    window.open(data.publicUrl, "_blank", "noopener,noreferrer");
   };
 
   const [deleteTarget, setDeleteTarget] = useState<Document | null>(null);
