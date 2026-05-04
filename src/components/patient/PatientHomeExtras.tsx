@@ -211,7 +211,11 @@ export const PatientHomeExtras = () => {
                     }`}
                   />
                   <span>
-                    {it.tipo === "consulta" ? "Registrado em consulta" : "Comentário no treino"}
+                    {it.tipo === "consulta"
+                      ? "Registrado em consulta"
+                      : it.workout_date
+                        ? `Comentário no treino de ${weekday(it.workout_date)}`
+                        : "Comentário no treino"}
                   </span>
                 </div>
               </div>
