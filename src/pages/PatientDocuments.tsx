@@ -638,7 +638,7 @@ const PatientDocuments = () => {
                   const { data } = supabase.storage
                     .from("patient-documents")
                     .getPublicUrl(doc.file_path);
-                  window.open(data.publicUrl, "_blank");
+                  window.open(data.publicUrl, "_blank", "noopener,noreferrer");
                 }}
               >
                 <ExternalLink className="w-4 h-4" />
