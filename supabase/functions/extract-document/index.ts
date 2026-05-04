@@ -9,26 +9,59 @@ const corsHeaders = {
 };
 
 const MARKER_NAMES: Record<string, string> = {
-  "glucose": "Glicose", "glicemia": "Glicose", "blood glucose": "Glicose", "fasting glucose": "Glicose",
-  "total cholesterol": "Colesterol Total", "cholesterol": "Colesterol Total",
-  "ldl cholesterol": "LDL", "ldl-c": "LDL", "hdl cholesterol": "HDL", "hdl-c": "HDL",
-  "triglycerides": "Triglicerídeos", "triglyceride": "Triglicerídeos",
-  "hemoglobin": "Hemoglobina", "haemoglobin": "Hemoglobina",
-  "hba1c": "Hemoglobina Glicada", "hemoglobin a1c": "Hemoglobina Glicada",
-  "creatinine": "Creatinina", "urea": "Ureia", "uric acid": "Ácido Úrico",
-  "tsh": "TSH", "t4": "T4 Livre", "free t4": "T4 Livre", "t3": "T3",
-  "vitamin d": "Vitamina D", "25-oh vitamin d": "Vitamina D",
-  "ferritin": "Ferritina", "iron": "Ferro",
-  "crp": "PCR", "c-reactive protein": "PCR",
-  "sodium": "Sódio", "potassium": "Potássio", "calcium": "Cálcio", "magnesium": "Magnésio",
-  "albumin": "Albumina", "ast": "AST (TGO)", "alt": "ALT (TGP)", "ggt": "GGT",
+  glucose: "Glicose",
+  glicemia: "Glicose",
+  "blood glucose": "Glicose",
+  "fasting glucose": "Glicose",
+  "total cholesterol": "Colesterol Total",
+  cholesterol: "Colesterol Total",
+  "ldl cholesterol": "LDL",
+  "ldl-c": "LDL",
+  "hdl cholesterol": "HDL",
+  "hdl-c": "HDL",
+  triglycerides: "Triglicerídeos",
+  triglyceride: "Triglicerídeos",
+  hemoglobin: "Hemoglobina",
+  haemoglobin: "Hemoglobina",
+  hba1c: "Hemoglobina Glicada",
+  "hemoglobin a1c": "Hemoglobina Glicada",
+  creatinine: "Creatinina",
+  urea: "Ureia",
+  "uric acid": "Ácido Úrico",
+  tsh: "TSH",
+  t4: "T4 Livre",
+  "free t4": "T4 Livre",
+  t3: "T3",
+  "vitamin d": "Vitamina D",
+  "25-oh vitamin d": "Vitamina D",
+  ferritin: "Ferritina",
+  iron: "Ferro",
+  crp: "PCR",
+  "c-reactive protein": "PCR",
+  sodium: "Sódio",
+  potassium: "Potássio",
+  calcium: "Cálcio",
+  magnesium: "Magnésio",
+  albumin: "Albumina",
+  ast: "AST (TGO)",
+  alt: "ALT (TGP)",
+  ggt: "GGT",
   "alkaline phosphatase": "Fosfatase Alcalina",
-  "platelets": "Plaquetas", "platelet count": "Plaquetas", "hematocrit": "Hematócrito",
-  "wbc": "Leucócitos", "white blood cells": "Leucócitos",
-  "rbc": "Hemácias", "red blood cells": "Hemácias",
-  "insulin": "Insulina", "cortisol": "Cortisol",
-  "testosterone": "Testosterona", "estradiol": "Estradiol", "progesterone": "Progesterona",
-  "vitamin b12": "Vitamina B12", "folic acid": "Ácido Fólico", "folate": "Ácido Fólico",
+  platelets: "Plaquetas",
+  "platelet count": "Plaquetas",
+  hematocrit: "Hematócrito",
+  wbc: "Leucócitos",
+  "white blood cells": "Leucócitos",
+  rbc: "Hemácias",
+  "red blood cells": "Hemácias",
+  insulin: "Insulina",
+  cortisol: "Cortisol",
+  testosterone: "Testosterona",
+  estradiol: "Estradiol",
+  progesterone: "Progesterona",
+  "vitamin b12": "Vitamina B12",
+  "folic acid": "Ácido Fólico",
+  folate: "Ácido Fólico",
 };
 
 function normalizeMarkerName(name: string): string {
@@ -40,22 +73,24 @@ function normalizeMarkerName(name: string): string {
 function parseJSON(raw: string): any {
   const attempts = [
     raw.trim(),
-    raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim(),
+    raw
+      .replace(/```json\n?/g, "")
+      .replace(/```\n?/g, "")
+      .trim(),
     raw.substring(raw.indexOf("{"), raw.lastIndexOf("}") + 1),
   ];
   for (const attempt of attempts) {
-    try { return JSON.parse(attempt); } catch { continue; }
+    try {
+      return JSON.parse(attempt);
+    } catch {
+      continue;
+    }
   }
   throw new Error("JSON inválido após todas as tentativas de limpeza");
 }
 
 // Chama Claude com retry automático em caso de JSON malformado
-async function callClaude(
-  apiKey: string,
-  messages: any[],
-  systemPrompt: string,
-  attempt = 1
-): Promise<any> {
+async function callClaude(apiKey: string, messages: any[], systemPrompt: string, attempt = 1): Promise<any> {
   const model = "claude-opus-4-6";
   const bodyStr = JSON.stringify({
     model,
@@ -116,10 +151,13 @@ async function callClaude(
         [
           ...messages,
           { role: "assistant", content },
-          { role: "user", content: "O JSON retornado está malformado. Retorne APENAS o JSON corrigido, sem nenhum texto adicional." },
+          {
+            role: "user",
+            content: "O JSON retornado está malformado. Retorne APENAS o JSON corrigido, sem nenhum texto adicional.",
+          },
         ],
         systemPrompt,
-        2
+        2,
       );
     }
     throw e;
@@ -247,10 +285,7 @@ serve(async (req) => {
     const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     await supabase
       .from("document_extractions")
@@ -274,10 +309,10 @@ serve(async (req) => {
           error_message: `Não foi possível acessar o arquivo no armazenamento: ${downloadError?.message ?? "arquivo não encontrado"}`,
         })
         .eq("document_id", document_id);
-      return new Response(
-        JSON.stringify({ error: "Failed to download file", details: downloadError?.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Failed to download file", details: downloadError?.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const arrayBuffer = await fileData.arrayBuffer();
@@ -341,11 +376,7 @@ serve(async (req) => {
     // Chama Claude com retry automático
     let extracted: any;
     try {
-      extracted = await callClaude(
-        ANTHROPIC_API_KEY,
-        [{ role: "user", content: userContent }],
-        SYSTEM_PROMPT
-      );
+      extracted = await callClaude(ANTHROPIC_API_KEY, [{ role: "user", content: userContent }], SYSTEM_PROMPT);
     } catch (parseError) {
       console.error("Falha na extração após retries:", parseError);
       await supabase
@@ -355,10 +386,10 @@ serve(async (req) => {
           error_message: "Não foi possível interpretar o documento. Tente novamente ou preencha manualmente.",
         })
         .eq("document_id", document_id);
-      return new Response(
-        JSON.stringify({ error: "Extraction failed" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Extraction failed" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Salva resultado da extração
@@ -379,11 +410,7 @@ serve(async (req) => {
       .eq("document_id", document_id);
 
     // Insere lab_results se for exame laboratorial
-    if (
-      Array.isArray(extracted.lab_results) &&
-      extracted.lab_results.length > 0 &&
-      extracted.suggested_category === "exame_laboratorial"
-    ) {
+    if (Array.isArray(extracted.lab_results) && extracted.lab_results.length > 0) {
       const { data: docRow } = await supabase
         .from("documents")
         .select("patient_id, uploaded_by")
@@ -443,17 +470,15 @@ serve(async (req) => {
 
     // Insere nutrition_plans se for prescrição nutricional
     if (
-      extracted.suggested_category === 'prescricao_nutricional' &&
+      extracted.suggested_category === "prescricao_nutricional" &&
       extracted.nutrition_data &&
-      (
-        extracted.nutrition_data.total_calories ||
-        (Array.isArray(extracted.nutrition_data.meals) && extracted.nutrition_data.meals.length > 0)
-      )
+      (extracted.nutrition_data.total_calories ||
+        (Array.isArray(extracted.nutrition_data.meals) && extracted.nutrition_data.meals.length > 0))
     ) {
       const { data: docRow2 } = await supabase
-        .from('documents')
-        .select('patient_id, uploaded_by')
-        .eq('id', document_id)
+        .from("documents")
+        .select("patient_id, uploaded_by")
+        .eq("id", document_id)
         .single();
 
       const patientId = docRow2?.patient_id ?? null;
@@ -461,68 +486,71 @@ serve(async (req) => {
 
       // Desativar planos anteriores ativos do mesmo usuário
       await supabase
-        .from('nutrition_plans')
-        .update({ status: 'inactive' })
-        .eq('user_id', userId)
-        .eq('status', 'active');
+        .from("nutrition_plans")
+        .update({ status: "inactive" })
+        .eq("user_id", userId)
+        .eq("status", "active");
 
       const nd = extracted.nutrition_data;
 
       // Normalizar refeições para o formato esperado pelo frontend
-      const meals = Array.isArray(nd.meals) ? nd.meals.map((m: any) => ({
-        name: m.name || m.meal_name || 'Refeição',
-        time: m.time || m.horario || null,
-        foods: Array.isArray(m.foods)
-          ? m.foods.map((f: any) => typeof f === 'string' ? f : `${f.name || f.alimento}${f.quantity ? ` — ${f.quantity}` : ''}${f.quantidade ? ` — ${f.quantidade}` : ''}`)
-          : [],
-        calories: m.calories || m.calorias || null,
-        notes: m.notes || m.observacoes || null,
-      })) : [];
+      const meals = Array.isArray(nd.meals)
+        ? nd.meals.map((m: any) => ({
+            name: m.name || m.meal_name || "Refeição",
+            time: m.time || m.horario || null,
+            foods: Array.isArray(m.foods)
+              ? m.foods.map((f: any) =>
+                  typeof f === "string"
+                    ? f
+                    : `${f.name || f.alimento}${f.quantity ? ` — ${f.quantity}` : ""}${f.quantidade ? ` — ${f.quantidade}` : ""}`,
+                )
+              : [],
+            calories: m.calories || m.calorias || null,
+            notes: m.notes || m.observacoes || null,
+          }))
+        : [];
 
-      const { error: nutritionError } = await supabase
-        .from('nutrition_plans')
-        .insert({
-          document_id,
-          patient_id: patientId,
-          user_id: userId,
-          professional_name: extracted.professional_name || null,
-          professional_registry: extracted.professional_registry || null,
-          total_calories: nd.total_calories ? parseFloat(nd.total_calories) : null,
-          protein_grams: nd.protein_grams ? parseFloat(nd.protein_grams) : null,
-          protein_percent: nd.protein_percent ? parseFloat(nd.protein_percent) : null,
-          carbs_grams: nd.carbs_grams ? parseFloat(nd.carbs_grams) : null,
-          carbs_percent: nd.carbs_percent ? parseFloat(nd.carbs_percent) : null,
-          fat_grams: nd.fat_grams ? parseFloat(nd.fat_grams) : null,
-          fat_percent: nd.fat_percent ? parseFloat(nd.fat_percent) : null,
-          meals,
-          supplements: Array.isArray(nd.supplements) ? nd.supplements : [],
-          restrictions: Array.isArray(nd.restrictions) ? nd.restrictions : [],
-          observations: extracted.raw_text_summary || null,
-          status: 'active',
-          start_date: extracted.document_date || null,
-        });
+      const { error: nutritionError } = await supabase.from("nutrition_plans").insert({
+        document_id,
+        patient_id: patientId,
+        user_id: userId,
+        professional_name: extracted.professional_name || null,
+        professional_registry: extracted.professional_registry || null,
+        total_calories: nd.total_calories ? parseFloat(nd.total_calories) : null,
+        protein_grams: nd.protein_grams ? parseFloat(nd.protein_grams) : null,
+        protein_percent: nd.protein_percent ? parseFloat(nd.protein_percent) : null,
+        carbs_grams: nd.carbs_grams ? parseFloat(nd.carbs_grams) : null,
+        carbs_percent: nd.carbs_percent ? parseFloat(nd.carbs_percent) : null,
+        fat_grams: nd.fat_grams ? parseFloat(nd.fat_grams) : null,
+        fat_percent: nd.fat_percent ? parseFloat(nd.fat_percent) : null,
+        meals,
+        supplements: Array.isArray(nd.supplements) ? nd.supplements : [],
+        restrictions: Array.isArray(nd.restrictions) ? nd.restrictions : [],
+        observations: extracted.raw_text_summary || null,
+        status: "active",
+        start_date: extracted.document_date || null,
+      });
 
       if (nutritionError) {
-        console.error('Erro ao inserir nutrition_plan:', nutritionError);
+        console.error("Erro ao inserir nutrition_plan:", nutritionError);
       } else {
-        console.log('nutrition_plan inserido com sucesso');
+        console.log("nutrition_plan inserido com sucesso");
       }
     }
 
-    return new Response(
-      JSON.stringify({ success: true, extraction: extracted }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-
+    return new Response(JSON.stringify({ success: true, extraction: extracted }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error: any) {
     console.error("extract-document ERRO:", {
       message: error?.message,
       stack: error?.stack,
       name: error?.name,
     });
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
