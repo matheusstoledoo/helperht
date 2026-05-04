@@ -184,6 +184,8 @@ export default function PatientDashboardMain() {
           ))}
         </div>
 
+        <PatientHomeExtras />
+
       </div>
 
     </PatientLayout>
