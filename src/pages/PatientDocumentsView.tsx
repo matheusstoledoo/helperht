@@ -538,10 +538,6 @@ const PatientDocumentsView = () => {
     const { data } = supabase.storage
       .from("patient-documents")
       .getPublicUrl(doc.file_path);
-    if (!data?.publicUrl) {
-      toast.error("Erro ao abrir documento");
-      return;
-    }
     window.open(data.publicUrl, "_blank", "noopener,noreferrer");
   };
 
