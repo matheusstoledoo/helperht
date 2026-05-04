@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import ManualTrainingPlanForm from "./ManualTrainingPlanForm";
+import SamsungHealthImport from "./SamsungHealthImport";
 
 interface TrainingHubProps {
   userId: string;
