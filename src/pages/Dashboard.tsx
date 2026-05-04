@@ -488,7 +488,7 @@ const Dashboard = () => {
                     <Card
                       key={patient.id}
                       className="cursor-pointer active:bg-accent/10 transition-colors"
-                      onClick={() => navigate(`/prof/paciente/${patient.id}`)}
+                      onClick={() => handleViewPatient(patient.id)}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
