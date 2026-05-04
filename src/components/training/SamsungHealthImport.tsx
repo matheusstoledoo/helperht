@@ -188,7 +188,7 @@ export default function SamsungHealthImport({
         if (!target) continue;
 
         try {
-          const text = await e.getData!(new TextWriter(), {
+          const text = await (e as any).getData(new TextWriter(), {
             password: password || undefined,
           });
           const rows = await parseCsvText(text as string);
