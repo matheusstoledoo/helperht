@@ -534,14 +534,19 @@ const PatientDocumentsView = () => {
     }
   };
 
-  const handleOpenInNewTab = (doc: Document) => {
-    const { data } = supabase.storage
+  const handleOpenInNewTab = async (doc: Document) => {
+    const { data, error } = await supabase.storage
       .from("patient-documents")
-      .getPublicUrl(doc.file_path, {
-        transform: undefined,
+      .createSignedUrl(doc.file_path, 300, {
+        download: false,
       });
-    const url = data.publicUrl + "?download=false";
-    window.open(url, "_blank", "noopener,noreferrer");
+
+    if (error || !data?.signedUrl) {
+      toast.error("Erro ao abrir documento");
+      return;
+    }
+
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   };
 
   const [deleteTarget, setDeleteTarget] = useState<Document | null>(null);
