@@ -112,6 +112,7 @@ export default function PatientLabCharts() {
     panelMap.set("outros", [])
     groupedByMarker.forEach(({ points, category }, markerName) => {
       const panelKey = classifyMarker(markerName, category)
+      if (panelKey === "hemograma" && !isHemogramaMarkerAllowed(markerName)) return
       panelMap.get(panelKey)!.push({ markerName, dataPoints: points })
     })
     return panelMap
