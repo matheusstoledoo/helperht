@@ -636,7 +636,7 @@ const PatientDocuments = () => {
                 title="Abrir em nova guia"
                 onClick={() => {
                    const { data } = supabase.storage
-                    .from("documents")
+                    .from("patient-documents")
                     .getPublicUrl(doc.file_path);
                   window.open(data.publicUrl, "_blank", "noopener,noreferrer");
                 }}
