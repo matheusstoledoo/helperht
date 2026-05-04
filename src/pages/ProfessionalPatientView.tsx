@@ -44,6 +44,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatFrequency } from "@/lib/utils";
 import { PatientTrailsSection } from "@/components/trails/PatientTrailsSection";
+import { NewSinceLastVisit } from "@/components/professional/NewSinceLastVisit";
 import { PatientTrailResponsesTimeline } from "@/components/trails/PatientTrailResponsesTimeline";
 
 interface PatientData {
@@ -629,6 +630,9 @@ const ProfessionalPatientView = () => {
               {/* Objetivos & Insights agora está unificado dentro de "Saúde & Objetivos" acima */}
             </div>
           </div>
+
+          {/* Novidades desde a última visita */}
+          <NewSinceLastVisit patientId={id || ""} />
 
           {/* Trails Section */}
           <PatientTrailsSection 
