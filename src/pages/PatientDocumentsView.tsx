@@ -537,8 +537,11 @@ const PatientDocumentsView = () => {
   const handleOpenInNewTab = (doc: Document) => {
     const { data } = supabase.storage
       .from("patient-documents")
-      .getPublicUrl(doc.file_path);
-    window.open(data.publicUrl, "_blank", "noopener,noreferrer");
+      .getPublicUrl(doc.file_path, {
+        transform: undefined,
+      });
+    const url = data.publicUrl + "?download=false";
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const [deleteTarget, setDeleteTarget] = useState<Document | null>(null);
