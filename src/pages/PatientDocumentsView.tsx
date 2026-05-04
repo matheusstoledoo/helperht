@@ -535,18 +535,22 @@ const PatientDocumentsView = () => {
   };
 
   const handleOpenInNewTab = async (doc: Document) => {
-    const { data, error } = await supabase.storage
-      .from("patient-documents")
-      .createSignedUrl(doc.file_path, 300, {
-        download: false,
-      });
+    try {
+      const { data, error } = await supabase.storage
+        .from("patient-documents")
+        .createSignedUrl(doc.file_path, 300);
 
-    if (error || !data?.signedUrl) {
+      if (error || !data?.signedUrl) {
+        toast.error("Erro ao abrir documento");
+        return;
+      }
+
+      // Força abertura inline adicionando responseContentDisposition
+      const inlineUrl = data.signedUrl + "&responseContentDisposition=inline";
+      window.open(inlineUrl, "_blank", "noopener,noreferrer");
+    } catch (error) {
       toast.error("Erro ao abrir documento");
-      return;
     }
-
-    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   };
 
   const [deleteTarget, setDeleteTarget] = useState<Document | null>(null);
