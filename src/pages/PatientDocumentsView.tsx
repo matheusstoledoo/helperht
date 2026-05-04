@@ -86,6 +86,8 @@ const PatientDocumentsView = () => {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [viewerDoc, setViewerDoc] = useState<Document | null>(null);
+  const [viewerUrl, setViewerUrl] = useState<string>("");
   const [patientId, setPatientId] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>("");
 
