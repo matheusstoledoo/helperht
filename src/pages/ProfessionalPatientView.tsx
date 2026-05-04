@@ -631,6 +631,9 @@ const ProfessionalPatientView = () => {
             </div>
           </div>
 
+          {/* Novidades desde a última visita */}
+          <NewSinceLastVisit patientId={id || ""} />
+
           {/* Trails Section */}
           <PatientTrailsSection 
             patientId={id || ""}
