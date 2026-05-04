@@ -208,7 +208,20 @@ const Dashboard = () => {
           .in("patient_id", patientIds)
           .eq("status", "pending")
           .lte("scheduled_date", threeDaysAhead.toISOString().slice(0, 10)),
+        supabase
+          .from("trail_enrollments")
+          .select("patient_id, care_trails!inner(clinical_condition)")
+          .in("patient_id", patientIds)
+          .eq("status", "active"),
       ]);
+
+      const workoutTrailSet = new Set<string>();
+      (enrollmentsRes.data || []).forEach((e: any) => {
+        const cond = (e.care_trails?.clinical_condition || "").toString().toLowerCase();
+        if (cond === "performance" || cond === "composição corporal" || cond === "composicao_corporal" || cond === "composicao corporal") {
+          workoutTrailSet.add(e.patient_id);
+        }
+      });
 
       const lastWorkout = new Map<string, string>();
       (workoutsRes.data || []).forEach((w: any) => {
