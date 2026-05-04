@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import PatientLayout from "@/components/patient/PatientLayout";
-import { LabPanelSection, LAB_PANELS, classifyMarker } from "@/components/lab-charts/LabPanelSection";
+import { LabPanelSection, LAB_PANELS, classifyMarker, isHemogramaMarkerAllowed } from "@/components/lab-charts/LabPanelSection";
 import type { LabDataPoint } from "@/components/lab-charts/LabMarkerChart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FlaskConical } from "lucide-react";
@@ -112,6 +112,7 @@ export default function PatientLabCharts() {
     panelMap.set("outros", [])
     groupedByMarker.forEach(({ points, category }, markerName) => {
       const panelKey = classifyMarker(markerName, category)
+      if (panelKey === "hemograma" && !isHemogramaMarkerAllowed(markerName)) return
       panelMap.get(panelKey)!.push({ markerName, dataPoints: points })
     })
     return panelMap

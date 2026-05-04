@@ -86,6 +86,31 @@ export const LAB_PANELS = [
   },
 ] as const;
 
+// Allow-list de marcadores exibidos no painel Hemograma (filtragem visual; não afeta o banco)
+const HEMOGRAMA_ALLOWED_PATTERNS = [
+  "hemoglobina",
+  "hematócrito",
+  "hematocrito",
+  "vgm",
+  "vcm", // sinônimo: Volume Corpuscular/Globular Médio
+  "hgm",
+  "hcm", // sinônimo: Hemoglobina Corpuscular/Globular Média
+  "chgm",
+  "chcm", // sinônimo: Concentração de Hemoglobina Corpuscular/Globular Média
+  "leucócito",
+  "leucocito",
+  "plaqueta",
+];
+
+export function isHemogramaMarkerAllowed(markerName: string): boolean {
+  const lower = markerName.toLowerCase();
+  // Exclui subtipos de leucócitos (neutrófilos, linfócitos, etc.)
+  if (/(neutróf|neutrof|linfóc|linfoc|monóc|monoc|eosinóf|eosinof|basóf|basof|bastonete|segmentado)/.test(lower)) {
+    return false;
+  }
+  return HEMOGRAMA_ALLOWED_PATTERNS.some((kw) => lower.includes(kw));
+}
+
 // FIX: usa marker_category do banco se disponível, só classifica por keyword como fallback
 export function classifyMarker(markerName: string, categoryFromDB?: string | null): string {
   if (categoryFromDB && categoryFromDB !== "other") return categoryFromDB;

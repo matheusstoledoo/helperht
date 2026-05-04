@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { FullPageLoading } from "@/components/ui/loading-spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FlaskConical } from "lucide-react";
-import { LabPanelSection, LAB_PANELS, classifyMarker } from "@/components/lab-charts/LabPanelSection";
+import { LabPanelSection, LAB_PANELS, classifyMarker, isHemogramaMarkerAllowed } from "@/components/lab-charts/LabPanelSection";
 import type { LabDataPoint } from "@/components/lab-charts/LabMarkerChart";
 
 interface RawLabResult {
@@ -104,7 +104,9 @@ export default function ProfPatientLabCharts() {
     LAB_PANELS.forEach((p) => panelMap.set(p.key, []));
     panelMap.set("outros", []);
     groupedByMarker.forEach((dataPoints, markerName) => {
-      panelMap.get(classifyMarker(markerName))!.push({ markerName, dataPoints });
+      const panelKey = classifyMarker(markerName);
+      if (panelKey === "hemograma" && !isHemogramaMarkerAllowed(markerName)) return;
+      panelMap.get(panelKey)!.push({ markerName, dataPoints });
     });
     return panelMap;
   }, [groupedByMarker]);
