@@ -17,7 +17,6 @@ import PatientLayout from "@/components/patient/PatientLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getGreeting } from "@/lib/utils";
-import { PatientHomeExtras } from "@/components/patient/PatientHomeExtras";
 
 interface DashboardCard {
   id: string;
@@ -183,8 +182,6 @@ export default function PatientDashboardMain() {
             </Card>
           ))}
         </div>
-
-        <PatientHomeExtras />
 
       </div>
 
